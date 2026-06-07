@@ -154,6 +154,9 @@ export interface AgentProfileChangedEvent {
   llmConnection?: string | null
   enabledSourceSlugs?: string[]
   systemPromptPreset?: string
+  skillSlugs?: string[]
+  delegationMode?: 'disabled' | 'ask' | 'auto'
+  delegationAllowedAgentIds?: string[]
 }
 
 /**

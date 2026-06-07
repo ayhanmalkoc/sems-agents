@@ -34,7 +34,8 @@ export const SESSION_PERSISTENT_FIELDS = [
   'lastReadMessageId', 'hasUnread',
   // Config
   'enabledSourceSlugs', 'permissionMode', 'previousPermissionMode', 'workingDirectory',
-  'mainAgentProfileId', 'activeAgentProfileId',
+  'mainAgentProfileId', 'activeAgentProfileId', 'systemPromptPreset', 'skillSlugs',
+  'delegationMode', 'delegationAllowedAgentIds',
   // Model/Connection
   'model', 'llmConnection', 'connectionLocked', 'thinkingLevel',
   // Sharing
@@ -136,6 +137,14 @@ export interface SessionConfig {
   mainAgentProfileId?: string;
   /** Agent profile currently addressed in the UI. Defaults to mainAgentProfileId. */
   activeAgentProfileId?: string;
+  /** Agent instructions/system prompt captured from the active profile. */
+  systemPromptPreset?: 'default' | 'mini' | string;
+  /** Skill slugs attached to the active agent profile. */
+  skillSlugs?: string[];
+  /** Subagent delegation policy captured from the active agent profile. */
+  delegationMode?: 'disabled' | 'ask' | 'auto';
+  /** Agent ids allowed for delegation. */
+  delegationAllowedAgentIds?: string[];
   /** SDK cwd for session storage - set once at creation, never changes. Ensures SDK can find session transcripts regardless of workingDirectory changes. */
   sdkCwd?: string;
   /** Shared viewer URL (if shared via viewer) */
@@ -256,6 +265,14 @@ export interface SessionHeader {
   mainAgentProfileId?: string;
   /** Agent profile currently addressed in the UI. Defaults to mainAgentProfileId. */
   activeAgentProfileId?: string;
+  /** Agent instructions/system prompt captured from the active profile. */
+  systemPromptPreset?: 'default' | 'mini' | string;
+  /** Skill slugs attached to the active agent profile. */
+  skillSlugs?: string[];
+  /** Subagent delegation policy captured from the active agent profile. */
+  delegationMode?: 'disabled' | 'ask' | 'auto';
+  /** Agent ids allowed for delegation. */
+  delegationAllowedAgentIds?: string[];
   /** SDK cwd for session storage - set once at creation, never changes */
   sdkCwd?: string;
   /** Shared viewer URL (if shared via viewer) */

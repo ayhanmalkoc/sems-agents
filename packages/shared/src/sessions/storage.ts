@@ -183,6 +183,10 @@ export async function createSession(
     enabledSourceSlugs?: string[];
     mainAgentProfileId?: string;
     activeAgentProfileId?: string;
+    systemPromptPreset?: SessionConfig['systemPromptPreset'];
+    skillSlugs?: string[];
+    delegationMode?: SessionConfig['delegationMode'];
+    delegationAllowedAgentIds?: string[];
     model?: string;
     llmConnection?: string;
     hidden?: boolean;
@@ -216,6 +220,10 @@ export async function createSession(
     enabledSourceSlugs: options?.enabledSourceSlugs,
     mainAgentProfileId: options?.mainAgentProfileId,
     activeAgentProfileId: options?.activeAgentProfileId,
+    systemPromptPreset: options?.systemPromptPreset,
+    skillSlugs: options?.skillSlugs,
+    delegationMode: options?.delegationMode,
+    delegationAllowedAgentIds: options?.delegationAllowedAgentIds,
     model: options?.model,
     llmConnection: options?.llmConnection,
     hidden: options?.hidden,
@@ -538,6 +546,10 @@ export async function updateSessionMetadata(
     | 'enabledSourceSlugs'
     | 'mainAgentProfileId'
     | 'activeAgentProfileId'
+    | 'systemPromptPreset'
+    | 'skillSlugs'
+    | 'delegationMode'
+    | 'delegationAllowedAgentIds'
     | 'workingDirectory'
     | 'sdkCwd'
     | 'permissionMode'
@@ -559,6 +571,10 @@ export async function updateSessionMetadata(
   if (updates.enabledSourceSlugs !== undefined) session.enabledSourceSlugs = updates.enabledSourceSlugs;
   if (updates.mainAgentProfileId !== undefined) session.mainAgentProfileId = updates.mainAgentProfileId;
   if (updates.activeAgentProfileId !== undefined) session.activeAgentProfileId = updates.activeAgentProfileId;
+  if (updates.systemPromptPreset !== undefined) session.systemPromptPreset = updates.systemPromptPreset;
+  if (updates.skillSlugs !== undefined) session.skillSlugs = updates.skillSlugs;
+  if (updates.delegationMode !== undefined) session.delegationMode = updates.delegationMode;
+  if (updates.delegationAllowedAgentIds !== undefined) session.delegationAllowedAgentIds = updates.delegationAllowedAgentIds;
   if (updates.workingDirectory !== undefined) session.workingDirectory = updates.workingDirectory;
   if (updates.sdkCwd !== undefined) session.sdkCwd = updates.sdkCwd;
   if (updates.permissionMode !== undefined) session.permissionMode = updates.permissionMode;

@@ -841,8 +841,13 @@ interface ManagedSession {
   connectionLocked?: boolean
   // Thinking level for this session ('off', 'think', 'max')
   thinkingLevel?: ThinkingLevel
-  // System prompt preset for mini agents ('default' | 'mini')
+  // System prompt preset or agent instructions ('default' | 'mini' | custom prompt)
   systemPromptPreset?: 'default' | 'mini' | string
+  // Skill slugs attached to the active agent profile
+  skillSlugs?: string[]
+  // Subagent delegation policy attached to the active agent profile
+  delegationMode?: 'disabled' | 'ask' | 'auto'
+  delegationAllowedAgentIds?: string[]
   // Role/type of the last message (for badge display without loading messages)
   lastMessageRole?: 'user' | 'assistant' | 'plan' | 'tool' | 'error'
   // ID of the last final (non-intermediate) assistant message - pre-computed for unread detection
@@ -2492,6 +2497,7 @@ export class SessionManager implements ISessionManager {
     // normalizeThinkingLevel() tolerates undefined/unknown inputs.
     const defaultThinkingLevel =
       normalizeThinkingLevel(options?.thinkingLevel)
+      ?? normalizeThinkingLevel(mainAgentProfile?.thinkingLevel)
       ?? normalizeThinkingLevel(wsConfig?.defaults?.thinkingLevel)
       ?? getDefaultThinkingLevel()
     const activeAgentProfileId = options?.activeAgentProfileId ?? mainAgentProfile?.id
@@ -2745,6 +2751,10 @@ export class SessionManager implements ISessionManager {
       llmConnection: defaultLlmConnection,
       mainAgentProfileId: mainAgentProfile?.id,
       activeAgentProfileId,
+      systemPromptPreset: options?.systemPromptPreset ?? mainAgentProfile?.systemPrompt,
+      skillSlugs: mainAgentProfile?.skillSlugs,
+      delegationMode: mainAgentProfile?.delegationMode,
+      delegationAllowedAgentIds: mainAgentProfile?.delegationAllowedAgentIds,
       hidden: options?.hidden,
       sessionStatus: options?.sessionStatus,
       labels: options?.labels,
@@ -2835,6 +2845,9 @@ export class SessionManager implements ISessionManager {
       mainAgentProfileId: mainAgentProfile?.id,
       activeAgentProfileId,
       systemPromptPreset: options?.systemPromptPreset ?? mainAgentProfile?.systemPrompt,
+      skillSlugs: mainAgentProfile?.skillSlugs,
+      delegationMode: mainAgentProfile?.delegationMode,
+      delegationAllowedAgentIds: mainAgentProfile?.delegationAllowedAgentIds,
       enabledSourceSlugs: defaultEnabledSourceSlugs,
       branchFromMessageId: validatedBranch?.sourceMessageId,
       branchContextStrategy: validatedBranch?.branchContextStrategy,
@@ -6764,6 +6777,9 @@ export class SessionManager implements ISessionManager {
       managed.llmConnection = resolvedConnection
     }
     managed.systemPromptPreset = profile.systemPrompt
+    managed.skillSlugs = profile.skillSlugs ?? []
+    managed.delegationMode = profile.delegationMode ?? 'disabled'
+    managed.delegationAllowedAgentIds = profile.delegationAllowedAgentIds ?? []
 
     const previousEffectiveMode = getPermissionModeDiagnostics(sessionId).permissionMode
     if (previousEffectiveMode !== resolvedPermissionMode) {
@@ -6796,6 +6812,9 @@ export class SessionManager implements ISessionManager {
       llmConnection: managed.llmConnection ?? null,
       enabledSourceSlugs: managed.enabledSourceSlugs,
       systemPromptPreset: managed.systemPromptPreset,
+      skillSlugs: managed.skillSlugs,
+      delegationMode: managed.delegationMode,
+      delegationAllowedAgentIds: managed.delegationAllowedAgentIds,
     }, managed.workspace.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)
