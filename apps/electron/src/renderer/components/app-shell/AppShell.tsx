@@ -2452,7 +2452,7 @@ function AppShellContent({
                     {
                       id: "nav:agents",
                       title: "Agents",
-                      label: String((contextValue.agentProfiles || []).filter(agent => agent.visibility !== 'internal').length),
+                      label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length),
                       icon: Bot,
                       variant: isAgentsNavigation(navState) ? "default" : "ghost",
                       onClick: handleAgentsClick,
@@ -3274,7 +3274,7 @@ function AppShellContent({
             {/* Content: SessionList, SourcesListPanel, or SettingsNavigator based on navigation state */}
             {isAgentsNavigation(navState) && (
               <AgentsListPanel
-                agents={contextValue.agentProfiles || []}
+                agents={agentProfiles}
                 workspaceRootPath={activeWorkspace?.rootPath}
                 onAgentClick={handleAgentSelect}
                 onDuplicateAgent={handleDuplicateAgent}
