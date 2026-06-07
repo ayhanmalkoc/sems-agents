@@ -9,7 +9,7 @@ import type { PermissionMode } from '../../../shared/types'
 import { toast } from 'sonner'
 
 type ThinkingValue = 'low' | 'medium' | 'high' | 'max'
-type DelegationValue = 'disabled' | 'ask' | 'auto'
+type SubagentsValue = 'disabled' | 'ask' | 'auto'
 
 const protectedIds = new Set(['default', 'code-reviewer', 'researcher'])
 const rolePresets = [
@@ -19,6 +19,19 @@ const rolePresets = [
   { id: 'implementer', label: 'Implementer', prompt: 'Make focused code changes, preserve existing style, validate with targeted tests, and avoid broad unrelated refactors.' },
   { id: 'product', label: 'Product thinker', prompt: 'Translate needs into product behavior, UX flows, acceptance criteria, edge cases, and implementation priorities.' },
 ]
+
+const permissionModeLabels: Record<PermissionMode, string> = {
+  safe: 'Explore',
+  ask: 'Ask',
+  'allow-all': 'Execute',
+}
+
+const thinkingLabels: Record<ThinkingValue, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  max: 'Max',
+}
 
 interface DraftState {
   id?: string
@@ -34,7 +47,7 @@ interface DraftState {
   permissionMode: PermissionMode | ''
   enabledSourceSlugs: string[]
   skillSlugs: string[]
-  delegationMode: DelegationValue
+  delegationMode: SubagentsValue
   delegationAllowedAgentIds: string[]
 }
 
@@ -70,7 +83,7 @@ function draftFromProfile(profile: AgentProfile): DraftState {
     permissionMode: profile.permissionMode || '',
     enabledSourceSlugs: profile.enabledSourceSlugs || [],
     skillSlugs: profile.skillSlugs || [],
-    delegationMode: (profile.delegationMode as DelegationValue | undefined) || 'disabled',
+    delegationMode: (profile.delegationMode as SubagentsValue | undefined) || 'disabled',
     delegationAllowedAgentIds: profile.delegationAllowedAgentIds || [],
   }
 }
@@ -173,13 +186,13 @@ export default function AgentsSettingsPage() {
   }
 
   const previewItems = [
-    draft.llmConnection ? `Connection: ${llmConnections.find(item => item.slug === draft.llmConnection)?.name || draft.llmConnection}` : 'Connection: workspace default',
-    draft.model ? `Model: ${draft.model}` : 'Model: workspace default',
-    `Thinking: ${draft.thinkingLevel}`,
-    draft.permissionMode ? `Permission: ${draft.permissionMode}` : 'Permission: workspace default',
-    draft.enabledSourceSlugs.length ? `Sources: ${draft.enabledSourceSlugs.length}` : 'Sources: workspace default',
+    draft.llmConnection ? `Connection: ${llmConnections.find(item => item.slug === draft.llmConnection)?.name || draft.llmConnection}` : 'Connection: Workspace default',
+    draft.model ? `Model: ${draft.model}` : 'Model: Workspace default',
+    `Thinking: ${thinkingLabels[draft.thinkingLevel]}`, 
+    draft.permissionMode ? `Default mode: ${permissionModeLabels[draft.permissionMode]}` : 'Default mode: Workspace default',
+    draft.enabledSourceSlugs.length ? `Sources: ${draft.enabledSourceSlugs.length}` : 'Sources: Workspace default',
     draft.skillSlugs.length ? `Skills: ${draft.skillSlugs.length}` : 'Skills: none',
-    `Delegation: ${draft.delegationMode}`,
+    `Subagents: ${draft.delegationMode}`,
   ]
 
   return (
@@ -204,13 +217,13 @@ export default function AgentsSettingsPage() {
           <section className="space-y-5">
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="mb-5 flex items-start justify-between gap-3">
-                <div><div className="text-base font-semibold">{isEditing ? 'Edit agent' : 'Create agent'}</div><div className="text-sm text-muted-foreground">Define role, model behavior, tools, sources, permissions, and delegation.</div></div>
+                <div><div className="text-base font-semibold">{isEditing ? 'Edit agent' : 'Create agent'}</div><div className="text-sm text-muted-foreground">Define how this agent appears, which AI settings it uses, and which capabilities it can access.</div></div>
                 {selectedProfile && !isProtected && <Button variant="ghost" size="icon" onClick={() => deleteProfile(selectedProfile.id)}><Trash2 className="h-4 w-4" /></Button>}
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold">Identity</div>
+                  <div className="text-sm font-semibold">Agent details</div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="space-y-1.5 text-sm"><span className="font-medium">Name</span><input className="w-full rounded-md border bg-background px-3 py-2" placeholder="Code Reviewer" value={draft.name} onChange={e => updateDraft('name', e.target.value)} disabled={isProtected} /></label>
                     <label className="space-y-1.5 text-sm"><span className="font-medium">Description</span><input className="w-full rounded-md border bg-background px-3 py-2" placeholder="What this agent is best at" value={draft.description} onChange={e => updateDraft('description', e.target.value)} /></label>
@@ -220,7 +233,7 @@ export default function AgentsSettingsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold">Role & instructions</div>
+                  <div className="text-sm font-semibold">Instructions</div>
                   <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={draft.rolePreset} onChange={e => applyRolePreset(e.target.value)}>{rolePresets.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select>
                   <textarea className="min-h-36 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="How should this agent behave, prioritize, and avoid mistakes?" value={draft.systemPrompt} onChange={e => updateDraft('systemPrompt', e.target.value)} />
                 </div>
@@ -232,33 +245,33 @@ export default function AgentsSettingsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold">Execution policy</div>
+                  <div className="text-sm font-semibold">Permissions</div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="space-y-1.5 text-sm"><span className="font-medium">Permission mode</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.permissionMode} onChange={e => updateDraft('permissionMode', e.target.value as PermissionMode | '')}><option value="">Workspace default</option>{enabledModes.map(mode => <option key={mode} value={mode}>{mode}</option>)}</select></label>
-                    <label className="space-y-1.5 text-sm"><span className="font-medium">Thinking level</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.thinkingLevel} onChange={e => updateDraft('thinkingLevel', e.target.value as ThinkingValue)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="max">Max</option></select></label>
+                    <label className="space-y-1.5 text-sm"><span className="font-medium">Default mode</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.permissionMode} onChange={e => updateDraft('permissionMode', e.target.value as PermissionMode | '')}><option value="">Workspace default</option>{enabledModes.map(mode => <option key={mode} value={mode}>{permissionModeLabels[mode]}</option>)}</select></label>
+                    <label className="space-y-1.5 text-sm"><span className="font-medium">Thinking</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.thinkingLevel} onChange={e => updateDraft('thinkingLevel', e.target.value as ThinkingValue)}>{(['low', 'medium', 'high', 'max'] as ThinkingValue[]).map(level => <option key={level} value={level}>{thinkingLabels[level]}</option>)}</select></label>
                   </div>
                 </div>
 
                 <details className="rounded-lg border p-3">
-                  <summary className="cursor-pointer text-sm font-semibold">Advanced model override</summary>
+                  <summary className="cursor-pointer text-sm font-semibold">AI settings</summary>
                   <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="space-y-1.5 text-sm"><span className="font-medium">LLM connection</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.llmConnection} onChange={e => updateDraft('llmConnection', e.target.value)}><option value="">Workspace default connection</option>{llmConnections.map(conn => <option key={conn.slug} value={conn.slug}>{conn.name}</option>)}</select></label>
-                    <label className="space-y-1.5 text-sm"><span className="font-medium">Model override</span><input className="w-full rounded-md border bg-background px-3 py-2" placeholder="Optional model id" value={draft.model} onChange={e => updateDraft('model', e.target.value)} /></label>
+                    <label className="space-y-1.5 text-sm"><span className="font-medium">Connection</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.llmConnection} onChange={e => updateDraft('llmConnection', e.target.value)}><option value="">Workspace default</option>{llmConnections.map(conn => <option key={conn.slug} value={conn.slug}>{conn.name}</option>)}</select></label>
+                    <label className="space-y-1.5 text-sm"><span className="font-medium">Model</span><input className="w-full rounded-md border bg-background px-3 py-2" placeholder="Workspace default" value={draft.model} onChange={e => updateDraft('model', e.target.value)} /></label>
                   </div>
                 </details>
 
                 <div className="space-y-3">
-                  <div className="text-sm font-semibold">Delegation</div>
+                  <div className="text-sm font-semibold">Subagents</div>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="space-y-1.5 text-sm"><span className="font-medium">Mode</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.delegationMode} onChange={e => updateDraft('delegationMode', e.target.value as DelegationValue)}><option value="disabled">Disabled</option><option value="ask">Ask first</option><option value="auto">Automatic</option></select></label>
-                    <div className="rounded-lg border p-3"><div className="mb-2 text-xs font-medium text-muted-foreground">Allowed agents</div>{agentProfiles.filter(profile => profile.id !== draft.id && profile.visibility !== 'internal').map(profile => <label key={profile.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.delegationAllowedAgentIds.includes(profile.id)} onChange={() => updateDraft('delegationAllowedAgentIds', toggleValue(draft.delegationAllowedAgentIds, profile.id))} /> <span>{profile.name}</span></label>)}</div>
+                    <label className="space-y-1.5 text-sm"><span className="font-medium">Subagent mode</span><select className="w-full rounded-md border bg-background px-3 py-2" value={draft.delegationMode} onChange={e => updateDraft('delegationMode', e.target.value as SubagentsValue)}><option value="disabled">Disabled</option><option value="ask">Ask first</option><option value="auto">Automatic</option></select></label>
+                    <div className="rounded-lg border p-3"><div className="mb-2 text-xs font-medium text-muted-foreground">Allowed subagents</div>{agentProfiles.filter(profile => profile.id !== draft.id && profile.visibility !== 'internal').map(profile => <label key={profile.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.delegationAllowedAgentIds.includes(profile.id)} onChange={() => updateDraft('delegationAllowedAgentIds', toggleValue(draft.delegationAllowedAgentIds, profile.id))} /> <span>{profile.name}</span></label>)}</div>
                   </div>
                 </div>
 
-                <div className="rounded-lg border bg-muted/30 p-3"><div className="mb-2 text-sm font-semibold">Preview</div><div className="flex flex-wrap gap-2">{previewItems.map(item => <span key={item} className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">{item}</span>)}</div></div>
+                <div className="rounded-lg border bg-muted/30 p-3"><div className="mb-2 text-sm font-semibold">Effective summary</div><div className="flex flex-wrap gap-2">{previewItems.map(item => <span key={item} className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">{item}</span>)}</div></div>
               </div>
 
-              <div className="mt-5 flex items-center justify-end gap-2"><Button variant="ghost" onClick={resetForCreate}>Clear</Button><Button onClick={saveProfile} disabled={!draft.name.trim()} className="gap-2"><Save className="h-4 w-4" /> {isEditing ? 'Save changes' : 'Create agent'}</Button></div>
+              <div className="mt-5 flex items-center justify-end gap-2"><Button variant="ghost" onClick={resetForCreate}>New agent</Button><Button onClick={saveProfile} disabled={!draft.name.trim()} className="gap-2"><Save className="h-4 w-4" /> {isEditing ? 'Save changes' : 'Create agent'}</Button></div>
             </div>
           </section>
         </div>
