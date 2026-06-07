@@ -6748,6 +6748,12 @@ export class SessionManager implements ISessionManager {
       sessionId: managed.id,
       mainAgentProfileId: managed.mainAgentProfileId,
       activeAgentProfileId: managed.activeAgentProfileId,
+      permissionMode: managed.permissionMode,
+      thinkingLevel: managed.thinkingLevel,
+      model: managed.model,
+      llmConnection: managed.llmConnection,
+      enabledSourceSlugs: managed.enabledSourceSlugs,
+      systemPromptPreset: managed.systemPromptPreset,
     }, managed.workspace.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)

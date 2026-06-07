@@ -944,6 +944,10 @@ export default function App() {
         // Update atom directly (UI sees update immediately)
         updateSessionDirect(sessionId, () => updatedSession)
 
+        if (event.type === 'agent_profile_changed') {
+          syncSessionOptionsFromSession(updatedSession)
+        }
+
         // Handle side effects
         handleEffects(effects, sessionId, event.type)
 
@@ -984,6 +988,10 @@ export default function App() {
         currentSession,
         workspaceId
       )
+
+      if (event.type === 'agent_profile_changed') {
+        syncSessionOptionsFromSession(updatedSession)
+      }
 
       // Handle side effects
       handleEffects(effects, sessionId, event.type)
