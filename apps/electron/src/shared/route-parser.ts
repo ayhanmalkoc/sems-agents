@@ -276,6 +276,11 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return `settings/${parsed.details.type}`
   }
 
+
+  if (parsed.navigator === 'agents') {
+    if (!parsed.details) return 'agents'
+    return `agents/agent/${parsed.details.id}`
+  }
   if (parsed.navigator === 'sources') {
     // Build base from filter (sources, sources/api, sources/mcp, sources/local)
     let base = 'sources'
