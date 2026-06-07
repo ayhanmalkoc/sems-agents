@@ -67,6 +67,8 @@ export interface Session {
    */
   hasUnread?: boolean
   enabledSourceSlugs?: string[]
+  mainAgentProfileId?: string
+  activeAgentProfileId?: string
   workingDirectory?: string
   sessionFolderPath?: string
   sharedUrl?: string
@@ -128,6 +130,8 @@ export interface CreateSessionOptions {
   labels?: string[]
   isFlagged?: boolean
   enabledSourceSlugs?: string[]
+  mainAgentProfileId?: string
+  activeAgentProfileId?: string
   /**
    * Message ID to branch from. This is a hard context cutoff:
    * the new session must not include model context from later parent messages.
@@ -185,6 +189,7 @@ export type SessionEvent =
   | { type: 'plan_submitted'; sessionId: string; message: Message }
   | { type: 'sources_changed'; sessionId: string; enabledSourceSlugs: string[] }
   | { type: 'labels_changed'; sessionId: string; labels: string[] }
+  | { type: 'agent_profile_changed'; sessionId: string; mainAgentProfileId?: string; activeAgentProfileId?: string }
   | { type: 'connection_changed'; sessionId: string; connectionSlug: string; supportsBranching?: boolean }
   | { type: 'task_backgrounded'; sessionId: string; toolUseId: string; taskId: string; intent?: string; turnId?: string }
   | { type: 'shell_backgrounded'; sessionId: string; toolUseId: string; shellId: string; intent?: string; command?: string; turnId?: string }
@@ -235,6 +240,7 @@ export type SessionCommand =
   | { type: 'updateWorkingDirectory'; dir: string }
   | { type: 'setSources'; sourceSlugs: string[] }
   | { type: 'setLabels'; labels: string[] }
+  | { type: 'setAgentProfile'; agentProfileId: string }
   | { type: 'showInFinder' }
   | { type: 'copyPath' }
   | { type: 'shareToViewer' }

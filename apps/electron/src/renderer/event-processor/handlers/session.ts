@@ -13,6 +13,7 @@ import type {
   TypedErrorEvent,
   SourcesChangedEvent,
   LabelsChangedEvent,
+  AgentProfileChangedEvent,
   SessionStatusChangedEvent,
   SessionFlaggedEvent,
   SessionUnflaggedEvent,
@@ -653,6 +654,23 @@ export function handleLabelsChanged(
   }
 }
 
+export function handleAgentProfileChanged(
+  state: SessionState,
+  event: AgentProfileChangedEvent
+): ProcessResult {
+  const { session, streaming } = state
+  return {
+    state: {
+      session: {
+        ...session,
+        mainAgentProfileId: event.mainAgentProfileId,
+        activeAgentProfileId: event.activeAgentProfileId,
+      },
+      streaming,
+    },
+    effects: [],
+  }
+}
 /**
  * Handle session_status_changed - update session's sessionStatus (external metadata change or agent tool)
  */

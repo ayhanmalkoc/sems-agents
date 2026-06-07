@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info } from 'lucide-react'
+import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, Bot, Check, ChevronDown, Plus, Settings } from 'lucide-react'
 import { ChatDisplay, type ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
@@ -17,11 +17,12 @@ import { SessionInfoPopover } from '@/components/app-shell/SessionInfoPopover'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
+import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator } from '@/components/ui/styled-dropdown'
 import { useAppShellContext, usePendingPermission, usePendingCredential, useSessionOptionsFor, useSession as useSessionData } from '@/context/AppShellContext'
 import { rendererPerf } from '@/lib/perf'
-import { routes } from '@/lib/navigate'
+import { navigate, routes } from '@/lib/navigate'
 import { coerceInputText } from '@/lib/input-text'
 import { deriveSessionMessagesLoadState, formatSessionLoadFailure } from '@/lib/session-load'
 import { ensureSessionMessagesLoadedAtom, forceSessionMessagesReloadAtom, loadedSessionsAtom, sessionMetaMapAtom } from '@/atoms/sessions'
@@ -79,6 +80,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     chatDisplayRef,
     onChatMatchInfoChange,
     isFocusedPanel,
+    agentProfiles,
   } = useAppShellContext()
 
   // Use the unified session options hook for clean access
@@ -406,6 +408,64 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   // Get display title for header - use getSessionTitle for consistent fallback logic with SessionList
   // Priority: name > first user message > preview > "New chat"
   const displayTitle = session ? getSessionTitle(session) : (sessionMeta ? getSessionTitle(sessionMeta) : t('chat.session'))
+  const visibleAgentProfiles = React.useMemo(() => (agentProfiles ?? []).filter(profile => profile.visibility !== 'internal'), [agentProfiles])
+  const activeAgentProfileId = session?.activeAgentProfileId || session?.mainAgentProfileId || sessionMeta?.activeAgentProfileId || sessionMeta?.mainAgentProfileId || 'default'
+  const activeAgent = visibleAgentProfiles.find(profile => profile.id === activeAgentProfileId) || visibleAgentProfiles.find(profile => profile.id === 'default')
+  const headerTitle = displayTitle
+  const handleAgentProfileChange = React.useCallback(async (agentProfileId: string) => {
+    if (!session && !sessionMeta) return
+    try {
+      await window.electronAPI.sessionCommand(sessionId, { type: 'setAgentProfile', agentProfileId })
+      toast.success('Agent switched')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to switch agent')
+    }
+  }, [session, sessionId, sessionMeta])
+
+  const agentChip = React.useMemo(() => {
+    if (visibleAgentProfiles.length === 0) return null
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 max-w-[220px] gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs font-medium titlebar-no-drag"
+            aria-label="Current agent"
+          >
+            <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold" style={{ backgroundColor: activeAgent?.color || 'var(--muted)', color: activeAgent?.color ? 'white' : undefined }}>
+              {activeAgent?.icon || <Bot className="h-3 w-3" />}
+            </span>
+            <span className="truncate">{activeAgent?.name || 'Default Agent'}</span>
+            <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <StyledDropdownMenuContent align="end" className="min-w-[240px]">
+          {visibleAgentProfiles.map(profile => (
+            <StyledDropdownMenuItem key={profile.id} onClick={() => handleAgentProfileChange(profile.id)} className="flex items-center gap-2">
+              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: profile.color || 'var(--muted)', color: profile.color ? 'white' : undefined }}>
+                {profile.icon || <Bot className="h-3.5 w-3.5" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm">{profile.name}</span>
+                {profile.description && <span className="block truncate text-xs text-muted-foreground">{profile.description}</span>}
+              </span>
+              {profile.id === activeAgentProfileId && <Check className="h-4 w-4 text-primary" />}
+            </StyledDropdownMenuItem>
+          ))}
+          <StyledDropdownMenuSeparator />
+          <StyledDropdownMenuItem onClick={() => navigate(routes.view.settings('agents'))} className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            <span>Manage agents</span>
+          </StyledDropdownMenuItem>
+          <StyledDropdownMenuItem onClick={() => navigate(routes.view.settings('agents'))} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            <span>Create new agent</span>
+          </StyledDropdownMenuItem>
+        </StyledDropdownMenuContent>
+      </DropdownMenu>
+    )
+  }, [activeAgent, activeAgentProfileId, handleAgentProfileChange, visibleAgentProfiles])
   const isFlagged = session?.isFlagged || sessionMeta?.isFlagged || false
   const isArchived = session?.isArchived || sessionMeta?.isArchived || false
   const sharedUrl = session?.sharedUrl || sessionMeta?.sharedUrl || null
@@ -600,7 +660,12 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     )
   }, [isCompactMode, sessionId, session?.sessionFolderPath, sessionMeta])
 
-  const headerActions = isCompactMode ? compactInfoButton : shareButton
+  const headerActions = (
+    <div className="flex items-center gap-1.5">
+      {agentChip}
+      {isCompactMode ? compactInfoButton : shareButton}
+    </div>
+  )
 
   // Build title menu content for chat sessions using shared SessionMenu.
   // Desktop uses Radix DropdownMenu via PanelHeader; compact mode uses a
@@ -697,7 +762,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
       return (
         <>
           <div className="h-full flex flex-col">
-            <PanelHeader  title={displayTitle} titleMenu={titleMenu} compactTitleMenu={compactTitleMenu} leadingAction={leadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
+            <PanelHeader  title={headerTitle} titleMenu={titleMenu} compactTitleMenu={compactTitleMenu} leadingAction={leadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
             <div className="flex-1 flex flex-col min-h-0">
               <ChatDisplay
                 ref={chatDisplayRef}
@@ -770,7 +835,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   return (
     <>
       <div className="h-full flex flex-col">
-        <PanelHeader  title={displayTitle} titleMenu={titleMenu} compactTitleMenu={compactTitleMenu} leadingAction={leadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
+        <PanelHeader  title={headerTitle} titleMenu={titleMenu} compactTitleMenu={compactTitleMenu} leadingAction={leadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
         <div className="flex-1 flex flex-col min-h-0">
           <ChatDisplay
             ref={chatDisplayRef}

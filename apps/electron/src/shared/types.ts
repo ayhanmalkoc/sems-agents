@@ -61,7 +61,8 @@ export type { LoadedSource, FolderSourceConfig, SourceConnectionStatus };
 
 // Skill types
 import type { LoadedSkill, SkillMetadata } from '@craft-agent/shared/skills/types';
-export type { LoadedSkill, SkillMetadata };
+import type { AgentProfile, CreateAgentProfileInput, UpdateAgentProfileInput } from '@craft-agent/shared/agent-profiles';
+export type { LoadedSkill, SkillMetadata, AgentProfile, CreateAgentProfileInput, UpdateAgentProfileInput };
 
 // Resource bundle types (cross-workspace export/import)
 import type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult } from '@craft-agent/shared/resources';
@@ -481,6 +482,13 @@ export interface ElectronAPI {
 
   // Skills change listener (live updates when skills are added/removed/modified)
   onSkillsChanged(callback: (workspaceId: string, skills: LoadedSkill[]) => void): () => void
+
+  // Agent profiles
+  listAgentProfiles(workspaceId: string): Promise<AgentProfile[]>
+  createAgentProfile(workspaceId: string, input: CreateAgentProfileInput): Promise<AgentProfile>
+  updateAgentProfile(workspaceId: string, id: string, updates: UpdateAgentProfileInput): Promise<AgentProfile>
+  deleteAgentProfile(workspaceId: string, id: string): Promise<void>
+  onAgentProfilesChanged(callback: (workspaceId: string) => void): () => void
 
   // Statuses (workspace-scoped)
   listStatuses(workspaceId: string): Promise<import('@craft-agent/shared/statuses').StatusConfig[]>

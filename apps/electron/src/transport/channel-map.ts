@@ -233,6 +233,13 @@ export const CHANNEL_MAP = {
   openSkillInFinder: invoke(RPC_CHANNELS.skills.OPEN_FINDER),
   onSkillsChanged: listener(RPC_CHANNELS.skills.CHANGED),
 
+  // Agent profiles
+  listAgentProfiles: invoke(RPC_CHANNELS.agentProfiles.LIST),
+  createAgentProfile: invoke(RPC_CHANNELS.agentProfiles.CREATE),
+  updateAgentProfile: invoke(RPC_CHANNELS.agentProfiles.UPDATE),
+  deleteAgentProfile: invoke(RPC_CHANNELS.agentProfiles.DELETE),
+  onAgentProfilesChanged: listener(RPC_CHANNELS.agentProfiles.CHANGED),
+
   // Statuses
   listStatuses: invoke(RPC_CHANNELS.statuses.LIST),
   reorderStatuses: invoke(RPC_CHANNELS.statuses.REORDER),

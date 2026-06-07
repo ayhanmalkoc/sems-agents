@@ -140,6 +140,13 @@ export interface LabelsChangedEvent {
   labels: string[]
 }
 
+export interface AgentProfileChangedEvent {
+  type: 'agent_profile_changed'
+  sessionId: string
+  mainAgentProfileId?: string
+  activeAgentProfileId?: string
+}
+
 /**
  * Todo state changed event (external metadata change or agent tool)
  */
@@ -484,6 +491,7 @@ export type AgentEvent =
   | CredentialRequestEvent
   | SourcesChangedEvent
   | LabelsChangedEvent
+  | AgentProfileChangedEvent
   | SessionStatusChangedEvent
   | SessionFlaggedEvent
   | SessionUnflaggedEvent

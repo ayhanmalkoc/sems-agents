@@ -820,6 +820,7 @@ function AppShellContent({
 
   // Skills state (workspace-scoped)
   const [skills, setSkills] = React.useState<LoadedSkill[]>([])
+  const [agentProfiles, setAgentProfiles] = React.useState<import('../../../shared/types').AgentProfile[]>([])
   // Sync skills to atom for NavigationContext auto-selection
   const setSkillsAtom = useSetAtom(skillsAtom)
   React.useEffect(() => {
@@ -927,6 +928,27 @@ function AppShellContent({
     const cleanup = window.electronAPI.onSkillsChanged((workspaceId, updatedSkills) => {
       if (workspaceId !== activeWorkspaceId) return
       setSkills(updatedSkills || [])
+    })
+    return cleanup
+  }, [activeWorkspaceId])
+
+  React.useEffect(() => {
+    if (!activeWorkspaceId) return
+    window.electronAPI.listAgentProfiles(activeWorkspaceId).then((profiles) => {
+      setAgentProfiles(profiles || [])
+    }).catch(err => {
+      console.error('[Chat] Failed to load agent profiles:', err)
+    })
+  }, [activeWorkspaceId])
+
+  React.useEffect(() => {
+    const cleanup = window.electronAPI.onAgentProfilesChanged((workspaceId) => {
+      if (workspaceId !== activeWorkspaceId) return
+      window.electronAPI.listAgentProfiles(workspaceId).then((profiles) => {
+        setAgentProfiles(profiles || [])
+      }).catch(err => {
+        console.error('[Chat] Failed to reload agent profiles:', err)
+      })
     })
     return cleanup
   }, [activeWorkspaceId])
@@ -1576,6 +1598,7 @@ function AppShellContent({
     onDeleteSession: handleDeleteSession,
     enabledSources: sources,
     skills,
+    agentProfiles,
     activeSessionWorkingDirectory,
     labels: displayLabelConfigs,
     onSessionLabelsChange: handleSessionLabelsChange,
@@ -1596,7 +1619,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -1862,7 +1885,7 @@ function AppShellContent({
   }, [captureContextMenuPosition])
 
   // Create a new chat and select it
-  const handleNewChat = useCallback((newPanel: boolean = false) => {
+  const handleNewChat = useCallback((newPanel: boolean = false, agentProfileId?: string) => {
     if (!activeWorkspace) return
 
     // Exit search mode and switch to All Sessions
@@ -1871,7 +1894,7 @@ function AppShellContent({
 
     // Delegate to NavigationContext which handles session creation
     navigate(
-      routes.action.newSession(),
+      routes.action.newSession(agentProfileId ? { agent: agentProfileId } : undefined),
       newPanel ? { newPanel: true, targetLaneId: 'main' } : undefined
     )
 
@@ -2253,6 +2276,7 @@ function AppShellContent({
                     </TooltipTrigger>
                     <TooltipContent side="right">{newChatHotkey}</TooltipContent>
                   </Tooltip>
+
                 </div>
                 {/* Primary Nav: All Sessions (▸ Statuses, Flagged, Archived), Labels | Sources, Skills | Settings */}
                 {/* pb-4 provides clearance so the last item scrolls above the mask-fade-bottom gradient */}

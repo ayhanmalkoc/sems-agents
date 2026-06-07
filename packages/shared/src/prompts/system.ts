@@ -358,6 +358,13 @@ export function getSystemPrompt(
     return getMiniAgentSystemPrompt(workspaceRootPath);
   }
 
+  const customPresetPrompt = preset && preset !== 'default' ? `
+
+## Agent Profile Instructions
+
+${preset}
+` : '';
+
   // Use pinned preferences if provided (for session consistency after compaction)
   const preferences = pinnedPreferencesPrompt ?? formatPreferencesForPrompt();
   const debugContext = debugMode?.enabled ? formatDebugModeContext(debugMode.logFilePath) : '';
@@ -373,7 +380,7 @@ export function getSystemPrompt(
   // to enable prompt caching. The system prompt stays static and cacheable.
   // Safe Mode context is also in user messages for the same reason.
   const basePrompt = getCraftAssistantPrompt(workspaceRootPath, backendName, resolvedIncludeCoAuthoredBy);
-  const fullPrompt = `${basePrompt}${preferences}${debugContext}${projectContextFiles}`;
+  const fullPrompt = `${basePrompt}${customPresetPrompt}${preferences}${debugContext}${projectContextFiles}`;
 
   debug('[getSystemPrompt] full prompt length:', fullPrompt.length);
 

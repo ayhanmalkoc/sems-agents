@@ -23,6 +23,7 @@ import type {
   LoadedSkill,
   NewChatActionParams,
   LlmConnectionWithStatus,
+  AgentProfile,
   TestAutomationResult,
 } from '../../shared/types'
 import type { SessionStatus as SessionStatusConfig } from '@/config/session-status-config'
@@ -57,6 +58,8 @@ export interface AppShellContextType {
   enabledSources?: LoadedSource[]
   /** All skills for this workspace - provided by AppShell component (for @mentions) */
   skills?: LoadedSkill[]
+  /** Workspace-scoped agent profiles. */
+  agentProfiles?: AgentProfile[]
   /** Working directory of the active session — needed for project-level skill resolution */
   activeSessionWorkingDirectory?: string
   /** All label configs (tree) for label menu and badge display */

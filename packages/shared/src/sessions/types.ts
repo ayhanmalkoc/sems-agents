@@ -34,6 +34,7 @@ export const SESSION_PERSISTENT_FIELDS = [
   'lastReadMessageId', 'hasUnread',
   // Config
   'enabledSourceSlugs', 'permissionMode', 'previousPermissionMode', 'workingDirectory',
+  'mainAgentProfileId', 'activeAgentProfileId',
   // Model/Connection
   'model', 'llmConnection', 'connectionLocked', 'thinkingLevel',
   // Sharing
@@ -131,6 +132,10 @@ export interface SessionConfig {
   enabledSourceSlugs?: string[];
   /** Working directory for this session (used by agent for bash commands and context) */
   workingDirectory?: string;
+  /** Agent profile used as this session's main/default agent. */
+  mainAgentProfileId?: string;
+  /** Agent profile currently addressed in the UI. Defaults to mainAgentProfileId. */
+  activeAgentProfileId?: string;
   /** SDK cwd for session storage - set once at creation, never changes. Ensures SDK can find session transcripts regardless of workingDirectory changes. */
   sdkCwd?: string;
   /** Shared viewer URL (if shared via viewer) */
@@ -247,6 +252,10 @@ export interface SessionHeader {
   enabledSourceSlugs?: string[];
   /** Working directory for this session (used by agent for bash commands and context) */
   workingDirectory?: string;
+  /** Agent profile used as this session's main/default agent. */
+  mainAgentProfileId?: string;
+  /** Agent profile currently addressed in the UI. Defaults to mainAgentProfileId. */
+  activeAgentProfileId?: string;
   /** SDK cwd for session storage - set once at creation, never changes */
   sdkCwd?: string;
   /** Shared viewer URL (if shared via viewer) */
@@ -334,6 +343,8 @@ export interface SessionMetadata {
   sharedId?: string;
   /** Working directory for this session */
   workingDirectory?: string;
+  mainAgentProfileId?: string;
+  activeAgentProfileId?: string;
   /** SDK cwd for session storage - set once at creation, never changes */
   sdkCwd?: string;
   /** Role/type of the last message (for badge display without loading messages) */

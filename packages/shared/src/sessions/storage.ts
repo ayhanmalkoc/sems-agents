@@ -181,6 +181,8 @@ export async function createSession(
     workingDirectory?: string;
     permissionMode?: SessionConfig['permissionMode'];
     enabledSourceSlugs?: string[];
+    mainAgentProfileId?: string;
+    activeAgentProfileId?: string;
     model?: string;
     llmConnection?: string;
     hidden?: boolean;
@@ -212,6 +214,8 @@ export async function createSession(
     sdkCwd,
     permissionMode: options?.permissionMode,
     enabledSourceSlugs: options?.enabledSourceSlugs,
+    mainAgentProfileId: options?.mainAgentProfileId,
+    activeAgentProfileId: options?.activeAgentProfileId,
     model: options?.model,
     llmConnection: options?.llmConnection,
     hidden: options?.hidden,
@@ -532,6 +536,8 @@ export async function updateSessionMetadata(
     | 'lastReadMessageId'
     | 'hasUnread'
     | 'enabledSourceSlugs'
+    | 'mainAgentProfileId'
+    | 'activeAgentProfileId'
     | 'workingDirectory'
     | 'sdkCwd'
     | 'permissionMode'
@@ -551,6 +557,8 @@ export async function updateSessionMetadata(
   if (updates.sessionStatus !== undefined) session.sessionStatus = updates.sessionStatus;
   if (updates.labels !== undefined) session.labels = updates.labels;
   if (updates.enabledSourceSlugs !== undefined) session.enabledSourceSlugs = updates.enabledSourceSlugs;
+  if (updates.mainAgentProfileId !== undefined) session.mainAgentProfileId = updates.mainAgentProfileId;
+  if (updates.activeAgentProfileId !== undefined) session.activeAgentProfileId = updates.activeAgentProfileId;
   if (updates.workingDirectory !== undefined) session.workingDirectory = updates.workingDirectory;
   if (updates.sdkCwd !== undefined) session.sdkCwd = updates.sdkCwd;
   if (updates.permissionMode !== undefined) session.permissionMode = updates.permissionMode;

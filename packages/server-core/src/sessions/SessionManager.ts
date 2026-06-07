@@ -39,6 +39,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
+import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile } from '@craft-agent/shared/agent-profiles'
 import {
   // Session persistence functions
   listSessions as listStoredSessions,
@@ -832,6 +833,10 @@ interface ManagedSession {
   model?: string
   // LLM connection slug for this session (locked after first message)
   llmConnection?: string
+  /** Agent profile used as this session's main/default agent. */
+  mainAgentProfileId?: string
+  /** Agent profile currently addressed in the UI. */
+  activeAgentProfileId?: string
   // Whether the connection is locked (cannot be changed after first agent creation)
   connectionLocked?: boolean
   // Thinking level for this session ('off', 'think', 'max')
@@ -2483,10 +2488,20 @@ export class SessionManager implements ISessionManager {
       normalizeThinkingLevel(options?.thinkingLevel)
       ?? normalizeThinkingLevel(wsConfig?.defaults?.thinkingLevel)
       ?? getDefaultThinkingLevel()
+    const mainAgentProfile = getAgentProfile(
+      workspaceRootPath,
+      options?.mainAgentProfileId ?? DEFAULT_AGENT_PROFILE_ID,
+    )
+    const activeAgentProfileId = options?.activeAgentProfileId ?? mainAgentProfile?.id
+    const defaultLlmConnection = options?.llmConnection
+      ?? mainAgentProfile?.llmConnection
+      ?? wsConfig?.defaults?.defaultLlmConnection
+      ?? getDefaultLlmConnection()
+      ?? undefined
     // Get default model from workspace config (used when no session-specific model is set)
-    const defaultModel = wsConfig?.defaults?.model
+    const defaultModel = mainAgentProfile?.model ?? wsConfig?.defaults?.model
     // Get default enabled sources from workspace config
-    const defaultEnabledSourceSlugs = options?.enabledSourceSlugs ?? wsConfig?.defaults?.enabledSourceSlugs
+    const defaultEnabledSourceSlugs = options?.enabledSourceSlugs ?? mainAgentProfile?.enabledSourceSlugs ?? wsConfig?.defaults?.enabledSourceSlugs
 
     // Resolve model tier hints ('fast' / 'default') to actual model IDs.
     // EditPopover uses tier hints instead of hardcoded Anthropic model names
@@ -2494,7 +2509,7 @@ export class SessionManager implements ISessionManager {
     let resolvedModelOption = options?.model || defaultModel
     if (resolvedModelOption === 'fast' || resolvedModelOption === 'default') {
       const tierConnection = resolveSessionConnection(
-        options?.llmConnection,
+        defaultLlmConnection,
         wsConfig?.defaults?.defaultLlmConnection,
       )
       if (tierConnection) {
@@ -2508,7 +2523,7 @@ export class SessionManager implements ISessionManager {
 
     // Resolve backend target early for branching policy checks.
     const targetBackendContext = resolveBackendContext({
-      sessionConnectionSlug: options?.llmConnection,
+      sessionConnectionSlug: defaultLlmConnection,
       workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection,
       managedModel: resolvedModelOption,
     })
@@ -2723,6 +2738,11 @@ export class SessionManager implements ISessionManager {
       name: options?.name,
       permissionMode: defaultPermissionMode,
       workingDirectory: resolvedWorkingDir,
+      enabledSourceSlugs: defaultEnabledSourceSlugs,
+      model: resolvedModelOption,
+      llmConnection: defaultLlmConnection,
+      mainAgentProfileId: mainAgentProfile?.id,
+      activeAgentProfileId,
       hidden: options?.hidden,
       sessionStatus: options?.sessionStatus,
       labels: options?.labels,
@@ -2808,9 +2828,11 @@ export class SessionManager implements ISessionManager {
       permissionMode: defaultPermissionMode,
       workingDirectory: resolvedWorkingDir,
       model: resolvedModel,
-      llmConnection: options?.llmConnection,
+      llmConnection: defaultLlmConnection,
       thinkingLevel: defaultThinkingLevel,
-      systemPromptPreset: options?.systemPromptPreset,
+      mainAgentProfileId: mainAgentProfile?.id,
+      activeAgentProfileId,
+      systemPromptPreset: options?.systemPromptPreset ?? mainAgentProfile?.systemPrompt,
       enabledSourceSlugs: defaultEnabledSourceSlugs,
       branchFromMessageId: validatedBranch?.sourceMessageId,
       branchContextStrategy: validatedBranch?.branchContextStrategy,
@@ -5448,6 +5470,16 @@ export class SessionManager implements ISessionManager {
     }
     this.setLastMessageClientId(sessionId, rpcContext?.callerClientId)
 
+    const profileForMessage = managed.mainAgentProfileId
+      ? getAgentProfile(managed.workspace.rootPath, managed.mainAgentProfileId)
+      : undefined
+    if (profileForMessage?.skillSlugs?.length) {
+      options = {
+        ...options,
+        skillSlugs: [...new Set([...(options?.skillSlugs ?? []), ...profileForMessage.skillSlugs])],
+      }
+    }
+
     // Source-activation auto-retry dedup (craft-agents-oss#804). When the server
     // has just scheduled or committed a "[<slug> activated]" retry, drop a matching
     // duplicate that arrives from a legacy renderer still running the client-side
@@ -6682,6 +6714,38 @@ export class SessionManager implements ISessionManager {
       const watcher = this.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     }
+  }
+
+  /**
+   * Set the agent profile for a session. Applies to subsequent messages.
+   */
+  async setSessionAgentProfile(sessionId: string, agentProfileId: string): Promise<void> {
+    const managed = this.sessions.get(sessionId)
+    if (!managed) {
+      throw new Error(`Session not found: ${sessionId}`)
+    }
+    const profile = getAgentProfile(managed.workspace.rootPath, agentProfileId)
+    if (!profile) {
+      throw new Error(`Agent profile not found: ${agentProfileId}`)
+    }
+
+    managed.mainAgentProfileId = profile.id
+    managed.activeAgentProfileId = profile.id
+    if (profile.model) managed.model = profile.model
+    if (profile.thinkingLevel) managed.thinkingLevel = profile.thinkingLevel
+    if (profile.llmConnection && !managed.connectionLocked) managed.llmConnection = profile.llmConnection
+    if (profile.enabledSourceSlugs) managed.enabledSourceSlugs = profile.enabledSourceSlugs
+    if (profile.systemPrompt) managed.systemPromptPreset = profile.systemPrompt
+
+    this.setMetadataWriteGuard(managed)
+    this.sendEvent({
+      type: 'agent_profile_changed',
+      sessionId: managed.id,
+      mainAgentProfileId: managed.mainAgentProfileId,
+      activeAgentProfileId: managed.activeAgentProfileId,
+    }, managed.workspace.id)
+    this.persistSession(managed)
+    await this.flushSession(managed.id)
   }
 
   /**

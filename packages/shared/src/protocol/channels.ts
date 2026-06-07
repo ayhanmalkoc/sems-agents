@@ -264,6 +264,13 @@ export const RPC_CHANNELS = {
     OPEN_FINDER: 'skills:openFinder',
     CHANGED: 'skills:changed',
   },
+  agentProfiles: {
+    LIST: 'agentProfiles:list',
+    CREATE: 'agentProfiles:create',
+    UPDATE: 'agentProfiles:update',
+    DELETE: 'agentProfiles:delete',
+    CHANGED: 'agentProfiles:changed',
+  },
   statuses: {
     LIST: 'statuses:list',
     REORDER: 'statuses:reorder',

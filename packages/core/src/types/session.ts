@@ -57,4 +57,6 @@ export interface SessionMetadata {
   isFlagged?: boolean;     // Whether this session is flagged
   status?: SessionStatus;  // Workflow status
   hidden?: boolean;        // Whether this session is hidden from session list
+  mainAgentProfileId?: string;
+  activeAgentProfileId?: string;
 }
