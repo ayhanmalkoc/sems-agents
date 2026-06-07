@@ -2161,6 +2161,11 @@ function AppShellContent({
 
   // Get title based on navigation state
   const listTitle = React.useMemo(() => {
+    // Agents navigator
+    if (isAgentsNavigation(navState)) {
+      return 'Agents'
+    }
+
     // Sources navigator
     if (isSourcesNavigation(navState)) {
       return t("sidebar.sources")
