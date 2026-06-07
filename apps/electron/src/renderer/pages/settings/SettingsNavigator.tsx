@@ -1,28 +1,18 @@
 /**
  * SettingsNavigator
  *
- * Navigator panel content for settings. Displays a list of settings sections
- * (App, Workspace, Shortcuts, Preferences) that can be selected to show in the details panel.
- *
- * Styling follows SessionList/SourcesListPanel patterns for visual consistency.
+ * Calm, grouped settings navigation. Routes/settings pages stay unchanged.
  */
 
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MoreHorizontal, AppWindow } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  StyledDropdownMenuContent,
-  StyledDropdownMenuItem,
-} from '@/components/ui/styled-dropdown'
-import { DropdownMenuProvider } from '@/components/ui/menu-context'
+import { ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import type { SettingsSubpage } from '../../../shared/types'
 import { SETTINGS_ITEMS } from '../../../shared/menu-schema'
 import { SETTINGS_ICONS } from '@/components/icons/SettingsIcons'
+import { navigate, routes } from '@/lib/navigate'
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
@@ -30,13 +20,7 @@ export const meta: DetailsPageMeta = {
 }
 
 interface SettingsNavigatorProps {
-  /**
-   * Currently selected settings subpage. `null` means the bare `settings`
-   * route (no row highlighted) — happens in compact mode where the navigator
-   * stands alone before the user drills into a subpage.
-   */
   selectedSubpage: SettingsSubpage | null
-  /** Called when a subpage is selected */
   onSelectSubpage: (subpage: SettingsSubpage) => void
 }
 
@@ -44,139 +28,82 @@ interface SettingsItem {
   id: SettingsSubpage
   label: string
   icon: React.ComponentType<{ className?: string }>
-  description: string
 }
 
-interface SettingsItemRowProps {
-  item: SettingsItem
-  isSelected: boolean
-  isFirst: boolean
-  onSelect: () => void
-}
+const SETTINGS_GROUPS: Array<{ label: string; ids: SettingsSubpage[] }> = [
+  { label: 'General', ids: ['app', 'appearance', 'input', 'preferences', 'shortcuts'] },
+  { label: 'AI & Workspace', ids: ['ai', 'workspace', 'permissions', 'labels'] },
+  { label: 'Integrations', ids: ['messaging', 'server'] },
+]
 
-/**
- * SettingsItemRow - Individual settings item with dropdown menu
- * Tracks menu open state to keep "..." button visible when menu is open
- */
-function SettingsItemRow({ item, isSelected, isFirst, onSelect }: SettingsItemRowProps) {
-  const { t } = useTranslation()
-  const [menuOpen, setMenuOpen] = useState(false)
+function SettingsRow({ item, selected, onSelect }: { item: SettingsItem; selected: boolean; onSelect: () => void }) {
   const Icon = item.icon
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex h-8 w-full items-center gap-2 rounded-[8px] px-2 text-left text-sm outline-none transition-colors',
+        selected ? 'bg-foreground/7 text-foreground' : 'text-foreground/80 hover:bg-foreground/4 hover:text-foreground',
+      )}
+    >
+      <Icon className={cn('h-3.5 w-3.5 shrink-0', selected ? 'text-foreground' : 'text-muted-foreground')} />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+    </button>
+  )
+}
 
-  // Open settings page in a new window via deep link
-  const handleOpenInNewWindow = () => {
-    window.electronAPI.openUrl(`craftagents://settings/${item.id}?window=focused`)
-  }
+export default function SettingsNavigator({ selectedSubpage, onSelectSubpage }: SettingsNavigatorProps) {
+  const { t } = useTranslation()
+
+  const settingsItems = useMemo(() => {
+    const items = new Map<SettingsSubpage, SettingsItem>()
+    for (const item of SETTINGS_ITEMS) {
+      items.set(item.id, {
+        id: item.id,
+        label: t(item.labelKey),
+        icon: SETTINGS_ICONS[item.id],
+      })
+    }
+    return items
+  }, [t])
 
   return (
-    <div className="settings-item" data-selected={isSelected || undefined}>
-      {/* Separator - only show if not first */}
-      {!isFirst && (
-        <div className="settings-separator pl-12 pr-4">
-          <Separator />
-        </div>
-      )}
-      {/* Wrapper for button with proper margins */}
-      <div className="settings-content relative group select-none pl-2 mr-2">
-        {/* Icon - positioned absolutely for consistent alignment */}
-        <div className="absolute left-[20px] top-[14px] z-10">
-          <Icon
-            className={cn(
-              'w-4 h-4 shrink-0',
-              isSelected ? 'text-foreground' : 'text-muted-foreground'
-            )}
-          />
-        </div>
-        {/* Main content button */}
+    <div className="flex h-full flex-col bg-background">
+      <div className="shrink-0 px-2 pb-2 pt-2">
         <button
           type="button"
-          onClick={onSelect}
-          className={cn(
-            'flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]',
-            // Fast hover transition (75ms vs default 150ms)
-            'transition-[background-color] duration-75',
-            isSelected
-              ? 'bg-foreground/5 hover:bg-foreground/7'
-              : 'hover:bg-foreground/2'
-          )}
+          onClick={() => navigate(routes.view.allSessions())}
+          className="flex h-8 w-full items-center gap-2 rounded-[8px] px-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
         >
-          {/* Spacer for icon */}
-          <div className="w-6 h-5 shrink-0" />
-          {/* Content column */}
-          <div className="flex flex-col min-w-0 flex-1">
-            <span
-              className={cn(
-                'font-medium',
-                isSelected ? 'text-foreground' : 'text-foreground/80'
-              )}
-            >
-              {item.label}
-            </span>
-            <span className="text-xs text-foreground/60 line-clamp-1">
-              {item.description}
-            </span>
-          </div>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span className="truncate">{t('settings.backToApp')}</span>
         </button>
-        {/* Action buttons - visible on hover or when menu is open */}
-        <div
-          data-touch-reveal="true"
-          className={cn(
-            'absolute right-2 top-2 transition-opacity z-10',
-            menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          )}
-        >
-          <div className="flex items-center rounded-[8px] overflow-hidden border border-transparent hover:border-border/50">
-            <DropdownMenu modal={true} onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <div className="p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer">
-                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </DropdownMenuTrigger>
-              <StyledDropdownMenuContent align="end">
-                <DropdownMenuProvider>
-                  <StyledDropdownMenuItem onClick={handleOpenInNewWindow}>
-                    <AppWindow className="h-3.5 w-3.5" />
-                    <span className="flex-1">{t("sessionMenu.openInNewWindow")}</span>
-                  </StyledDropdownMenuItem>
-                </DropdownMenuProvider>
-              </StyledDropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
       </div>
-    </div>
-  )
-}
 
-export default function SettingsNavigator({
-  selectedSubpage,
-  onSelectSubpage,
-}: SettingsNavigatorProps) {
-  const { t } = useTranslation()
-
-  const settingsItems: SettingsItem[] = useMemo(() =>
-    SETTINGS_ITEMS.map((item) => ({
-      id: item.id,
-      label: t(item.labelKey),
-      icon: SETTINGS_ICONS[item.id],
-      description: t(item.descriptionKey),
-    })),
-    [t]
-  )
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto">
-        <div className="pt-2">
-          {settingsItems.map((item, index) => (
-            <SettingsItemRow
-              key={item.id}
-              item={item}
-              isSelected={selectedSubpage === item.id}
-              isFirst={index === 0}
-              onSelect={() => onSelectSubpage(item.id)}
-            />
-          ))}
+      <div className="flex-1 overflow-y-auto px-2 pb-3">
+        <div className="space-y-5">
+          {SETTINGS_GROUPS.map((group) => {
+            const items = group.ids.map((id) => settingsItems.get(id)).filter(Boolean) as SettingsItem[]
+            if (items.length === 0) return null
+            return (
+              <section key={group.label} className="space-y-1">
+                <div className="px-2 pb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
+                  {group.label}
+                </div>
+                <div className="space-y-0.5">
+                  {items.map((item) => (
+                    <SettingsRow
+                      key={item.id}
+                      item={item}
+                      selected={selectedSubpage === item.id}
+                      onSelect={() => onSelectSubpage(item.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
       </div>
     </div>

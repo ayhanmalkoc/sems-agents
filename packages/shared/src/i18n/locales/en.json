@@ -807,6 +807,7 @@
   "settings.appearance.system": "System",
   "settings.appearance.themeWarning": "Theme warning:",
   "settings.appearance.title": "Appearance",
+  "settings.backToApp": "Back to app",
   "settings.appearance.toolHeader": "Tool",
   "settings.appearance.toolIcons": "Tool Icons",
   "settings.appearance.toolIconsDesc": "Icons shown next to CLI commands in chat activity. Stored in ~/.craft-agent/tool-icons/.",
