@@ -486,6 +486,8 @@
   "menu.minimize": "Minimize",
   "menu.newChat": "New Session",
   "menu.newWindow": "New Window",
+  "menu.tools": "Tools",
+  "menu.files": "Files",
   "menu.paste": "Paste",
   "menu.quitCraftAgents": "Quit Craft Agents",
   "menu.redo": "Redo",

@@ -1980,6 +1980,17 @@ function AppShellContent({
     }
   }, [])
 
+  const handleOpenFilesTool = useCallback(async () => {
+    const directory = activeSessionWorkingDirectory || activeWorkspace?.rootPath
+    if (!directory) return
+    try {
+      await window.electronAPI.showInFolder(directory)
+    } catch (error) {
+      console.error('[Chat] Failed to open files tool:', error)
+      toast.error(t('toast.failedToOpenFile'))
+    }
+  }, [activeSessionWorkingDirectory, activeWorkspace?.rootPath, t])
+
   // Delete Source - simplified since agents system is removed
   const handleDeleteSource = useCallback(async (sourceSlug: string) => {
     if (!activeWorkspace) return
@@ -2292,6 +2303,8 @@ function AppShellContent({
           onToggleFocusMode={() => setIsSidebarAndNavigatorHidden(prev => !prev)}
           onAddSessionPanel={() => handleNewChat(true)}
           onAddBrowserPanel={() => { void handleNewBrowserWindow() }}
+          onOpenFilesTool={() => { void handleOpenFilesTool() }}
+          hasFilesTool={Boolean(activeSessionWorkingDirectory || activeWorkspace?.rootPath)}
           isCompact={isAutoCompact}
         />
 

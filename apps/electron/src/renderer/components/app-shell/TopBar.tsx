@@ -57,6 +57,8 @@ interface TopBarProps {
   onToggleFocusMode: () => void
   onAddSessionPanel: () => void
   onAddBrowserPanel: () => void
+  onOpenFilesTool?: () => void
+  hasFilesTool?: boolean
   /** When true, hides controls that don't apply in compact/mobile layout */
   isCompact?: boolean
 }
@@ -83,6 +85,8 @@ export function TopBar({
   onToggleFocusMode,
   onAddSessionPanel,
   onAddBrowserPanel,
+  onOpenFilesTool,
+  hasFilesTool = false,
   isCompact,
 }: TopBarProps) {
   const { t } = useTranslation()
@@ -229,7 +233,7 @@ export function TopBar({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <TopBarButton aria-label={t("menu.addPanelMenu")} className="ml-1 h-[26px] w-[26px] rounded-lg">
+            <TopBarButton aria-label={t("menu.tools")} className="ml-1 h-[26px] w-[26px] rounded-lg">
               <Icons.Plus className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
             </TopBarButton>
           </DropdownMenuTrigger>
@@ -241,6 +245,11 @@ export function TopBar({
             <StyledDropdownMenuItem onClick={onAddBrowserPanel}>
               <Icons.Globe className="h-3.5 w-3.5" />
               {t("browser.newWindow")}
+            </StyledDropdownMenuItem>
+            <StyledDropdownMenuSeparator />
+            <StyledDropdownMenuItem disabled={!hasFilesTool || !onOpenFilesTool} onClick={onOpenFilesTool}>
+              <Icons.FolderOpen className="h-3.5 w-3.5" />
+              {t("menu.files")}
             </StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
