@@ -398,7 +398,7 @@ export function FreeFormInput({
 
   // Get display name for current model (full name, not short name)
   const currentModelDisplayName = React.useMemo(() => {
-    const modelToDisplay = connectionDefaultModel ?? currentModel
+    const modelToDisplay = currentModel || connectionDefaultModel || ''
     const model = availableModels.find(m =>
       typeof m === 'string' ? m === modelToDisplay : m.id === modelToDisplay
     )
