@@ -410,6 +410,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   const visibleAgentProfiles = React.useMemo(() => (agentProfiles ?? []).filter(profile => profile.visibility !== 'internal'), [agentProfiles])
   const activeAgentProfileId = session?.activeAgentProfileId || session?.mainAgentProfileId || sessionMeta?.activeAgentProfileId || sessionMeta?.mainAgentProfileId || 'default'
   const activeAgent = visibleAgentProfiles.find(profile => profile.id === activeAgentProfileId) || visibleAgentProfiles.find(profile => profile.id === 'default')
+  const agentPermissionMode = activeAgent?.permissionMode ?? sessionOpts.permissionMode
+  const agentThinkingLevel = activeAgent?.thinkingLevel ?? sessionOpts.thinkingLevel
+  const agentConnection = activeAgent?.llmConnection ?? session?.llmConnection ?? sessionMeta?.llmConnection
+  const agentSourceSlugs = activeAgent?.enabledSourceSlugs ?? session?.enabledSourceSlugs ?? sessionMeta?.enabledSourceSlugs ?? []
   const headerTitle = displayTitle
   const handleAgentProfileChange = React.useCallback(async (agentProfileId: string) => {
     if (!session && !sessionMeta) return
@@ -728,8 +732,9 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 onSendMessage={() => {}}
                 onOpenFile={handleOpenFile}
                 onOpenUrl={handleOpenUrl}
-                currentModel={effectiveModel}
+                currentModel={activeAgent?.model ?? effectiveModel}
                 onModelChange={handleModelChange}
+                currentConnection={agentConnection}
                 onConnectionChange={handleConnectionChange}
                 agentProfiles={visibleAgentProfiles}
                 activeAgentProfileId={activeAgentProfileId}
@@ -739,9 +744,9 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 onRespondToPermission={onRespondToPermission}
                 pendingCredential={undefined}
                 onRespondToCredential={onRespondToCredential}
-                thinkingLevel={sessionOpts.thinkingLevel}
+                thinkingLevel={agentThinkingLevel}
                 onThinkingLevelChange={(level) => setOption('thinkingLevel', level)}
-                permissionMode={sessionOpts.permissionMode}
+                permissionMode={agentPermissionMode}
                 onPermissionModeChange={setPermissionMode}
                 enabledModes={enabledModes}
                 inputValue={inputValue}
@@ -749,6 +754,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 attachmentsValue={attachmentsValue}
                 onAttachmentsChange={handleAttachmentsChange}
                 sources={enabledSources}
+                enabledSourceSlugs={agentSourceSlugs}
                 skills={skills}
                 sessionStatuses={sessionStatuses}
                 onSessionStatusChange={handleSessionStatusChange}
@@ -809,8 +815,9 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             }}
             onOpenFile={handleOpenFile}
             onOpenUrl={handleOpenUrl}
-            currentModel={effectiveModel}
+            currentModel={activeAgent?.model ?? effectiveModel}
             onModelChange={handleModelChange}
+            currentConnection={agentConnection}
             onConnectionChange={handleConnectionChange}
             agentProfiles={visibleAgentProfiles}
             activeAgentProfileId={activeAgentProfileId}
@@ -820,9 +827,9 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             onRespondToPermission={onRespondToPermission}
             pendingCredential={pendingCredential}
             onRespondToCredential={onRespondToCredential}
-            thinkingLevel={sessionOpts.thinkingLevel}
+            thinkingLevel={agentThinkingLevel}
             onThinkingLevelChange={(level) => setOption('thinkingLevel', level)}
-            permissionMode={sessionOpts.permissionMode}
+            permissionMode={agentPermissionMode}
             onPermissionModeChange={setPermissionMode}
             enabledModes={enabledModes}
             inputValue={inputValue}
@@ -830,6 +837,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             attachmentsValue={attachmentsValue}
             onAttachmentsChange={handleAttachmentsChange}
             sources={enabledSources}
+            enabledSourceSlugs={agentSourceSlugs}
             skills={skills}
             labels={labels}
             onLabelsChange={(newLabels) => onSessionLabelsChange?.(sessionId, newLabels)}

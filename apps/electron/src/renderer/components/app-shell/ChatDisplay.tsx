@@ -137,6 +137,8 @@ interface ChatDisplayProps {
   currentModel: string
   onModelChange: (model: string, connection?: string) => void
   // Connection selection (locked after first message)
+  /** Current effective LLM connection slug */
+  currentConnection?: string
   /** Callback when LLM connection changes (only works when session is empty) */
   onConnectionChange?: (connectionSlug: string) => void
   /** Ref for the input, used for external focus control */
@@ -185,6 +187,8 @@ interface ChatDisplayProps {
   // Source selection
   /** Available sources (enabled only) */
   sources?: LoadedSource[]
+  /** Current effective source slugs */
+  enabledSourceSlugs?: string[]
   /** Callback when source selection changes */
   onSourcesChange?: (slugs: string[]) => void
   // Skill selection (for @mentions)
@@ -446,6 +450,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   onOpenUrl,
   currentModel,
   onModelChange,
+  currentConnection,
   onConnectionChange,
   textareaRef: externalTextareaRef,
   disabled = false,
@@ -472,6 +477,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   onManageAgents,
   // Sources
   sources,
+  enabledSourceSlugs,
   onSourcesChange,
   // Skills (for @mentions)
   skills,
@@ -1738,7 +1744,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                                 model: session.model,
                                 permissionMode: session.permissionMode,
                                 workingDirectory: session.workingDirectory,
-                                enabledSourceSlugs: session.enabledSourceSlugs,
+                                enabledSourceSlugs: enabledSourceSlugs ?? session.enabledSourceSlugs,
                               }
                             )
                             navigate(routes.view.allSessions(child.id), { newPanel: resolveBranchNewPanelOption(options) })
@@ -1945,7 +1951,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               attachmentsValue,
               onAttachmentsChange,
               sources,
-              enabledSourceSlugs: session.enabledSourceSlugs,
+              enabledSourceSlugs: enabledSourceSlugs ?? session.enabledSourceSlugs,
               onSourcesChange,
               skills,
               workspaceId,
@@ -1954,7 +1960,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               disableSend: disableSend || connectionUnavailable,
               connectionUnavailable,
               isEmptySession: session.messages.length === 0,
-              currentConnection: session.llmConnection,
+              currentConnection: currentConnection ?? session.llmConnection,
               onConnectionChange,
               agentProfiles,
               activeAgentProfileId,

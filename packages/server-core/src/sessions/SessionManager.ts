@@ -6731,29 +6731,56 @@ export class SessionManager implements ISessionManager {
       throw new Error(`Agent profile not found: ${agentProfileId}`)
     }
 
+    const wsConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+    const globalDefaults = loadConfigDefaults()
+    const resolvedPermissionMode = profile.permissionMode
+      ?? wsConfig?.defaults?.permissionMode
+      ?? globalDefaults.workspaceDefaults.permissionMode
+    const resolvedThinkingLevel = normalizeThinkingLevel(profile.thinkingLevel)
+      ?? normalizeThinkingLevel(wsConfig?.defaults?.thinkingLevel)
+      ?? getDefaultThinkingLevel()
+    const resolvedConnection = profile.llmConnection
+      ?? wsConfig?.defaults?.defaultLlmConnection
+      ?? getDefaultLlmConnection()
+      ?? undefined
+    const resolvedConnectionDetails = resolveSessionConnection(
+      resolvedConnection,
+      wsConfig?.defaults?.defaultLlmConnection,
+    )
+    const resolvedModel = profile.model
+      ?? wsConfig?.defaults?.model
+      ?? resolvedConnectionDetails?.defaultModel
+      ?? undefined
+    const resolvedSourceSlugs = profile.enabledSourceSlugs
+      ?? wsConfig?.defaults?.enabledSourceSlugs
+      ?? []
+
     managed.mainAgentProfileId = profile.id
     managed.activeAgentProfileId = profile.id
-    if (profile.model) managed.model = profile.model
-    if (profile.permissionMode) {
-      const previousEffectiveMode = getPermissionModeDiagnostics(sessionId).permissionMode
-      managed.permissionMode = profile.permissionMode
-      if (previousEffectiveMode !== profile.permissionMode) {
-        setPermissionMode(sessionId, profile.permissionMode, { changedBy: 'system' })
-      }
-      const diagnostics = getPermissionModeDiagnostics(sessionId)
-      managed.previousPermissionMode = diagnostics.previousPermissionMode
-      if (managed.agent) {
-        managed.agent.setPermissionMode(profile.permissionMode)
-      }
+    managed.model = resolvedModel
+    managed.permissionMode = resolvedPermissionMode
+    managed.thinkingLevel = resolvedThinkingLevel
+    if (!managed.connectionLocked) {
+      managed.llmConnection = resolvedConnection
     }
-    if (profile.thinkingLevel) managed.thinkingLevel = profile.thinkingLevel
-    if (profile.llmConnection && !managed.connectionLocked) managed.llmConnection = profile.llmConnection
-    if (profile.enabledSourceSlugs) {
-      await this.setSessionSources(sessionId, profile.enabledSourceSlugs)
-    }
-    if (profile.systemPrompt) managed.systemPromptPreset = profile.systemPrompt
+    managed.systemPromptPreset = profile.systemPrompt
 
+    const previousEffectiveMode = getPermissionModeDiagnostics(sessionId).permissionMode
+    if (previousEffectiveMode !== resolvedPermissionMode) {
+      setPermissionMode(sessionId, resolvedPermissionMode, { changedBy: 'system' })
+    }
     const permissionDiagnostics = getPermissionModeDiagnostics(sessionId)
+    managed.previousPermissionMode = permissionDiagnostics.previousPermissionMode
+    if (managed.agent) {
+      managed.agent.setPermissionMode(resolvedPermissionMode)
+      managed.agent.setThinkingLevel(resolvedThinkingLevel)
+      if (resolvedModel) {
+        managed.agent.setModel(resolvedModel)
+      }
+    }
+
+    await this.setSessionSources(sessionId, resolvedSourceSlugs)
+
     this.setMetadataWriteGuard(managed)
     this.sendEvent({
       type: 'agent_profile_changed',
@@ -6765,15 +6792,14 @@ export class SessionManager implements ISessionManager {
       changedAt: permissionDiagnostics.lastChangedAt,
       changedBy: permissionDiagnostics.lastChangedBy,
       thinkingLevel: managed.thinkingLevel,
-      model: managed.model,
-      llmConnection: managed.llmConnection,
+      model: managed.model ?? null,
+      llmConnection: managed.llmConnection ?? null,
       enabledSourceSlugs: managed.enabledSourceSlugs,
       systemPromptPreset: managed.systemPromptPreset,
     }, managed.workspace.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)
   }
-
   /**
    * Set the thinking level for a session. See {@link ThinkingLevel} for valid values.
    * This is sticky and persisted across messages.

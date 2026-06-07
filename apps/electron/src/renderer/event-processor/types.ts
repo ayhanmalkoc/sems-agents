@@ -150,8 +150,8 @@ export interface AgentProfileChangedEvent {
   changedAt?: string
   changedBy?: 'user' | 'system' | 'restore' | 'automation' | 'unknown'
   thinkingLevel?: ThinkingLevel
-  model?: string
-  llmConnection?: string
+  model?: string | null
+  llmConnection?: string | null
   enabledSourceSlugs?: string[]
   systemPromptPreset?: string
 }

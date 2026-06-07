@@ -189,7 +189,7 @@ export type SessionEvent =
   | { type: 'plan_submitted'; sessionId: string; message: Message }
   | { type: 'sources_changed'; sessionId: string; enabledSourceSlugs: string[] }
   | { type: 'labels_changed'; sessionId: string; labels: string[] }
-  | { type: 'agent_profile_changed'; sessionId: string; mainAgentProfileId?: string; activeAgentProfileId?: string; permissionMode?: PermissionMode; modeVersion?: number; changedAt?: string; changedBy?: PermissionModeState['changedBy']; thinkingLevel?: ThinkingLevel; model?: string; llmConnection?: string; enabledSourceSlugs?: string[]; systemPromptPreset?: string }
+  | { type: 'agent_profile_changed'; sessionId: string; mainAgentProfileId?: string; activeAgentProfileId?: string; permissionMode?: PermissionMode; modeVersion?: number; changedAt?: string; changedBy?: PermissionModeState['changedBy']; thinkingLevel?: ThinkingLevel; model?: string | null; llmConnection?: string | null; enabledSourceSlugs?: string[]; systemPromptPreset?: string }
   | { type: 'connection_changed'; sessionId: string; connectionSlug: string; supportsBranching?: boolean }
   | { type: 'task_backgrounded'; sessionId: string; toolUseId: string; taskId: string; intent?: string; turnId?: string }
   | { type: 'shell_backgrounded'; sessionId: string; toolUseId: string; shellId: string; intent?: string; command?: string; turnId?: string }
