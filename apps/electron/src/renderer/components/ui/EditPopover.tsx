@@ -80,6 +80,8 @@ export type EditContextKey =
   | 'add-source-mcp'   // Filter-specific: user is viewing MCPs
   | 'add-source-local' // Filter-specific: user is viewing Local Folders
   | 'add-skill'
+  | 'add-agent'
+  | 'edit-agent'
   | 'edit-statuses'
   | 'edit-labels'
   | 'edit-auto-rules'
@@ -400,6 +402,51 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     overridePlaceholderKey: 'editPopover.placeholder.addSkill',
   }),
 
+
+  'add-agent': (location) => ({
+    context: {
+      label: 'Add Agent',
+      filePath: `${location}/agent-profiles.json`,
+      context:
+        'The user wants to create a new agent profile. ' +
+        'Agent profiles are stored in agent-profiles.json as reusable workspace agents. ' +
+        'Create exactly one new profile with kind "user" and visibility "user-selectable". ' +
+        'Do not modify system or template agents. Generate a unique lowercase id slug. ' +
+        'Allowed fields include: id, kind, name, description, icon, color, systemPrompt, model, llmConnection, thinkingLevel, permissionMode, enabledSourceSlugs, skillSlugs, delegationMode, delegationAllowedAgentIds, visibility. ' +
+        'Use only existing source/skill/agent ids when referencing them. Confirm clearly when done.',
+    },
+    example: 'Create a safe research agent',
+    overridePlaceholder: 'What kind of agent should I create?',
+    displayLabelKey: 'editPopover.label.addAgent',
+    exampleKey: 'editPopover.example.addAgent',
+    overridePlaceholderKey: 'editPopover.placeholder.addAgent',
+    model: 'fast',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
+  'edit-agent': (location) => {
+    const [workspaceRoot, agentId] = location.split('::')
+    return {
+      context: {
+        label: 'Edit Agent',
+        filePath: `${workspaceRoot}/agent-profiles.json`,
+        context:
+          `The user wants to improve the user agent profile with id "${agentId || 'selected'}". ` +
+          'Only edit that one user agent. Do not modify system or template agents. ' +
+          'If the selected agent is system/template/read-only, tell the user to duplicate it first. ' +
+          'Keep the profile schema valid and preserve unrelated profiles. Confirm clearly when done.',
+      },
+      example: 'Make this agent better at code review',
+      overridePlaceholder: 'How should I improve this agent?',
+      displayLabelKey: 'editPopover.label.editAgent',
+      exampleKey: 'editPopover.example.editAgent',
+      overridePlaceholderKey: 'editPopover.placeholder.editAgent',
+      model: 'fast',
+      systemPromptPreset: 'mini',
+      inlineExecution: true,
+    }
+  },
   // Status configuration context
   'edit-statuses': (location) => ({
     context: {

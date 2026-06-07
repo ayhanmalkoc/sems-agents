@@ -28,21 +28,26 @@ import {
   useNavigationState,
   isSessionsNavigation,
   isSourcesNavigation,
+  isAgentsNavigation,
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
-import { sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
+import { agentSelection, sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
 import { SourceInfoPage, ChatPage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
+import AgentInfoPage from '@/pages/AgentInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'
 import { automationsAtom } from '@/atoms/automations'
 import { SendResourceToWorkspaceDialog, type SendResourceType } from './SendResourceToWorkspaceDialog'
+import { navigate, routes } from '@/lib/navigate'
+import { toast } from 'sonner'
+import type { AgentProfile } from '../../../shared/types'
 
 export interface MainContentPanelProps {
   /** Whether both sidebar and navigator are hidden (focus mode / CMD+.) */
@@ -120,6 +125,11 @@ export function MainContentPanel({
   }, [selectedAutomationId, getAutomationHistory])
 
   // Source multi-select state
+  const isAgentMultiSelectActive = agentSelection.useIsMultiSelectActive()
+  const selectedAgentIds = agentSelection.useSelectedIds()
+  const agentSelectionCount = agentSelection.useSelectionCount()
+  const { clearMultiSelect: clearAgentSelection } = agentSelection.useSelection()
+
   const isSourceMultiSelectActive = sourceSelection.useIsMultiSelectActive()
   const sourceSelectionCount = sourceSelection.useSelectionCount()
   const selectedSourceIds = sourceSelection.useSelectedIds()
@@ -230,6 +240,34 @@ export function MainContentPanel({
     </StoplightProvider>
   )
 
+
+  const duplicateAgent = useCallback(async (agent: AgentProfile) => {
+    if (!activeWorkspaceId) return
+    try {
+      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
+        ...agent,
+        id: undefined,
+        kind: 'user',
+        name: `${agent.name} Copy`,
+        visibility: 'user-selectable',
+      })
+      toast.success('Agent duplicated')
+      navigate(routes.view.agents(created.id))
+    } catch (err) {
+      toast.error('Failed to duplicate agent', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }, [activeWorkspaceId])
+
+  const deleteAgent = useCallback(async (agent: AgentProfile) => {
+    if (!activeWorkspaceId) return
+    try {
+      await window.electronAPI.deleteAgentProfile(activeWorkspaceId, agent.id)
+      toast.success('Agent deleted')
+      navigate(routes.view.agents())
+    } catch (err) {
+      toast.error('Failed to delete agent', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }, [activeWorkspaceId])
   // Settings navigator - uses component map from settings-pages.ts.
   // Bare `settings` route (subpage === null) means navigator-only view in compact mode;
   // PanelStackContainer hides the content panel entirely. On desktop the panel still
@@ -244,6 +282,38 @@ export function MainContentPanel({
     )
   }
 
+
+  if (isAgentsNavigation(navState)) {
+    if (isAgentMultiSelectActive) {
+      return wrapWithStoplight(
+        <Panel variant="grow" className={className}>
+          <MultiSelectPanel
+            count={agentSelectionCount}
+            entityType="agent"
+            onClearSelection={clearAgentSelection}
+          />
+        </Panel>
+      )
+    }
+    if (navState.details?.type === 'agent') {
+      return wrapWithStoplight(
+        <Panel variant="grow" className={className}>
+          <AgentInfoPage
+            agentId={navState.details.agentId}
+            onDuplicateAgent={duplicateAgent}
+            onDeleteAgent={deleteAgent}
+          />
+        </Panel>
+      )
+    }
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+          <p className="text-sm">Select an agent</p>
+        </div>
+      </Panel>
+    )
+  }
   // Sources navigator - show source info, multi-select panel, or empty state
   if (isSourcesNavigation(navState)) {
     if (isSourceMultiSelectActive) {

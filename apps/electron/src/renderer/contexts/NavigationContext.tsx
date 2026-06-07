@@ -65,6 +65,7 @@ import type {
 import {
   isSessionsNavigation,
   isSourcesNavigation,
+  isAgentsNavigation,
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
@@ -90,7 +91,7 @@ export type { Route }
 
 // Re-export navigation state types for consumers
 export type { NavigationState, SessionFilter }
-export { isSessionsNavigation, isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation }
+export { isSessionsNavigation, isSourcesNavigation, isAgentsNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation }
 
 // =============================================================================
 // Context

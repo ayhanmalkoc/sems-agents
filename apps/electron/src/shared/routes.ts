@@ -122,6 +122,12 @@ export const routes = {
         ? `view/${encodeURIComponent(viewId)}/session/${sessionId}` as const
         : `view/${encodeURIComponent(viewId)}` as const,
 
+    /** Agents view (agents navigator). Pass an agent id for detail view. */
+    agents: (agentId?: string) => {
+      if (!agentId) return 'agents' as const
+      return `agents/agent/${agentId}` as const
+    },
+
     /** Sources view (sources navigator) - supports type filtering */
     sources: (params?: { sourceSlug?: string; type?: 'api' | 'mcp' | 'local' }) => {
       const { sourceSlug, type } = params ?? {}

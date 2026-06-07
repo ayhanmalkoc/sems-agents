@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'sources' | 'skills' | 'automations' | 'settings'
+export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'settings'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -61,7 +61,7 @@ export interface ParsedCompoundRoute {
  * Known prefixes that indicate a compound route
  */
 const COMPOUND_ROUTE_PREFIXES = [
-  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'sources', 'skills', 'automations', 'settings'
+  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'agents', 'sources', 'skills', 'automations', 'settings'
 ]
 
 /**
@@ -101,11 +101,23 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
       // Bare `settings` route — navigator-only view (compact) / App fallback (desktop).
       return { navigator: 'settings', details: null }
     }
+    if (subpage === 'agents') return { navigator: 'agents', details: null }
     if (!isValidSettingsSubpage(subpage)) return null
     return {
       navigator: 'settings',
       details: { type: subpage, id: subpage },
     }
+  }
+
+  // Agents navigator
+  if (first === 'agents') {
+    if (segments.length === 1) {
+      return { navigator: 'agents', details: null }
+    }
+    if (segments[1] === 'agent' && segments[2]) {
+      return { navigator: 'agents', details: { type: 'agent', id: segments[2] } }
+    }
+    return null
   }
 
   // Sources navigator - supports type filters (api, mcp, local)
@@ -504,6 +516,17 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
     return { navigator: 'settings', subpage: compound.details.type as SettingsSubpage }
   }
 
+  // Agents
+  if (compound.navigator === 'agents') {
+    if (!compound.details) {
+      return { navigator: 'agents', details: null }
+    }
+    return {
+      navigator: 'agents',
+      details: { type: 'agent', agentId: compound.details.id },
+    }
+  }
+
   // Sources - include filter if present
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -706,6 +729,13 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
     return {
       navigator: 'settings',
       details: { type: state.subpage, id: state.subpage },
+    }
+  }
+
+  if (state.navigator === 'agents') {
+    return {
+      navigator: 'agents',
+      details: state.details ? { type: 'agent', id: state.details.agentId } : null,
     }
   }
 

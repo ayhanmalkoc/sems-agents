@@ -86,7 +86,7 @@ import { useFocusZone } from "@/hooks/keyboard"
 import { useFocusContext } from "@/context/FocusContext"
 import { getSessionTitle } from "@/utils/session"
 import { useSetAtom } from "jotai"
-import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSource, LoadedSkill, PermissionMode, SourceFilter, AutomationFilter } from "../../../shared/types"
+import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSource, LoadedSkill, AgentProfile, PermissionMode, SourceFilter, AutomationFilter } from "../../../shared/types"
 import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
@@ -110,12 +110,14 @@ import {
   useNavigationState,
   isSessionsNavigation,
   isSourcesNavigation,
+  isAgentsNavigation,
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
+import { AgentsListPanel } from "./AgentsListPanel"
 import { SourcesListPanel } from "./SourcesListPanel"
 import { SkillsListPanel } from "./SkillsListPanel"
 import { AutomationsListPanel } from "../automations/AutomationsListPanel"
@@ -1062,6 +1064,64 @@ function AppShellContent({
   // Ensure session messages are loaded when selected
   const ensureMessagesLoaded = useSetAtom(ensureSessionMessagesLoadedAtom)
 
+
+  const handleAgentSelect = React.useCallback((agent: AgentProfile) => {
+    navigate(routes.view.agents(agent.id))
+  }, [])
+
+  const handleCreateAgent = React.useCallback(async () => {
+    if (!activeWorkspaceId) return
+    try {
+      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
+        kind: 'user',
+        name: 'New Agent',
+        description: 'Custom workspace agent',
+        icon: '🤖',
+        color: '#6366f1',
+        systemPrompt: 'You are New Agent. Follow this role carefully and stay focused on the user\'s request.',
+        thinkingLevel: 'medium',
+        delegationMode: 'disabled',
+        visibility: 'user-selectable',
+      })
+      toast.success('Agent created')
+      navigate(routes.view.agents(created.id))
+    } catch (err) {
+      toast.error('Failed to create agent', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }, [activeWorkspaceId])
+
+  const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
+    if (!activeWorkspaceId) return
+    try {
+      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
+        ...agent,
+        id: undefined,
+        kind: 'user',
+        name: `${agent.name} Copy`,
+        visibility: 'user-selectable',
+      })
+      toast.success('Agent duplicated')
+      navigate(routes.view.agents(created.id))
+    } catch (err) {
+      toast.error('Failed to duplicate agent', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }, [activeWorkspaceId])
+
+  const handleDeleteAgent = React.useCallback(async (agent: AgentProfile) => {
+    if (!activeWorkspaceId) return
+    try {
+      await window.electronAPI.deleteAgentProfile(activeWorkspaceId, agent.id)
+      toast.success('Agent deleted')
+      navigate(routes.view.agents())
+    } catch (err) {
+      toast.error('Failed to delete agent', { description: err instanceof Error ? err.message : String(err) })
+    }
+  }, [activeWorkspaceId])
+
+  const handleImproveAgent = React.useCallback((agent: AgentProfile) => {
+    navigate(routes.view.agents(agent.id))
+  }, [])
+
   // Handle selecting a source from the list (preserves current filter type)
   const handleSourceSelect = React.useCallback((source: LoadedSource) => {
     if (!activeWorkspaceId) return
@@ -1698,6 +1758,10 @@ function AppShellContent({
     setOptimisticStatusOrder(orderedIds)
     window.electronAPI.reorderStatuses(activeWorkspaceId, orderedIds)
   }, [activeWorkspaceId])
+
+  const handleAgentsClick = useCallback(() => {
+    navigate(routes.view.agents())
+  }, [])
 
   // Handler for sources view (all sources)
   const handleSourcesClick = useCallback(() => {
@@ -2378,8 +2442,15 @@ function AppShellContent({
                     },
                     // --- Separator ---
                     { id: "separator:chats-sources", type: "separator" },
-                    // --- Sources & Skills Section ---
+                    // --- Agents, Sources & Skills Section ---
                     {
+                      id: "nav:agents",
+                      title: "Agents",
+                      label: String((contextValue.agentProfiles || []).filter(agent => agent.visibility !== 'internal').length),
+                      icon: Bot,
+                      variant: isAgentsNavigation(navState) ? "default" : "ghost",
+                      onClick: handleAgentsClick,
+                    },                    {
                       id: "nav:sources",
                       title: t("sidebar.sources"),
                       label: String(sources.length),
@@ -3132,7 +3203,25 @@ function AppShellContent({
                     </DropdownMenu>
                     )
                   )}
-                  {/* Add Source button (only for sources mode) - uses filter-aware edit config */}
+                  {/* Add Agent button (only for agents mode) */}
+                  {isAgentsNavigation(navState) && activeWorkspace && (
+                    <div className="flex items-center gap-1">
+                      <EditPopover
+                        trigger={
+                          <HeaderIconButton
+                            icon={<Bot className="h-4 w-4" />}
+                            tooltip="Create Agent with AI"
+                          />
+                        }
+                        {...getEditConfig('add-agent', activeWorkspace.rootPath)}
+                      />
+                      <HeaderIconButton
+                        icon={<Plus className="h-4 w-4" />}
+                        tooltip="Add Agent"
+                        onClick={handleCreateAgent}
+                      />
+                    </div>
+                  )}                  {/* Add Source button (only for sources mode) - uses filter-aware edit config */}
                   {isSourcesNavigation(navState) && activeWorkspace && (
                     <EditPopover
                       trigger={
@@ -3177,7 +3266,18 @@ function AppShellContent({
               }
             />
             {/* Content: SessionList, SourcesListPanel, or SettingsNavigator based on navigation state */}
-            {isSourcesNavigation(navState) && (
+            {isAgentsNavigation(navState) && (
+              <AgentsListPanel
+                agents={contextValue.agentProfiles || []}
+                workspaceRootPath={activeWorkspace?.rootPath}
+                onAgentClick={handleAgentSelect}
+                onDuplicateAgent={handleDuplicateAgent}
+                onDeleteAgent={handleDeleteAgent}
+                onImproveAgent={handleImproveAgent}
+                onCreateAgent={handleCreateAgent}
+                selectedAgentId={isAgentsNavigation(navState) && navState.details ? navState.details.agentId : null}
+              />
+            )}            {isSourcesNavigation(navState) && (
               /* Sources List - filtered by type if sourceFilter is active */
               <SourcesListPanel
                 sources={sources}

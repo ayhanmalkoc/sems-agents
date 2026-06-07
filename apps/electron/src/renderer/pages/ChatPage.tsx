@@ -426,7 +426,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   }, [session, sessionId, sessionMeta])
 
   const handleManageAgents = React.useCallback(() => {
-    navigate(routes.view.settings('agents'))
+    navigate(routes.view.agents())
   }, [])
 
   const isFlagged = session?.isFlagged || sessionMeta?.isFlagged || false
