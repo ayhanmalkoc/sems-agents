@@ -2476,7 +2476,13 @@ export class SessionManager implements ISessionManager {
     const globalDefaults = loadConfigDefaults()
 
     // Read permission mode from workspace config, fallback to global defaults
+    const mainAgentProfile = getAgentProfile(
+      workspaceRootPath,
+      options?.mainAgentProfileId ?? DEFAULT_AGENT_PROFILE_ID,
+    )
+
     const defaultPermissionMode = options?.permissionMode
+      ?? mainAgentProfile?.permissionMode
       ?? wsConfig?.defaults?.permissionMode
       ?? globalDefaults.workspaceDefaults.permissionMode
 
@@ -2488,10 +2494,6 @@ export class SessionManager implements ISessionManager {
       normalizeThinkingLevel(options?.thinkingLevel)
       ?? normalizeThinkingLevel(wsConfig?.defaults?.thinkingLevel)
       ?? getDefaultThinkingLevel()
-    const mainAgentProfile = getAgentProfile(
-      workspaceRootPath,
-      options?.mainAgentProfileId ?? DEFAULT_AGENT_PROFILE_ID,
-    )
     const activeAgentProfileId = options?.activeAgentProfileId ?? mainAgentProfile?.id
     const defaultLlmConnection = options?.llmConnection
       ?? mainAgentProfile?.llmConnection
@@ -6732,9 +6734,12 @@ export class SessionManager implements ISessionManager {
     managed.mainAgentProfileId = profile.id
     managed.activeAgentProfileId = profile.id
     if (profile.model) managed.model = profile.model
+    if (profile.permissionMode) managed.permissionMode = profile.permissionMode
     if (profile.thinkingLevel) managed.thinkingLevel = profile.thinkingLevel
     if (profile.llmConnection && !managed.connectionLocked) managed.llmConnection = profile.llmConnection
-    if (profile.enabledSourceSlugs) managed.enabledSourceSlugs = profile.enabledSourceSlugs
+    if (profile.enabledSourceSlugs) {
+      await this.setSessionSources(sessionId, profile.enabledSourceSlugs)
+    }
     if (profile.systemPrompt) managed.systemPromptPreset = profile.systemPrompt
 
     this.setMetadataWriteGuard(managed)
