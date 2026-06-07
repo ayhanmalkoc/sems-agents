@@ -2152,17 +2152,19 @@ export function FreeFormInput({
                   // when there's only one connection, so no switcher to show).
                   // Model row is disabled (locked to this session); vision toggle
                   // remains interactive.
+                  const lockedModel = currentModel || connectionDefaultModel
                   const showVisionToggle =
                     !!effectiveConnectionDetails && isCompatProvider(effectiveConnectionDetails.providerType)
-                  const visionOn = showVisionToggle && modelSupportsImages(effectiveConnectionDetails!, connectionDefaultModel)
+                  const visionOn = showVisionToggle && modelSupportsImages(effectiveConnectionDetails!, lockedModel)
+                  const lockedModelDescription = currentModel && currentModel !== connectionDefaultModel ? 'Agent profile' : t('chat.connectionDefault')
                   return (
                     <StyledDropdownMenuItem
                       disabled
                       className="flex items-center justify-between px-2 py-2 rounded-lg"
                     >
                       <div className="text-left">
-                        <div className="font-medium text-sm">{stripPiPrefixForDisplay(connectionDefaultModel)}</div>
-                        <div className="text-xs text-muted-foreground">{t('chat.connectionDefault')}</div>
+                        <div className="font-medium text-sm">{currentModelDisplayName}</div>
+                        <div className="text-xs text-muted-foreground">{lockedModelDescription}</div>
                       </div>
                       <div className="flex items-center gap-1 ml-3 shrink-0">
                         {showVisionToggle && effectiveConnectionDetails && (
@@ -2178,13 +2180,13 @@ export function FreeFormInput({
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  handleToggleModelVision(effectiveConnectionDetails.slug, connectionDefaultModel, !visionOn)
+                                  handleToggleModelVision(effectiveConnectionDetails.slug, lockedModel, !visionOn)
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    handleToggleModelVision(effectiveConnectionDetails.slug, connectionDefaultModel, !visionOn)
+                                    handleToggleModelVision(effectiveConnectionDetails.slug, lockedModel, !visionOn)
                                   }
                                 }}
                               >
