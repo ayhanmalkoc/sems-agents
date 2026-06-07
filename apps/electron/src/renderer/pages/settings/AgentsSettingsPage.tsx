@@ -12,14 +12,6 @@ type ThinkingValue = 'low' | 'medium' | 'high' | 'max'
 type SubagentsValue = 'disabled' | 'ask' | 'auto'
 
 const protectedIds = new Set(['default', 'code-reviewer', 'researcher'])
-const rolePresets = [
-  { id: 'custom', label: 'Custom role', prompt: '' },
-  { id: 'code-reviewer', label: 'Code reviewer', prompt: 'Focus on correctness, maintainability, regressions, security risks, and actionable review notes. Avoid unrelated rewrites.' },
-  { id: 'researcher', label: 'Researcher', prompt: 'Explore context first, compare options, cite concrete evidence, identify risks, and avoid implementation unless explicitly asked.' },
-  { id: 'implementer', label: 'Implementer', prompt: 'Make focused code changes, preserve existing style, validate with targeted tests, and avoid broad unrelated refactors.' },
-  { id: 'product', label: 'Product thinker', prompt: 'Translate needs into product behavior, UX flows, acceptance criteria, edge cases, and implementation priorities.' },
-]
-
 const permissionModeLabels: Record<PermissionMode, string> = {
   safe: 'Explore',
   ask: 'Ask',
@@ -39,7 +31,6 @@ interface DraftState {
   description: string
   icon: string
   color: string
-  rolePreset: string
   systemPrompt: string
   model: string
   llmConnection: string
@@ -56,7 +47,6 @@ const emptyDraft = (): DraftState => ({
   description: '',
   icon: '',
   color: '#6366f1',
-  rolePreset: 'custom',
   systemPrompt: '',
   model: '',
   llmConnection: '',
@@ -75,7 +65,6 @@ function draftFromProfile(profile: AgentProfile): DraftState {
     description: profile.description || '',
     icon: profile.icon || '',
     color: profile.color || '#6366f1',
-    rolePreset: 'custom',
     systemPrompt: profile.systemPrompt || '',
     model: profile.model || '',
     llmConnection: profile.llmConnection || '',
@@ -132,15 +121,6 @@ export default function AgentsSettingsPage() {
     setDraft(emptyDraft())
   }
 
-  const applyRolePreset = (presetId: string) => {
-    const preset = rolePresets.find(item => item.id === presetId)
-    setDraft(prev => ({
-      ...prev,
-      rolePreset: presetId,
-      systemPrompt: preset?.prompt ? `${preset.prompt}\n\n${prev.systemPrompt}`.trim() : prev.systemPrompt,
-    }))
-  }
-
   const saveProfile = async () => {
     if (!activeWorkspaceId || !draft.name.trim()) return
     const payload = {
@@ -148,7 +128,7 @@ export default function AgentsSettingsPage() {
       description: draft.description.trim() || undefined,
       icon: draft.icon.trim() || undefined,
       color: draft.color || undefined,
-      systemPrompt: draft.systemPrompt.trim() || `You are ${draft.name.trim()} Agent. Follow this role carefully and stay focused on the user's request.`,
+    systemPrompt: draft.systemPrompt.trim() || `You are ${draft.name.trim()} Agent. Follow this role carefully and stay focused on the user's request.`,
       model: draft.model.trim() || undefined,
       llmConnection: draft.llmConnection || undefined,
       thinkingLevel: draft.thinkingLevel,
@@ -234,8 +214,10 @@ export default function AgentsSettingsPage() {
 
                 <div className="space-y-3">
                   <div className="text-sm font-semibold">Instructions</div>
-                  <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={draft.rolePreset} onChange={e => applyRolePreset(e.target.value)}>{rolePresets.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select>
-                  <textarea className="min-h-36 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="How should this agent behave, prioritize, and avoid mistakes?" value={draft.systemPrompt} onChange={e => updateDraft('systemPrompt', e.target.value)} />
+                  <label className="space-y-1.5 text-sm">
+                    <span className="font-medium">System prompt</span>
+                    <textarea className="min-h-36 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="Tell this agent how to behave, what to prioritize, and what to avoid." value={draft.systemPrompt} onChange={e => updateDraft('systemPrompt', e.target.value)} />
+                  </label>
                 </div>
 
                 <div className="space-y-3">
