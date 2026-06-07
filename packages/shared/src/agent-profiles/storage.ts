@@ -39,8 +39,13 @@ function uniqueId(existing: Set<string>, base: string): string {
 }
 
 function normalizeProfile(profile: AgentProfile): AgentProfile {
+  const kind = profile.kind
+    ?? (profile.id === DEFAULT_AGENT_PROFILE_ID
+      ? 'system'
+      : (profile.id === 'code-reviewer' || profile.id === 'researcher') ? 'template' : 'user')
   return {
     ...profile,
+    kind,
     delegationMode: profile.delegationMode ?? 'disabled',
     visibility: profile.visibility ?? 'user-selectable',
   }
@@ -87,30 +92,33 @@ export function saveAgentProfile(workspaceRootPath: string, input: CreateAgentPr
   if (existingIds.has(id)) {
     throw new Error(`Agent profile "${id}" already exists`)
   }
-  const profile = normalizeProfile({ ...input, id, createdAt: now, updatedAt: now })
+  const profile = normalizeProfile({ ...input, kind: input.kind ?? 'user', id, createdAt: now, updatedAt: now })
   file.profiles.push(profile)
   writeProfilesFile(workspaceRootPath, file)
   return profile
 }
 
 export function updateAgentProfile(workspaceRootPath: string, id: string, updates: UpdateAgentProfileInput): AgentProfile {
-  if (id === DEFAULT_AGENT_PROFILE_ID) {
-    throw new Error('Default agent profile cannot be edited')
-  }
   const file = readProfilesFile(workspaceRootPath)
   const index = file.profiles.findIndex(profile => profile.id === id)
   if (index === -1) throw new Error(`Agent profile "${id}" not found`)
-  const profile = normalizeProfile({ ...file.profiles[index], ...updates, id, updatedAt: Date.now() })
+  const existing = normalizeProfile(file.profiles[index])
+  if (existing.kind !== 'user') {
+    throw new Error('Only user agents can be edited')
+  }
+  const profile = normalizeProfile({ ...existing, ...updates, kind: 'user', id, updatedAt: Date.now() })
   file.profiles[index] = profile
   writeProfilesFile(workspaceRootPath, file)
   return profile
 }
 
 export function deleteAgentProfile(workspaceRootPath: string, id: string): void {
-  if (id === DEFAULT_AGENT_PROFILE_ID) {
-    throw new Error('Default agent profile cannot be deleted')
-  }
   const file = readProfilesFile(workspaceRootPath)
+  const existing = file.profiles.find(profile => profile.id === id)
+  if (!existing) return
+  if (normalizeProfile(existing).kind !== 'user') {
+    throw new Error('Only user agents can be deleted')
+  }
   file.profiles = file.profiles.filter(profile => profile.id !== id)
   writeProfilesFile(workspaceRootPath, file)
 }

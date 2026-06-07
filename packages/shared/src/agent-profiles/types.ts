@@ -2,6 +2,7 @@ import type { ThinkingLevel } from '../agent/thinking-levels.ts'
 import type { PermissionMode } from '../agent/mode-types.ts'
 
 export type AgentProfileVisibility = 'user-selectable' | 'internal'
+export type AgentProfileKind = 'system' | 'template' | 'user'
 export type AgentDelegationMode = 'disabled' | 'ask' | 'auto'
 
 export interface AgentProfile {
@@ -19,6 +20,7 @@ export interface AgentProfile {
   delegationAllowedAgentIds?: string[]
   delegationMode?: AgentDelegationMode
   visibility?: AgentProfileVisibility
+  kind?: AgentProfileKind
   permissionMode?: PermissionMode
   createdAt: number
   updatedAt: number
@@ -36,6 +38,7 @@ export function createDefaultAgentProfile(now = Date.now()): AgentProfile {
     description: 'Default session agent using workspace settings.',
     delegationMode: 'disabled',
     visibility: 'user-selectable',
+    kind: 'system',
     createdAt: now,
     updatedAt: now,
   }
@@ -54,6 +57,7 @@ export function createSeedAgentProfiles(now = Date.now()): AgentProfile[] {
       systemPrompt: 'You are Code Reviewer Agent. Focus on code quality, regressions, security risks, maintainability, tests, and concise actionable review notes. Do not make broad unrelated changes.',
       delegationMode: 'disabled',
       visibility: 'user-selectable',
+      kind: 'template',
       createdAt: now,
       updatedAt: now,
     },
@@ -67,6 +71,7 @@ export function createSeedAgentProfiles(now = Date.now()): AgentProfile[] {
       systemPrompt: 'You are Researcher Agent. Explore context first, cite concrete repo evidence, compare options, identify risks, and avoid implementation unless explicitly asked.',
       delegationMode: 'disabled',
       visibility: 'user-selectable',
+      kind: 'template',
       createdAt: now,
       updatedAt: now,
     },
