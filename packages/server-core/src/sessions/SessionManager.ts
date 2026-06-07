@@ -6734,7 +6734,18 @@ export class SessionManager implements ISessionManager {
     managed.mainAgentProfileId = profile.id
     managed.activeAgentProfileId = profile.id
     if (profile.model) managed.model = profile.model
-    if (profile.permissionMode) managed.permissionMode = profile.permissionMode
+    if (profile.permissionMode) {
+      const previousEffectiveMode = getPermissionModeDiagnostics(sessionId).permissionMode
+      managed.permissionMode = profile.permissionMode
+      if (previousEffectiveMode !== profile.permissionMode) {
+        setPermissionMode(sessionId, profile.permissionMode, { changedBy: 'system' })
+      }
+      const diagnostics = getPermissionModeDiagnostics(sessionId)
+      managed.previousPermissionMode = diagnostics.previousPermissionMode
+      if (managed.agent) {
+        managed.agent.setPermissionMode(profile.permissionMode)
+      }
+    }
     if (profile.thinkingLevel) managed.thinkingLevel = profile.thinkingLevel
     if (profile.llmConnection && !managed.connectionLocked) managed.llmConnection = profile.llmConnection
     if (profile.enabledSourceSlugs) {
@@ -6742,6 +6753,7 @@ export class SessionManager implements ISessionManager {
     }
     if (profile.systemPrompt) managed.systemPromptPreset = profile.systemPrompt
 
+    const permissionDiagnostics = getPermissionModeDiagnostics(sessionId)
     this.setMetadataWriteGuard(managed)
     this.sendEvent({
       type: 'agent_profile_changed',
@@ -6749,6 +6761,9 @@ export class SessionManager implements ISessionManager {
       mainAgentProfileId: managed.mainAgentProfileId,
       activeAgentProfileId: managed.activeAgentProfileId,
       permissionMode: managed.permissionMode,
+      modeVersion: permissionDiagnostics.modeVersion,
+      changedAt: permissionDiagnostics.lastChangedAt,
+      changedBy: permissionDiagnostics.lastChangedBy,
       thinkingLevel: managed.thinkingLevel,
       model: managed.model,
       llmConnection: managed.llmConnection,

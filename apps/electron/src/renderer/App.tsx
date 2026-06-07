@@ -946,6 +946,14 @@ export default function App() {
 
         if (event.type === 'agent_profile_changed') {
           syncSessionOptionsFromSession(updatedSession)
+          if (typeof event.modeVersion === 'number' && event.changedAt && event.changedBy && event.permissionMode) {
+            applyPermissionModeState(sessionId, {
+              permissionMode: event.permissionMode,
+              modeVersion: event.modeVersion,
+              changedAt: event.changedAt,
+              changedBy: event.changedBy,
+            }, 'event')
+          }
         }
 
         // Handle side effects

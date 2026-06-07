@@ -146,6 +146,9 @@ export interface AgentProfileChangedEvent {
   mainAgentProfileId?: string
   activeAgentProfileId?: string
   permissionMode?: PermissionMode
+  modeVersion?: number
+  changedAt?: string
+  changedBy?: 'user' | 'system' | 'restore' | 'automation' | 'unknown'
   thinkingLevel?: ThinkingLevel
   model?: string
   llmConnection?: string
