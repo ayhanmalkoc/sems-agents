@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, Bot, Check, ChevronDown, Plus, Settings } from 'lucide-react'
+import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info } from 'lucide-react'
 import { ChatDisplay, type ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
@@ -17,7 +17,6 @@ import { SessionInfoPopover } from '@/components/app-shell/SessionInfoPopover'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
-import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator } from '@/components/ui/styled-dropdown'
 import { useAppShellContext, usePendingPermission, usePendingCredential, useSessionOptionsFor, useSession as useSessionData } from '@/context/AppShellContext'
@@ -422,50 +421,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     }
   }, [session, sessionId, sessionMeta])
 
-  const agentChip = React.useMemo(() => {
-    if (visibleAgentProfiles.length === 0) return null
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 max-w-[220px] gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs font-medium titlebar-no-drag"
-            aria-label="Current agent"
-          >
-            <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold" style={{ backgroundColor: activeAgent?.color || 'var(--muted)', color: activeAgent?.color ? 'white' : undefined }}>
-              {activeAgent?.icon || <Bot className="h-3 w-3" />}
-            </span>
-            <span className="truncate">{activeAgent?.name || 'Default Agent'}</span>
-            <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
-          </Button>
-        </DropdownMenuTrigger>
-        <StyledDropdownMenuContent align="end" className="min-w-[240px]">
-          {visibleAgentProfiles.map(profile => (
-            <StyledDropdownMenuItem key={profile.id} onClick={() => handleAgentProfileChange(profile.id)} className="flex items-center gap-2">
-              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: profile.color || 'var(--muted)', color: profile.color ? 'white' : undefined }}>
-                {profile.icon || <Bot className="h-3.5 w-3.5" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{profile.name}</span>
-                {profile.description && <span className="block truncate text-xs text-muted-foreground">{profile.description}</span>}
-              </span>
-              {profile.id === activeAgentProfileId && <Check className="h-4 w-4 text-primary" />}
-            </StyledDropdownMenuItem>
-          ))}
-          <StyledDropdownMenuSeparator />
-          <StyledDropdownMenuItem onClick={() => navigate(routes.view.settings('agents'))} className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span>Manage agents</span>
-          </StyledDropdownMenuItem>
-          <StyledDropdownMenuItem onClick={() => navigate(routes.view.settings('agents'))} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            <span>Create new agent</span>
-          </StyledDropdownMenuItem>
-        </StyledDropdownMenuContent>
-      </DropdownMenu>
-    )
-  }, [activeAgent, activeAgentProfileId, handleAgentProfileChange, visibleAgentProfiles])
+  const handleManageAgents = React.useCallback(() => {
+    navigate(routes.view.settings('agents'))
+  }, [])
+
   const isFlagged = session?.isFlagged || sessionMeta?.isFlagged || false
   const isArchived = session?.isArchived || sessionMeta?.isArchived || false
   const sharedUrl = session?.sharedUrl || sessionMeta?.sharedUrl || null
@@ -662,7 +621,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
 
   const headerActions = (
     <div className="flex items-center gap-1.5">
-      {agentChip}
       {isCompactMode ? compactInfoButton : shareButton}
     </div>
   )
@@ -773,6 +731,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 currentModel={effectiveModel}
                 onModelChange={handleModelChange}
                 onConnectionChange={handleConnectionChange}
+                agentProfiles={visibleAgentProfiles}
+                activeAgentProfileId={activeAgentProfileId}
+                onAgentProfileChange={handleAgentProfileChange}
+                onManageAgents={handleManageAgents}
                 pendingPermission={undefined}
                 onRespondToPermission={onRespondToPermission}
                 pendingCredential={undefined}
@@ -850,6 +812,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             currentModel={effectiveModel}
             onModelChange={handleModelChange}
             onConnectionChange={handleConnectionChange}
+            agentProfiles={visibleAgentProfiles}
+            activeAgentProfileId={activeAgentProfileId}
+            onAgentProfileChange={handleAgentProfileChange}
+            onManageAgents={handleManageAgents}
             pendingPermission={pendingPermission}
             onRespondToPermission={onRespondToPermission}
             pendingCredential={pendingCredential}

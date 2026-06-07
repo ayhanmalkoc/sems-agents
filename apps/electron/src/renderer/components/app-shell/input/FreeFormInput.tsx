@@ -13,6 +13,9 @@ import {
   AlertCircle,
   Image as ImageIcon,
   X,
+  Bot,
+  Settings,
+  Plus,
 } from 'lucide-react'
 import { Icon_Home, Icon_Folder, Spinner } from '@craft-agent/ui'
 
@@ -74,7 +77,7 @@ import { CompactWorkingDirectorySelector } from '@/components/ui/CompactWorkingD
 import { ConnectionIcon } from '@/components/icons/ConnectionIcon'
 import { FreeFormInputContextBadge } from './FreeFormInputContextBadge'
 import { derivePickerMode } from './picker-mode'
-import type { FileAttachment, LoadedSource, LoadedSkill } from '../../../../shared/types'
+import type { AgentProfile, FileAttachment, LoadedSource, LoadedSkill } from '../../../../shared/types'
 import type { PermissionMode } from '@craft-agent/shared/agent/modes'
 import { type ThinkingLevel, THINKING_LEVELS, getThinkingLevelNameKey } from '@craft-agent/shared/agent/thinking-levels'
 import { useEscapeInterrupt } from '@/context/EscapeInterruptContext'
@@ -174,6 +177,15 @@ export interface FreeFormInputProps {
   onHeightChange?: (height: number) => void
   /** Callback when focus state changes */
   onFocusChange?: (focused: boolean) => void
+  // Agent selection
+  /** Available agent profiles */
+  agentProfiles?: AgentProfile[]
+  /** Currently active agent profile id */
+  activeAgentProfileId?: string
+  /** Callback when agent changes */
+  onAgentProfileChange?: (agentProfileId: string) => void
+  /** Callback to open agent management */
+  onManageAgents?: () => void
   // Source selection
   /** Available sources (enabled only) */
   sources?: LoadedSource[]
@@ -284,6 +296,10 @@ export function FreeFormInput({
   unstyled = false,
   onHeightChange,
   onFocusChange,
+  agentProfiles = [],
+  activeAgentProfileId = 'default',
+  onAgentProfileChange,
+  onManageAgents,
   sources = [],
   enabledSourceSlugs = [],
   onSourcesChange,
@@ -1903,7 +1919,67 @@ export function FreeFormInput({
           {/* Desktop: full badges row with labels and working directory */}
           {!compactMode && (
           <div className="flex items-center gap-1 min-w-32 shrink overflow-hidden">
-          {/* 1. Attach Files Badge */}
+          {/* 1. Agent Selector Badge */}
+          {agentProfiles.length > 0 && onAgentProfileChange && (
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "input-toolbar-btn inline-flex items-center h-7 px-1.5 gap-1 text-[13px] shrink-0 rounded-[6px] hover:bg-foreground/5 transition-colors select-none",
+                      )}
+                      disabled={disabled}
+                    >
+                      {(() => {
+                        const visibleAgents = agentProfiles.filter(profile => profile.visibility !== 'internal')
+                        const activeAgent = visibleAgents.find(profile => profile.id === activeAgentProfileId) || visibleAgents.find(profile => profile.id === 'default') || visibleAgents[0]
+                        return (
+                          <>
+                            <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold" style={{ backgroundColor: activeAgent?.color || 'var(--muted)', color: activeAgent?.color ? 'white' : undefined }}>
+                              {activeAgent?.icon || <Bot className="h-3 w-3" />}
+                            </span>
+                            <span className="max-w-[130px] truncate">{activeAgent?.name || 'Agent'}</span>
+                            <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+                          </>
+                        )
+                      })()}
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="top">Agent</TooltipContent>
+              </Tooltip>
+              <StyledDropdownMenuContent side="top" align="start" sideOffset={8} className="min-w-[250px]">
+                {agentProfiles.filter(profile => profile.visibility !== 'internal').map(profile => (
+                  <StyledDropdownMenuItem key={profile.id} onSelect={() => onAgentProfileChange(profile.id)} className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: profile.color || 'var(--muted)', color: profile.color ? 'white' : undefined }}>
+                      {profile.icon || <Bot className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{profile.name}</span>
+                      {profile.description && <span className="block truncate text-xs text-muted-foreground">{profile.description}</span>}
+                    </span>
+                    {profile.id === activeAgentProfileId && <Check className="h-4 w-4 text-primary" />}
+                  </StyledDropdownMenuItem>
+                ))}
+                {onManageAgents && (
+                  <>
+                    <StyledDropdownMenuSeparator />
+                    <StyledDropdownMenuItem onSelect={onManageAgents} className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      <span>Manage agents</span>
+                    </StyledDropdownMenuItem>
+                    <StyledDropdownMenuItem onSelect={onManageAgents} className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      <span>Create new agent</span>
+                    </StyledDropdownMenuItem>
+                  </>
+                )}
+              </StyledDropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {/* 2. Attach Files Badge */}
           <FreeFormInputContextBadge
             icon={<Paperclip className="h-4 w-4" />}
             label={attachments.length > 0
@@ -1918,7 +1994,7 @@ export function FreeFormInput({
             disabled={disabled}
           />
 
-          {/* 2. Source Selector Badge - only show if onSourcesChange is provided */}
+          {/* 3. Source Selector Badge - only show if onSourcesChange is provided */}
           {onSourcesChange && (
             <div className="relative shrink min-w-0 overflow-hidden">
               <FreeFormInputContextBadge
