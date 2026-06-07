@@ -2044,8 +2044,9 @@ function AppShellContent({
     }
     flattenTree(labelTree)
 
-    // 3. Agents, Sources, Skills, Settings
+    // 3. Agents, Resources (Sources + Skills), Automations, Settings
     result.push({ id: 'nav:agents', type: 'nav', action: handleAgentsClick })
+    result.push({ id: 'nav:resources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
@@ -2448,7 +2449,7 @@ function AppShellContent({
                     },
                     // --- Separator ---
                     { id: "separator:chats-sources", type: "separator" },
-                    // --- Agents, Sources & Skills Section ---
+                    // --- Agents, Resources & Automations Section ---
                     {
                       id: "nav:agents",
                       title: "Agents",
@@ -2456,74 +2457,88 @@ function AppShellContent({
                       icon: Bot,
                       variant: isAgentsNavigation(navState) ? "default" : "ghost",
                       onClick: handleAgentsClick,
-                    },                    {
-                      id: "nav:sources",
-                      title: t("sidebar.sources"),
-                      label: String(sources.length),
-                      icon: DatabaseZap,
-                      variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
+                    },
+                    {
+                      id: "nav:resources",
+                      title: t("sidebar.resources"),
+                      label: String(sources.length + skills.length),
+                      icon: Layers,
+                      variant: (isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? "default" : "ghost",
                       onClick: handleSourcesClick,
-                      dataTutorial: "sources-nav",
                       expandable: true,
-                      expanded: isExpanded('nav:sources'),
-                      onToggle: () => toggleExpanded('nav:sources'),
-                      contextMenu: {
-                        type: 'sources',
-                        onAddSource: () => openAddSource(),
-                      },
+                      expanded: isExpanded('nav:resources'),
+                      onToggle: () => toggleExpanded('nav:resources'),
                       items: [
                         {
-                          id: "nav:sources:api",
-                          title: t("sidebar.apis"),
-                          label: String(sourceTypeCounts.api),
-                          icon: Globe,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost",
-                          onClick: handleSourcesApiClick,
+                          id: "nav:sources",
+                          title: t("sidebar.sources"),
+                          label: String(sources.length),
+                          icon: DatabaseZap,
+                          variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
+                          onClick: handleSourcesClick,
+                          dataTutorial: "sources-nav",
+                          expandable: true,
+                          expanded: isExpanded('nav:sources'),
+                          onToggle: () => toggleExpanded('nav:sources'),
                           contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('api'),
-                            sourceType: 'api',
+                            type: 'sources',
+                            onAddSource: () => openAddSource(),
                           },
+                          items: [
+                            {
+                              id: "nav:sources:api",
+                              title: t("sidebar.apis"),
+                              label: String(sourceTypeCounts.api),
+                              icon: Globe,
+                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost",
+                              onClick: handleSourcesApiClick,
+                              contextMenu: {
+                                type: 'sources' as const,
+                                onAddSource: () => openAddSource('api'),
+                                sourceType: 'api',
+                              },
+                            },
+                            {
+                              id: "nav:sources:mcp",
+                              title: t("sidebar.mcps"),
+                              label: String(sourceTypeCounts.mcp),
+                              icon: <McpIcon className="h-3.5 w-3.5" />,
+                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost",
+                              onClick: handleSourcesMcpClick,
+                              contextMenu: {
+                                type: 'sources' as const,
+                                onAddSource: () => openAddSource('mcp'),
+                                sourceType: 'mcp',
+                              },
+                            },
+                            {
+                              id: "nav:sources:local",
+                              title: t("sidebar.localFolders"),
+                              label: String(sourceTypeCounts.local),
+                              icon: FolderOpen,
+                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost",
+                              onClick: handleSourcesLocalClick,
+                              contextMenu: {
+                                type: 'sources' as const,
+                                onAddSource: () => openAddSource('local'),
+                                sourceType: 'local',
+                              },
+                            },
+                          ],
                         },
                         {
-                          id: "nav:sources:mcp",
-                          title: t("sidebar.mcps"),
-                          label: String(sourceTypeCounts.mcp),
-                          icon: <McpIcon className="h-3.5 w-3.5" />,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost",
-                          onClick: handleSourcesMcpClick,
+                          id: "nav:skills",
+                          title: t("sidebar.skills"),
+                          label: String(skills.length),
+                          icon: Zap,
+                          variant: isSkillsNavigation(navState) ? "default" : "ghost",
+                          onClick: handleSkillsClick,
                           contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('mcp'),
-                            sourceType: 'mcp',
-                          },
-                        },
-                        {
-                          id: "nav:sources:local",
-                          title: t("sidebar.localFolders"),
-                          label: String(sourceTypeCounts.local),
-                          icon: FolderOpen,
-                          variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost",
-                          onClick: handleSourcesLocalClick,
-                          contextMenu: {
-                            type: 'sources' as const,
-                            onAddSource: () => openAddSource('local'),
-                            sourceType: 'local',
+                            type: 'skills',
+                            onAddSkill: openAddSkill,
                           },
                         },
                       ],
-                    },
-                    {
-                      id: "nav:skills",
-                      title: t("sidebar.skills"),
-                      label: String(skills.length),
-                      icon: Zap,
-                      variant: isSkillsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleSkillsClick,
-                      contextMenu: {
-                        type: 'skills',
-                        onAddSkill: openAddSkill,
-                      },
                     },
                     {
                       id: "nav:automations",
