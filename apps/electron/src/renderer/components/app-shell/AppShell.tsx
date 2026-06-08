@@ -2407,40 +2407,13 @@ function AppShellContent({
               />
             ) : (
             <div className="flex h-full flex-col select-none">
-              <div className="shrink-0 px-2 pb-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <ContextMenu modal={true}>
-                        <ContextMenuTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={(e) => handleNewChat(e.metaKey || e.ctrlKey)}
-                            className="group flex w-full items-center gap-2 rounded-[6px] px-2 py-[5px] text-[13px] font-normal text-foreground/80 outline-none hover:bg-sidebar-hover focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-                            data-tutorial="new-chat-button"
-                          >
-                            <span className="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                              <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
-                            </span>
-                            {t("session.newSession")}
-                          </button>
-                        </ContextMenuTrigger>
-                        <StyledContextMenuContent>
-                          <ContextMenuProvider>
-                            <SidebarMenu type="newSession" />
-                          </ContextMenuProvider>
-                        </StyledContextMenuContent>
-                      </ContextMenu>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{newChatHotkey}</TooltipContent>
-                </Tooltip>
-
+              <div className="shrink-0 pb-2">
                 <LeftSidebar
                   isCollapsed={false}
                   getItemProps={getSidebarItemProps}
                   focusedItemId={focusedSidebarItemId}
                   links={[
+                    { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchActive ? "default" : "ghost", onClick: () => setSearchActive(true) },
                     { id: "nav:agents", title: "Agents", label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
                     {
