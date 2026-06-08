@@ -65,6 +65,7 @@ interface TopBarProps {
   isRightDockOpen?: boolean
   /** When true, hides controls that don't apply in compact/mobile layout */
   isCompact?: boolean
+  placement?: 'global' | 'sidebar'
 }
 
 export function TopBar({
@@ -96,6 +97,7 @@ export function TopBar({
   onToggleRightDock,
   isRightDockOpen = false,
   isCompact,
+  placement = 'global',
 }: TopBarProps) {
   const { t } = useTranslation()
   const [maxVisibleBrowserBadges, setMaxVisibleBrowserBadges] = useState(3)
@@ -105,6 +107,7 @@ export function TopBar({
   const goForwardHotkey = useActionLabel('nav.goForwardAlt').hotkey
 
   useEffect(() => {
+    if (placement === 'sidebar') return
     const slotEl = rightSlotRef.current
     if (!slotEl) return
 
@@ -134,17 +137,17 @@ export function TopBar({
       if (frame) cancelAnimationFrame(frame)
       observer.disconnect()
     }
-  }, [workspaces.length, activeWorkspaceId])
+  }, [workspaces.length, activeWorkspaceId, placement])
 
   // Stoplight padding clears macOS traffic-light controls, which only exist
   // in the Electron desktop window. The webui runs in a regular browser tab
   // and has no traffic lights regardless of host OS — collapse to a normal
   // 12px inset so the logo sits at the edge.
-  const menuLeftPadding = isMac && !isWebUI ? 86 : 12
+  const menuLeftPadding = placement === 'sidebar' ? 8 : (isMac && !isWebUI ? 86 : 12)
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-panel titlebar-drag-region"
+      className={cn(placement === 'sidebar' ? 'relative z-panel titlebar-drag-region' : 'fixed top-0 left-0 right-0 z-panel titlebar-drag-region')}
       style={{ height: 'var(--topbar-height)' }}
     >
       <div className="flex h-full w-full items-center justify-between gap-2">
@@ -234,7 +237,7 @@ export function TopBar({
       </div>
 
       {/* === RIGHT: Browser strip + add + help === */}
-      {!isCompact && (
+      {placement !== 'sidebar' && !isCompact && (
       <div ref={rightSlotRef} className="flex min-w-0 shrink-0 items-center justify-end gap-1" style={{ paddingRight: 12 }}>
         <div className="min-w-0">
           <BrowserTabStrip activeSessionId={activeSessionId} maxVisibleBadges={maxVisibleBrowserBadges} />

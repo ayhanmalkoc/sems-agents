@@ -2443,6 +2443,28 @@ function AppShellContent({
             />
           )}
         </AnimatePresence>
+      {/* === OUTER LAYOUT: Unified Panel Stack | Right Sidebar === */}
+      <div
+        ref={shellRef}
+        className="flex items-stretch relative"
+        style={{
+          height: '100%',
+          paddingRight: isAutoCompact ? 0 : PANEL_EDGE_INSET,
+          paddingBottom: isAutoCompact ? 0 : PANEL_EDGE_INSET,
+          paddingLeft: 0,
+          gap: PANEL_GAP,
+        }}
+      >
+        <PanelStackContainer
+          sidebarSlot={
+            <div
+              ref={sidebarRef}
+              style={{ width: sidebarWidth }}
+              className="h-full font-sans relative flex flex-col"
+              data-focus-zone="sidebar"
+              tabIndex={sidebarFocused ? 0 : -1}
+              onKeyDown={handleSidebarKeyDown}
+            >
         {/* === TOP BAR === */}
         <TopBar
           workspaces={workspaces}
@@ -2473,37 +2495,16 @@ function AppShellContent({
           onToggleRightDock={() => setIsRightDockOpen((prev) => !prev)}
           isRightDockOpen={isRightDockOpen}
           isCompact={isAutoCompact}
+          placement="sidebar"
         />
-
-      {/* === OUTER LAYOUT: Unified Panel Stack | Right Sidebar === */}
-      <div
-        ref={shellRef}
-        className="flex items-stretch relative"
-        style={{
-          height: '100%',
-          paddingRight: isAutoCompact ? 0 : PANEL_EDGE_INSET,
-          paddingBottom: isAutoCompact ? 0 : PANEL_EDGE_INSET,
-          paddingLeft: 0,
-          gap: PANEL_GAP,
-        }}
-      >
-        <PanelStackContainer
-          sidebarSlot={
-            <div
-              ref={sidebarRef}
-              style={{ width: sidebarWidth }}
-              className="h-full font-sans relative"
-              data-focus-zone="sidebar"
-              tabIndex={sidebarFocused ? 0 : -1}
-              onKeyDown={handleSidebarKeyDown}
-            >
+          <div className="min-h-0 flex-1">
             {isSettingsNavigation(navState) ? (
               <SettingsNavigator
                 selectedSubpage={navState.subpage}
                 onSelectSubpage={(subpage) => handleSettingsClick(subpage)}
               />
             ) : (
-            <div className="flex h-full flex-col select-none">
+            <div className="flex h-full min-h-0 flex-col select-none">
               <div className="shrink-0 pb-2">
                 <LeftSidebar
                   isCollapsed={false}
@@ -2716,6 +2717,7 @@ function AppShellContent({
               </div>
             </div>
             )}
+          </div>
           </div>
           }
           sidebarWidth={effectiveSidebarAndNavigatorHidden ? 0 : (isSidebarVisible ? sidebarWidth : 0)}
