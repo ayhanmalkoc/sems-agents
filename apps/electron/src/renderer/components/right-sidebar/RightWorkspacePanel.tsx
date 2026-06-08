@@ -5,7 +5,6 @@ import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDro
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
-import { AppShellProvider, useOptionalAppShellContext } from '@/context/AppShellContext'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
 
@@ -79,7 +78,6 @@ export function RightWorkspacePanel({
   onResizeStart,
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
-  const appShellContext = useOptionalAppShellContext()
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
 
   return (
@@ -151,11 +149,7 @@ export function RightWorkspacePanel({
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab ? (
           activeTab.content ? (
-            appShellContext ? (
-              <AppShellProvider value={{ ...appShellContext, isRightDockPanel: true }}>
-                {activeTab.content}
-              </AppShellProvider>
-            ) : activeTab.content
+            activeTab.content
           ) : activeTab.type === 'files' ? (
             <FilesTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
           ) : (
