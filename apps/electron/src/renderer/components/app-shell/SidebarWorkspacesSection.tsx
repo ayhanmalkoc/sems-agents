@@ -157,6 +157,15 @@ export function SidebarWorkspacesSection({
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   onClick={() => {
+                    if (isOpen) {
+                      setOpenWorkspaceIds(prev => {
+                        const next = new Set(prev)
+                        next.delete(workspace.id)
+                        return next
+                      })
+                      onSelectWorkspace(workspace.id)
+                      return
+                    }
                     setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
                     const latestSession = allSessions[0]
                     if (latestSession) {
