@@ -8,13 +8,15 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info } from 'lucide-react'
+import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, Search, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { ChatDisplay, type ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
 import { CompactSessionMenu } from '@/components/app-shell/CompactSessionMenu'
 import { SessionInfoPopover } from '@/components/app-shell/SessionInfoPopover'
 import { RenameDialog } from '@/components/ui/rename-dialog'
+import { Input } from '@/components/ui/input'
+import { HeaderIconButton } from '@/components/ui/HeaderIconButton'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -76,6 +78,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isCompactMode,
     sessionListSearchQuery,
     isSearchModeActive,
+    setSessionListSearchQuery,
+    onOpenChatFind,
+    onCloseChatFind,
+    chatFindMatchInfo,
     chatDisplayRef,
     onChatMatchInfoChange,
     isFocusedPanel,
@@ -623,11 +629,44 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     )
   }, [isCompactMode, sessionId, session?.sessionFolderPath, sessionMeta])
 
+  const openChatFind = React.useCallback(() => {
+    onOpenChatFind?.()
+    setSessionListSearchQuery?.(sessionListSearchQuery || '')
+  }, [onOpenChatFind, sessionListSearchQuery, setSessionListSearchQuery])
+
   const headerActions = (
     <div className="flex items-center gap-1.5">
+      <HeaderIconButton icon={<Search className="h-4 w-4" />} aria-label="Find in chat" onClick={openChatFind} />
       {isCompactMode ? compactInfoButton : shareButton}
     </div>
   )
+
+  const chatFindBar = isSearchModeActive ? (
+    <div className="flex items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2">
+      <Search className="h-3.5 w-3.5 text-muted-foreground" />
+      <Input
+        value={sessionListSearchQuery ?? ''}
+        onChange={(event) => setSessionListSearchQuery?.(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') onCloseChatFind?.()
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            if (event.shiftKey) chatDisplayRef?.current?.goToPrevMatch()
+            else chatDisplayRef?.current?.goToNextMatch()
+          }
+        }}
+        placeholder="Find in chat"
+        className="h-7 flex-1 text-sm"
+        autoFocus
+      />
+      <span className="min-w-12 text-right text-xs text-muted-foreground">
+        {sessionListSearchQuery && sessionListSearchQuery.trim().length >= 2 ? `${chatFindMatchInfo?.count ? chatFindMatchInfo.index + 1 : 0}/${chatFindMatchInfo?.count ?? 0}` : ''}
+      </span>
+      <HeaderIconButton icon={<ChevronUp className="h-3.5 w-3.5" />} aria-label="Previous match" onClick={() => chatDisplayRef?.current?.goToPrevMatch()} />
+      <HeaderIconButton icon={<ChevronDown className="h-3.5 w-3.5" />} aria-label="Next match" onClick={() => chatDisplayRef?.current?.goToNextMatch()} />
+      <HeaderIconButton icon={<X className="h-3.5 w-3.5" />} aria-label="Close find" onClick={() => onCloseChatFind?.()} />
+    </div>
+  ) : null
 
   // Build title menu content for chat sessions using shared SessionMenu.
   // Desktop uses Radix DropdownMenu via PanelHeader; compact mode uses a
@@ -725,6 +764,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
         <>
           <div className="h-full flex flex-col">
             <PanelHeader  title={headerTitle} titleMenu={titleMenu} compactTitleMenu={compactTitleMenu} leadingAction={leadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
+            {chatFindBar}
             <div className="flex-1 flex flex-col min-h-0">
               <ChatDisplay
                 ref={chatDisplayRef}
