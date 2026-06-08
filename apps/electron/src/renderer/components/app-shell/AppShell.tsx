@@ -27,8 +27,6 @@ import {
   Calendar,
   Layers,
   ListTodo,
-  Clock,
-  Radio,
   Bot,
   Info,
   MailOpen,
@@ -2468,17 +2466,9 @@ function AppShellContent({
                       title: t("sidebar.automations"),
                       label: String(automations.length),
                       icon: ListTodo,
-                      variant: (isAutomationsNavigation(navState) && !automationFilter) ? "default" : "ghost",
+                      variant: isAutomationsNavigation(navState) ? "default" : "ghost",
                       onClick: handleAutomationsClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:automations'),
-                      onToggle: () => toggleExpanded('nav:automations'),
                       contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                      items: [
-                        { id: "nav:automations:scheduled", title: t("sidebar.scheduled"), label: String(automationTypeCounts.scheduled), icon: Clock, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled') ? "default" : "ghost", onClick: handleAutomationsScheduledClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
-                        { id: "nav:automations:event", title: t("sidebar.eventBased"), label: String(automationTypeCounts.event), icon: Radio, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'event') ? "default" : "ghost", onClick: handleAutomationsEventClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
-                        { id: "nav:automations:agentic", title: t("sidebar.agentic"), label: String(automationTypeCounts.agentic), icon: Bot, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic') ? "default" : "ghost", onClick: handleAutomationsAgenticClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
-                      ],
                     },
                   ]}
                 />
@@ -2538,6 +2528,29 @@ function AppShellContent({
                           {...getEditConfig('automation-config', activeWorkspace.rootPath)}
                         />
                       )}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-1 px-3 pb-2">
+                      {[
+                        { key: 'all', label: t("sidebar.allAutomations"), count: automations.length, active: !automationFilter, onClick: handleAutomationsClick },
+                        { key: 'scheduled', label: t("sidebar.scheduled"), count: automationTypeCounts.scheduled, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled', onClick: handleAutomationsScheduledClick },
+                        { key: 'event', label: t("sidebar.eventBased"), count: automationTypeCounts.event, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'event', onClick: handleAutomationsEventClick },
+                        { key: 'agentic', label: t("sidebar.agentic"), count: automationTypeCounts.agentic, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic', onClick: handleAutomationsAgenticClick },
+                      ].map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={item.onClick}
+                          className={cn(
+                            "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
+                            item.active
+                              ? "bg-foreground/8 text-foreground"
+                              : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
+                          )}
+                        >
+                          <span className="truncate">{item.label}</span>
+                          <span className="text-[10px] text-muted-foreground/70">{item.count}</span>
+                        </button>
+                      ))}
                     </div>
                     <AutomationsListPanel
                       automations={automations}
