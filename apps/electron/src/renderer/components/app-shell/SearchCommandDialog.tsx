@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { getSessionTitle } from '@/utils/session'
 import type { SessionMeta } from '@/atoms/sessions'
-import type { AgentProfile, LoadedSkill, LoadedSource, Workspace } from '../../../shared/types'
+import type { AgentProfile, LoadedSkill, LoadedSource, Workspace, SessionSearchResult } from '../../../shared/types'
 import type { AutomationListItem } from '../automations/types'
 
 const GROUP_LIMIT = 5
@@ -32,6 +32,7 @@ interface SearchCommandDialogProps {
   sources: LoadedSource[]
   skills: LoadedSkill[]
   automations: AutomationListItem[]
+  activeWorkspaceId?: string
   onOpenSession: (workspaceId: string, sessionId: string) => void | Promise<void>
   onOpenWorkspace: (workspaceId: string) => void | Promise<void>
   onOpenAgent: (agentId: string) => void
@@ -72,6 +73,7 @@ export function SearchCommandDialog({
   sources,
   skills,
   automations,
+  activeWorkspaceId,
   onOpenSession,
   onOpenWorkspace,
   onOpenAgent,
@@ -83,6 +85,8 @@ export function SearchCommandDialog({
   const [query, setQuery] = React.useState('')
   const [activeIndex, setActiveIndex] = React.useState(0)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const [contentResults, setContentResults] = React.useState<SessionSearchResult[]>([])
+  const [isSearchingContent, setIsSearchingContent] = React.useState(false)
 
   React.useEffect(() => {
     if (!open) return
@@ -94,8 +98,38 @@ export function SearchCommandDialog({
   const workspaceById = React.useMemo(() => new Map(workspaces.map(workspace => [workspace.id, workspace])), [workspaces])
   const normalizedQuery = query.trim().toLowerCase()
 
+
+  React.useEffect(() => {
+    if (!open || !activeWorkspaceId || query.trim().length < 2) {
+      setContentResults([])
+      setIsSearchingContent(false)
+      return
+    }
+
+    const searchId = Date.now().toString(36)
+    let cancelled = false
+    setIsSearchingContent(true)
+    const timer = window.setTimeout(async () => {
+      try {
+        const results = await window.electronAPI.searchSessionContent(activeWorkspaceId, query.trim(), searchId)
+        if (!cancelled) setContentResults(results)
+      } catch {
+        if (!cancelled) setContentResults([])
+      } finally {
+        if (!cancelled) setIsSearchingContent(false)
+      }
+    }, 150)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      setIsSearchingContent(false)
+    }
+  }, [activeWorkspaceId, open, query])
+
   const groups = React.useMemo(() => {
-    const visibleSessions = sessions
+    const contentResultBySessionId = new Map(contentResults.map(result => [result.sessionId, result]))
+    const metadataSessions = sessions
       .filter(session => !session.hidden && !session.isArchived)
       .sort((a, b) => (b.lastMessageAt ?? b.createdAt ?? 0) - (a.lastMessageAt ?? a.createdAt ?? 0))
       .filter(session => {
@@ -104,16 +138,38 @@ export function SearchCommandDialog({
       })
       .map<SearchResult>(session => {
         const workspace = workspaceById.get(session.workspaceId)
+        const contentResult = contentResultBySessionId.get(session.id)
         return {
           id: `session:${session.id}`,
           kind: 'session',
           title: getSessionTitle(session),
-          subtitle: workspace?.name || session.preview,
-          badge: 'Session',
+          subtitle: contentResult?.matches[0]?.snippet || workspace?.name || session.preview,
+          badge: contentResult ? `${contentResult.matchCount} matches` : 'Session',
           icon: <Layers className="h-4 w-4" />,
           onSelect: () => onOpenSession(workspace?.id ?? session.workspaceId, session.id),
         }
       })
+
+    const metadataSessionIds = new Set(metadataSessions.map(result => result.id.replace('session:', '')))
+    const contentSessions = contentResults
+      .filter(result => !metadataSessionIds.has(result.sessionId))
+      .map<SearchResult | null>(result => {
+        const session = sessions.find(item => item.id === result.sessionId)
+        if (!session || session.hidden || session.isArchived) return null
+        const workspace = workspaceById.get(session.workspaceId)
+        return {
+          id: `session-content:${session.id}`,
+          kind: 'session',
+          title: getSessionTitle(session),
+          subtitle: result.matches[0]?.snippet || workspace?.name || session.preview,
+          badge: `${result.matchCount} matches`,
+          icon: <Layers className="h-4 w-4" />,
+          onSelect: () => onOpenSession(workspace?.id ?? session.workspaceId, session.id),
+        }
+      })
+      .filter(Boolean) as SearchResult[]
+
+    const visibleSessions = [...metadataSessions, ...contentSessions]
 
     const workspaceResults = workspaces
       .filter(workspace => textMatches(normalizedQuery, workspace.name, workspace.rootPath, workspace.remoteServer?.url))
@@ -185,7 +241,7 @@ export function SearchCommandDialog({
       groupResults('Skills', skillResults),
       groupResults('Automations', automationResults),
     ].filter(Boolean) as Array<{ label: string; results: SearchResult[] }>
-  }, [agents, automations, normalizedQuery, onOpenAgent, onOpenAutomation, onOpenSession, onOpenSkill, onOpenSource, onOpenWorkspace, sessions, skills, sources, workspaceById, workspaces])
+  }, [agents, automations, contentResults, normalizedQuery, onOpenAgent, onOpenAutomation, onOpenSession, onOpenSkill, onOpenSource, onOpenWorkspace, sessions, skills, sources, workspaceById, workspaces])
 
   const flatResults = React.useMemo(() => groups.flatMap(group => group.results), [groups])
 
@@ -225,14 +281,14 @@ export function SearchCommandDialog({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search sessions, workspaces, agents, sources, skills, automations..."
+            placeholder="Search sessions, chat content, workspaces, agents, sources, skills, automations..."
             className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           />
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {groups.length === 0 ? (
             <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
-              No results
+              {isSearchingContent ? 'Searching sessions...' : 'No results'}
             </div>
           ) : groups.map(group => (
             <div key={group.label} className="mb-2 last:mb-0">

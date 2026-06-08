@@ -152,14 +152,6 @@ export interface AppShellContextType {
   sessionListSearchQuery?: string
   /** Whether search mode is active (prevents focus stealing to chat input even with empty query) */
   isSearchModeActive?: boolean
-  /** Callback to update chat find query */
-  setSessionListSearchQuery?: (query: string) => void
-  /** Open chat find UI */
-  onOpenChatFind?: () => void
-  /** Close chat find UI */
-  onCloseChatFind?: () => void
-  /** Current chat find match info */
-  chatFindMatchInfo?: { sessionId: string | null; count: number; index: number; isHighlighting?: boolean }
   /** Ref to ChatDisplay for navigation between matches */
   chatDisplayRef?: React.RefObject<ChatDisplayHandle>
   /** Callback when ChatDisplay match info changes (for immediate UI updates) */

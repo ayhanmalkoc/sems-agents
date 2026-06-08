@@ -729,8 +729,6 @@ function AppShellContent({
   }, [sessionFilterKey])
   // Global search and chat find are intentionally separate surfaces.
   const [searchDialogOpen, setSearchDialogOpen] = React.useState(false)
-  const [chatFindActive, setChatFindActive] = React.useState(false)
-  const [chatFindQuery, setChatFindQuery] = React.useState('')
 
   // Grouping mode for chat list: per-view (stored in viewFiltersMap), forced to 'date' for state sub-views
   const isStateSubView = sessionFilter?.kind === 'state'
@@ -766,13 +764,6 @@ function AppShellContent({
     })
   }, [])
 
-  // Reset match info when search is deactivated
-  React.useEffect(() => {
-    if (!chatFindActive || !chatFindQuery) {
-      setChatMatchInfo({ sessionId: null, count: 0, index: 0 })
-    }
-  }, [chatFindActive, chatFindQuery])
-
   // Filter dropdown: inline search query for filtering statuses/labels in a flat list.
   // When empty, the dropdown shows hierarchical submenus. When typing, shows a flat filtered list.
   const [filterDropdownQuery, setFilterDropdownQuery] = React.useState('')
@@ -787,10 +778,6 @@ function AppShellContent({
     return navState.navigator
   }, [navState])
 
-  React.useEffect(() => {
-    setChatFindActive(false)
-    setChatFindQuery('')
-  }, [navFilterKey])
 
   // Cmd+F opens global search. Chat find is a separate in-chat surface.
   useAction('app.search', () => setSearchDialogOpen(true))
@@ -883,10 +870,6 @@ function AppShellContent({
 
     // Clear transient UI state only on workspace SWITCH (not initial mount)
     if (previousWorkspaceId !== null && previousWorkspaceId !== activeWorkspaceId) {
-      // Clear chat find state
-      setChatFindActive(false)
-      setChatFindQuery('')
-
       // Clear filter dropdown state
       setFilterDropdownQuery('')
       setFilterDropdownSelectedIdx(0)
@@ -1235,13 +1218,6 @@ function AppShellContent({
   useAction('nav.goBackAlt', goBack)
   useAction('nav.goForwardAlt', goForward)
 
-  // Search match navigation (CMD+G next, CMD+SHIFT+G prev)
-  useAction('chat.nextSearchMatch', () => chatDisplayRef.current?.goToNextMatch(), {
-    enabled: () => chatFindActive && (chatMatchInfo.count ?? 0) > 0
-  })
-  useAction('chat.prevSearchMatch', () => chatDisplayRef.current?.goToPrevMatch(), {
-    enabled: () => chatFindActive && (chatMatchInfo.count ?? 0) > 0
-  })
 
   // ESC to stop processing - requires double-press within 1 second
   // First press shows warning overlay, second press interrupts
@@ -1694,13 +1670,8 @@ function AppShellContent({
     onSessionSourcesChange: handleSessionSourcesChange,
     rightSidebarButton: null,
     isCompactMode: isAutoCompact,
-    // Chat find state for ChatDisplay highlighting
-    sessionListSearchQuery: chatFindActive ? chatFindQuery : undefined,
-    isSearchModeActive: chatFindActive,
-    setSessionListSearchQuery: setChatFindQuery,
-    onOpenChatFind: () => setChatFindActive(true),
-    onCloseChatFind: () => { setChatFindActive(false); setChatFindQuery('') },
-    chatFindMatchInfo: chatMatchInfo,
+    sessionListSearchQuery: undefined,
+    isSearchModeActive: false,
     chatDisplayRef,
     onChatMatchInfoChange: handleChatMatchInfoChange,
     onTestAutomation: handleTestAutomation,
@@ -1710,7 +1681,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, chatFindActive, chatFindQuery, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -1983,10 +1954,6 @@ function AppShellContent({
   const handleNewChat = useCallback((newPanel: boolean = false, agentProfileId?: string) => {
     if (!activeWorkspace) return
 
-    // Exit search mode and switch to All Sessions
-    setChatFindActive(false)
-    setChatFindQuery('')
-
     // Delegate to NavigationContext which handles session creation
     navigate(
       routes.action.newSession(agentProfileId ? { agent: agentProfileId } : undefined),
@@ -2018,8 +1985,6 @@ function AppShellContent({
     if (workspaceId !== activeWorkspaceId) {
       await Promise.resolve(onSelectWorkspace(workspaceId))
     }
-    setChatFindActive(false)
-    setChatFindQuery('')
     setTimeout(() => {
       navigate(routes.action.newSession())
       focusZone('chat', { intent: 'programmatic' })
@@ -3647,6 +3612,7 @@ function AppShellContent({
         sources={sources}
         skills={skills}
         automations={automations}
+        activeWorkspaceId={activeWorkspaceId ?? undefined}
         onOpenSession={handleWorkspaceSidebarSessionSelect}
         onOpenWorkspace={handleGlobalSearchWorkspaceOpen}
         onOpenAgent={(agentId) => navigate(routes.view.agents(agentId))}
