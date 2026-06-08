@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDro
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
+import { WorkspaceTerminalPanel } from './WorkspaceTerminalPanel'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
 
@@ -64,6 +65,11 @@ function PlaceholderTool({ tool }: { tool: ToolConfig }) {
 function FilesTool({ tabId, onUpdateTabTitle }: { tabId: string; onUpdateTabTitle?: (id: string, title: string) => void }) {
   return <WorkspaceFilesPanel className="h-full" onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
+
+function TerminalTool({ tabId, onUpdateTabTitle }: { tabId: string; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceTerminalPanel className="h-full" onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
+}
+
 export function RightWorkspacePanel({
   width,
   tabs,
@@ -152,6 +158,8 @@ export function RightWorkspacePanel({
             activeTab.content
           ) : activeTab.type === 'files' ? (
             <FilesTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
+          ) : activeTab.type === 'terminal' ? (
+            <TerminalTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
           ) : (
             <PlaceholderTool tool={TOOL_BY_TYPE.get(activeTab.type)!} />
           )

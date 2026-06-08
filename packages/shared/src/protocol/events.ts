@@ -13,6 +13,8 @@ import type {
   UpdateInfo,
   BrowserInstanceInfo,
   DeepLinkNavigation,
+  TerminalDataEvent,
+  TerminalExitEvent,
 } from './dto'
 
 export interface BroadcastEventMap {
@@ -53,6 +55,10 @@ export interface BroadcastEventMap {
   [RPC_CHANNELS.browserPane.STATE_CHANGED]: [info: BrowserInstanceInfo]
   [RPC_CHANNELS.browserPane.REMOVED]: [id: string]
   [RPC_CHANNELS.browserPane.INTERACTED]: [id: string]
+
+  // Terminal events (per-window)
+  [RPC_CHANNELS.terminal.DATA]: [event: TerminalDataEvent]
+  [RPC_CHANNELS.terminal.EXIT]: [event: TerminalExitEvent]
 
   // Navigation events (per-window)
   [RPC_CHANNELS.notification.NAVIGATE]: [data: { workspaceId: string; sessionId: string }]

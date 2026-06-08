@@ -2,6 +2,9 @@ import { resolve } from 'path'
 import { join } from 'path'
 import { homedir } from 'os'
 import { execSync } from 'child_process'
+import { existsSync } from 'fs'
+import { randomUUID } from 'crypto'
+import * as nodePty from 'node-pty'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getGitBashPath, setGitBashPath, clearGitBashPath } from '@craft-agent/shared/config'
 import { classifyExternalUrl, formatBlockedUrlError } from '@craft-agent/shared/utils/url-safety'
@@ -16,6 +19,33 @@ import {
   requestClientOpenFileDialog,
 } from '@craft-agent/server-core/transport'
 
+type TerminalProcess = {
+  id: string
+  clientId: string
+  cwd: string
+  shell: string
+  pty: nodePty.IPty
+}
+
+const terminalProcesses = new Map<string, TerminalProcess>()
+
+function buildTerminalEnv(): Record<string, string> {
+  const env: Record<string, string> = { TERM: 'xterm-256color' }
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === 'string') env[key] = value
+  }
+  return env
+}
+
+function resolveDefaultShell(): { shell: string; args: string[] } {
+  if (process.platform === 'win32') {
+    const shell = process.env.ComSpec || 'cmd.exe'
+    return { shell, args: [] }
+  }
+  const shell = process.env.SHELL || (existsSync('/bin/zsh') ? '/bin/zsh' : existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh')
+  return { shell, args: [] }
+}
+
 export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.theme.GET_SYSTEM_PREFERENCE,
   RPC_CHANNELS.system.VERSIONS,
@@ -25,6 +55,10 @@ export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.shell.OPEN_URL,
   RPC_CHANNELS.shell.OPEN_FILE,
   RPC_CHANNELS.shell.SHOW_IN_FOLDER,
+  RPC_CHANNELS.terminal.CREATE,
+  RPC_CHANNELS.terminal.INPUT,
+  RPC_CHANNELS.terminal.RESIZE,
+  RPC_CHANNELS.terminal.KILL,
   RPC_CHANNELS.releaseNotes.GET,
   RPC_CHANNELS.releaseNotes.GET_LATEST_VERSION,
   RPC_CHANNELS.git.GET_BRANCH,
@@ -261,6 +295,57 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       deps.platform.logger.error('showInFolder error:', message)
       throw new Error(`Failed to show in folder: ${message}`)
     }
+  })
+
+  server.handle(RPC_CHANNELS.terminal.CREATE, async (ctx, payload: { cwd?: string; cols?: number; rows?: number }) => {
+    try {
+      const workspaceId = ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
+      const requestedCwd = payload?.cwd ? resolve(payload.cwd.startsWith('~') ? payload.cwd.replace(/^~/, homedir()) : payload.cwd) : homedir()
+      const cwd = await validateFilePath(requestedCwd, getWorkspaceAllowedDirs(workspaceId))
+      const { shell, args } = resolveDefaultShell()
+      const id = randomUUID()
+      const pty = nodePty.spawn(shell, args, {
+        name: 'xterm-256color',
+        cols: Math.max(20, payload?.cols ?? 80),
+        rows: Math.max(5, payload?.rows ?? 24),
+        cwd,
+        env: buildTerminalEnv(),
+      })
+
+      terminalProcesses.set(id, { id, clientId: ctx.clientId, cwd, shell, pty })
+      pty.onData((data) => {
+        server.push(RPC_CHANNELS.terminal.DATA, { to: 'client', clientId: ctx.clientId }, { id, data })
+      })
+      pty.onExit((event) => {
+        terminalProcesses.delete(id)
+        server.push(RPC_CHANNELS.terminal.EXIT, { to: 'client', clientId: ctx.clientId }, { id, exitCode: event.exitCode, signal: event.signal })
+      })
+
+      return { id, shell, cwd, pid: pty.pid }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      deps.platform.logger.error('terminal:create error:', message)
+      throw new Error(`Failed to create terminal: ${message}`)
+    }
+  })
+
+  server.handle(RPC_CHANNELS.terminal.INPUT, async (ctx, id: string, data: string) => {
+    const terminal = terminalProcesses.get(id)
+    if (!terminal || terminal.clientId !== ctx.clientId) return
+    terminal.pty.write(data)
+  })
+
+  server.handle(RPC_CHANNELS.terminal.RESIZE, async (ctx, id: string, cols: number, rows: number) => {
+    const terminal = terminalProcesses.get(id)
+    if (!terminal || terminal.clientId !== ctx.clientId) return
+    terminal.pty.resize(Math.max(20, cols), Math.max(5, rows))
+  })
+
+  server.handle(RPC_CHANNELS.terminal.KILL, async (ctx, id: string) => {
+    const terminal = terminalProcesses.get(id)
+    if (!terminal || terminal.clientId !== ctx.clientId) return
+    terminalProcesses.delete(id)
+    terminal.pty.kill()
   })
 }
 

@@ -132,6 +132,14 @@ export const RPC_CHANNELS = {
     OPEN_FILE: 'shell:openFile',
     SHOW_IN_FOLDER: 'shell:showInFolder',
   },
+  terminal: {
+    CREATE: 'terminal:create',
+    INPUT: 'terminal:input',
+    RESIZE: 'terminal:resize',
+    KILL: 'terminal:kill',
+    DATA: 'terminal:data',
+    EXIT: 'terminal:exit',
+  },
   menu: {
     NEW_CHAT: 'menu:newChat',
     NEW_WINDOW: 'menu:newWindow',

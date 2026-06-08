@@ -58,6 +58,10 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   RPC_CHANNELS.shell.OPEN_URL,
   RPC_CHANNELS.shell.OPEN_FILE,
   RPC_CHANNELS.shell.SHOW_IN_FOLDER,
+  RPC_CHANNELS.terminal.CREATE,
+  RPC_CHANNELS.terminal.INPUT,
+  RPC_CHANNELS.terminal.RESIZE,
+  RPC_CHANNELS.terminal.KILL,
 
   // skills — local filesystem actions (guarded for remote)
   RPC_CHANNELS.skills.OPEN_EDITOR,

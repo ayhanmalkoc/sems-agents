@@ -211,6 +211,10 @@ import type {
   WindowCloseRequest,
   DirectoryListingResult,
   FileEntryListingResult,
+  TerminalCreatePayload,
+  TerminalCreateResult,
+  TerminalDataEvent,
+  TerminalExitEvent,
   RemoteSessionTransferPayload,
   ImportRemoteSessionTransferResult,
 } from '@craft-agent/shared/protocol'
@@ -370,6 +374,12 @@ export interface ElectronAPI {
   openUrl(url: string): Promise<void>
   openFile(path: string): Promise<void>
   showInFolder(path: string): Promise<void>
+  createTerminal(payload: TerminalCreatePayload): Promise<TerminalCreateResult>
+  terminalInput(id: string, data: string): Promise<void>
+  terminalResize(id: string, cols: number, rows: number): Promise<void>
+  terminalKill(id: string): Promise<void>
+  onTerminalData(callback: (event: TerminalDataEvent) => void): () => void
+  onTerminalExit(callback: (event: TerminalExitEvent) => void): () => void
 
   // Menu event listeners
   onMenuNewChat(callback: () => void): () => void

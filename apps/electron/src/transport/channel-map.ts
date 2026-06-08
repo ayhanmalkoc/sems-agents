@@ -105,6 +105,12 @@ export const CHANNEL_MAP = {
   openUrl: invoke(RPC_CHANNELS.shell.OPEN_URL),
   openFile: invoke(RPC_CHANNELS.shell.OPEN_FILE),
   showInFolder: invoke(RPC_CHANNELS.shell.SHOW_IN_FOLDER),
+  createTerminal: invoke(RPC_CHANNELS.terminal.CREATE),
+  terminalInput: invoke(RPC_CHANNELS.terminal.INPUT),
+  terminalResize: invoke(RPC_CHANNELS.terminal.RESIZE),
+  terminalKill: invoke(RPC_CHANNELS.terminal.KILL),
+  onTerminalData: listener(RPC_CHANNELS.terminal.DATA),
+  onTerminalExit: listener(RPC_CHANNELS.terminal.EXIT),
 
   // Menu event listeners
   onMenuNewChat: listener(RPC_CHANNELS.menu.NEW_CHAT),
