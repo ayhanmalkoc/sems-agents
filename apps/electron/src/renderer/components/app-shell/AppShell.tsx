@@ -18,11 +18,7 @@ import {
   Search,
   Plus,
   Trash2,
-  DatabaseZap,
-  Zap,
   Inbox,
-  Globe,
-  FolderOpen,
   Cake,
   Calendar,
   Layers,
@@ -37,7 +33,6 @@ import { TopBar } from "./TopBar"
 import { SidebarWorkspacesSection } from "./SidebarWorkspacesSection"
 import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
-import { McpIcon } from "../icons/McpIcon"
 import { cn } from "@/lib/utils"
 import { isMac } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
@@ -2523,32 +2518,29 @@ function AppShellContent({
                         )
                       )}
                     </div>
-                    <div className="shrink-0 px-2 pb-2">
-                      <LeftSidebar
-                        isCollapsed={false}
-                        getItemProps={getSidebarItemProps}
-                        focusedItemId={focusedSidebarItemId}
-                        links={[
-                          {
-                            id: "resources-panel:sources",
-                            title: t("sidebar.sources"),
-                            label: String(sources.length),
-                            icon: DatabaseZap,
-                            variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
-                            onClick: handleSourcesClick,
-                            dataTutorial: "sources-nav",
-                            expandable: true,
-                            expanded: true,
-                            contextMenu: { type: 'sources', onAddSource: () => openAddSource() },
-                            items: [
-                              { id: "resources-panel:sources:api", title: t("sidebar.apis"), label: String(sourceTypeCounts.api), icon: Globe, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost", onClick: handleSourcesApiClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('api'), sourceType: 'api' } },
-                              { id: "resources-panel:sources:mcp", title: t("sidebar.mcps"), label: String(sourceTypeCounts.mcp), icon: <McpIcon className="h-3.5 w-3.5" />, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost", onClick: handleSourcesMcpClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('mcp'), sourceType: 'mcp' } },
-                              { id: "resources-panel:sources:local", title: t("sidebar.localFolders"), label: String(sourceTypeCounts.local), icon: FolderOpen, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost", onClick: handleSourcesLocalClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('local'), sourceType: 'local' } },
-                            ],
-                          },
-                          { id: "resources-panel:skills", title: t("sidebar.skills"), label: String(skills.length), icon: Zap, variant: isSkillsNavigation(navState) ? "default" : "ghost", onClick: handleSkillsClick, contextMenu: { type: 'skills', onAddSkill: openAddSkill } },
-                        ]}
-                      />
+                    <div className="flex shrink-0 flex-wrap gap-1 px-3 pb-2">
+                      {[
+                        { key: 'sources', label: t("sidebar.sources"), count: sources.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: handleSourcesClick },
+                        { key: 'api', label: t("sidebar.apis"), count: sourceTypeCounts.api, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api', onClick: handleSourcesApiClick },
+                        { key: 'mcp', label: t("sidebar.mcps"), count: sourceTypeCounts.mcp, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp', onClick: handleSourcesMcpClick },
+                        { key: 'local', label: t("sidebar.localFolders"), count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
+                        { key: 'skills', label: t("sidebar.skills"), count: skills.length, active: isSkillsNavigation(navState), onClick: handleSkillsClick },
+                      ].map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={item.onClick}
+                          className={cn(
+                            "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
+                            item.active
+                              ? "bg-foreground/8 text-foreground"
+                              : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
+                          )}
+                        >
+                          <span className="truncate">{item.label}</span>
+                          <span className="text-[10px] text-muted-foreground/70">{item.count}</span>
+                        </button>
+                      ))}
                     </div>
                     <div className="min-h-0 flex-1 border-t border-foreground/5 pt-1">
                       {isSourcesNavigation(navState) ? (
