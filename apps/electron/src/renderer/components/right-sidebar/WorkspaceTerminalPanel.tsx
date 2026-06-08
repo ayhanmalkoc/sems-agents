@@ -30,6 +30,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   const terminalRef = React.useRef<Terminal | null>(null)
   const fitAddonRef = React.useRef<FitAddon | null>(null)
   const terminalIdRef = React.useRef<string | null>(null)
+  const startGenerationRef = React.useRef(0)
   const onTitleChangeRef = React.useRef(onTitleChange)
   const [cwd, setCwd] = React.useState<string | null>(null)
   const [shell, setShell] = React.useState<string | null>(null)
@@ -44,12 +45,13 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   const disposeTerminal = React.useCallback(async (kill: boolean) => {
     const id = terminalIdRef.current
     terminalIdRef.current = null
-    if (kill && id) {
-      try { await window.electronAPI.terminalKill(id) } catch { /* noop */ }
-    }
     terminalRef.current?.dispose()
     terminalRef.current = null
     fitAddonRef.current = null
+    containerRef.current?.replaceChildren()
+    if (kill && id) {
+      try { await window.electronAPI.terminalKill(id) } catch { /* noop */ }
+    }
   }, [])
 
   const fit = React.useCallback(() => {
@@ -79,10 +81,14 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
 
   const startTerminal = React.useCallback(async () => {
     if (!activeWorkspace?.rootPath || !containerRef.current) return
+    const startGeneration = startGenerationRef.current + 1
+    startGenerationRef.current = startGeneration
     setStarting(true)
     setExited(false)
     setErrorMessage(null)
     await disposeTerminal(true)
+    if (startGenerationRef.current !== startGeneration || !containerRef.current) return
+    containerRef.current.replaceChildren()
 
     const terminal = new Terminal({
       cursorBlink: true,
