@@ -7,6 +7,7 @@ import { useAppShellContext } from '@/context/AppShellContext'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useTheme } from '@/context/ThemeContext'
 
 interface WorkspaceTerminalPanelProps {
   className?: string
@@ -20,6 +21,7 @@ function basename(path: string): string {
 
 export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTerminalPanelProps) {
   const { activeWorkspaceId, workspaces } = useAppShellContext()
+  const { isDark } = useTheme()
   const activeWorkspace = React.useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
     [activeWorkspaceId, workspaces]
@@ -71,11 +73,16 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       fontFamily: 'var(--font-mono), Consolas, "Liberation Mono", monospace',
       fontSize: 12,
       lineHeight: 1.25,
-      theme: {
-        background: '#00000000',
-        foreground: '#d4d4d8',
+      theme: isDark ? {
+        background: '#111113',
+        foreground: '#f4f4f5',
         cursor: '#f4f4f5',
-        selectionBackground: '#71717a55',
+        selectionBackground: '#71717a88',
+      } : {
+        background: '#ffffff',
+        foreground: '#111827',
+        cursor: '#111827',
+        selectionBackground: '#94a3b866',
       },
       allowProposedApi: false,
     })
@@ -115,7 +122,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, onTitleChange])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, isDark, onTitleChange])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {
@@ -165,7 +172,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
         <PanelHeaderCenterButton aria-label="Clear terminal" tooltip="Clear terminal" onClick={() => terminalRef.current?.clear()} icon={<Trash2 className="h-3.5 w-3.5" />} />
         <PanelHeaderCenterButton aria-label="Stop terminal" tooltip="Stop terminal" disabled={!terminalIdRef.current && exited} onClick={() => void disposeTerminal(true).then(() => setExited(true))} icon={<Square className="h-3.5 w-3.5" />} />
       </div>
-      <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden px-2 py-2 [&_.xterm]:h-full [&_.xterm-viewport]:!bg-transparent" />
+      <div ref={containerRef} className={cn('min-h-0 flex-1 overflow-hidden px-2 py-2 [&_.xterm]:h-full', isDark ? 'bg-[#111113]' : 'bg-white')} />
     </div>
   )
 }
