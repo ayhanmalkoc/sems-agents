@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Code2, Copy, ExternalLink, File, FileCode, FileText, Folder, FolderOpen, Github, Image, Monitor, MoreHorizontal, PanelRightClose, PanelRightOpen, Search, Smartphone, Terminal } from 'lucide-react'
+import { ChevronRight, Code2, Copy, File, FileCode, FileText, Folder, FolderOpen, Image, MoreHorizontal, PanelRightClose, PanelRightOpen, Search } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuSub, StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator, StyledDropdownMenuSubTrigger, StyledDropdownMenuSubContent } from '@/components/ui/styled-dropdown'
+import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator } from '@/components/ui/styled-dropdown'
 import { TopBarButton } from '@/components/ui/TopBarButton'
+import { OpenWithMenuButton } from '@/components/ui/OpenWithMenuButton'
 import { cn } from '@/lib/utils'
 import { useAppShellContext } from '@/context/AppShellContext'
 import type { FileEntryListingResult } from '../../../shared/types'
@@ -227,10 +228,6 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
     if (target) void window.electronAPI.showInFolder(target)
   }, [rootPath, selectedFile])
 
-  const openWorkspaceFolder = useCallback(() => {
-    if (rootPath) void window.electronAPI.showInFolder(rootPath)
-  }, [rootPath])
-
   const renderTree = (items: EntryNode[], depth = 0) => (
     <div className={depth === 0 ? 'space-y-0.5' : 'space-y-0.5 pl-3'}>
       {items.map((entry) => {
@@ -285,39 +282,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
             <StyledDropdownMenuItem disabled={previewKind !== 'markdown'} onClick={() => setRichPreview((value) => !value)}><Code2 className="h-3.5 w-3.5" />{richPreview ? 'Disable rich preview' : 'Enable rich preview'}</StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
-        <DropdownMenu>
-          <div className="flex h-7 items-center overflow-hidden rounded-lg border border-foreground/10 bg-background shadow-minimal">
-            <button
-              type="button"
-              aria-label="Open workspace"
-              onClick={openWorkspaceFolder}
-              className="flex h-full items-center gap-1.5 px-2 text-xs text-foreground transition-colors hover:bg-foreground/5"
-            >
-              <Code2 className="h-4 w-4 text-blue-500" />
-              <span>Open</span>
-            </button>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Choose app"
-                className="flex h-full w-6 items-center justify-center border-l border-foreground/10 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
-              >
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-          </div>
-          <StyledDropdownMenuContent align="end" minWidth="min-w-52">
-            <StyledDropdownMenuItem disabled><Code2 className="h-3.5 w-3.5 text-blue-500" />VS Code</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Monitor className="h-3.5 w-3.5" />Antigravity</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Github className="h-3.5 w-3.5 text-purple-500" />GitHub Desktop</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem onClick={openWorkspaceFolder}><ExternalLink className="h-3.5 w-3.5" />Default app</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Terminal</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Git Bash</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Smartphone className="h-3.5 w-3.5" />Android Studio</StyledDropdownMenuItem>
-            <StyledDropdownMenuSeparator />
-            <StyledDropdownMenuItem onClick={openWorkspaceFolder}><FolderOpen className="h-3.5 w-3.5" />Open folder</StyledDropdownMenuItem>
-          </StyledDropdownMenuContent>
-        </DropdownMenu>
+        <OpenWithMenuButton path={rootPath} />
         <TopBarButton aria-label="Toggle file tree" onClick={() => setTreeOpen((value) => !value)} isActive={treeOpen} className="h-7 w-7 rounded-lg">
           {treeOpen ? <PanelRightClose className="h-4 w-4 text-foreground/60" /> : <PanelRightOpen className="h-4 w-4 text-foreground/60" />}
         </TopBarButton>

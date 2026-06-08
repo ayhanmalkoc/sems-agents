@@ -135,8 +135,10 @@ export interface AppShellContextType {
   // Open a new chat with optional agent, name, and pre-filled input
   openNewChat?: (params?: NewChatActionParams) => Promise<void>
 
-  // Right sidebar button (for page headers)
+  // Right sidebar button (legacy page-header slot)
   rightSidebarButton?: React.ReactNode
+  isRightDockOpen?: boolean
+  onToggleRightDock?: () => void
 
   // Leading action button for panel header (e.g., back button in compact mode)
   leadingAction?: React.ReactNode
