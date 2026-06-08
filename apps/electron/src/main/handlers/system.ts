@@ -4,7 +4,6 @@ import { homedir } from 'os'
 import { execSync } from 'child_process'
 import { existsSync } from 'fs'
 import { randomUUID } from 'crypto'
-import * as nodePty from 'node-pty'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getGitBashPath, setGitBashPath, clearGitBashPath } from '@craft-agent/shared/config'
 import { classifyExternalUrl, formatBlockedUrlError } from '@craft-agent/shared/utils/url-safety'
@@ -24,7 +23,7 @@ type TerminalProcess = {
   clientId: string
   cwd: string
   shell: string
-  pty: nodePty.IPty
+  pty: { write(data: string): void; resize(cols: number, rows: number): void; kill(): void; pid?: number; onData(cb: (data: string) => void): void; onExit(cb: (event: { exitCode: number; signal?: number }) => void): void }
 }
 
 const terminalProcesses = new Map<string, TerminalProcess>()
@@ -55,10 +54,6 @@ export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.shell.OPEN_URL,
   RPC_CHANNELS.shell.OPEN_FILE,
   RPC_CHANNELS.shell.SHOW_IN_FOLDER,
-  RPC_CHANNELS.terminal.CREATE,
-  RPC_CHANNELS.terminal.INPUT,
-  RPC_CHANNELS.terminal.RESIZE,
-  RPC_CHANNELS.terminal.KILL,
   RPC_CHANNELS.releaseNotes.GET,
   RPC_CHANNELS.releaseNotes.GET_LATEST_VERSION,
   RPC_CHANNELS.git.GET_BRANCH,
@@ -93,6 +88,10 @@ export const GUI_HANDLED_CHANNELS = [
   RPC_CHANNELS.menu.COPY,
   RPC_CHANNELS.menu.PASTE,
   RPC_CHANNELS.menu.SELECT_ALL,
+  RPC_CHANNELS.terminal.CREATE,
+  RPC_CHANNELS.terminal.INPUT,
+  RPC_CHANNELS.terminal.RESIZE,
+  RPC_CHANNELS.terminal.KILL,
 ] as const
 
 export const HANDLED_CHANNELS = [
@@ -296,6 +295,11 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       throw new Error(`Failed to show in folder: ${message}`)
     }
   })
+}
+
+export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const { sessionManager } = deps
+  const windowManager = deps.windowManager
 
   server.handle(RPC_CHANNELS.terminal.CREATE, async (ctx, payload: { workspaceId?: string; cwd?: string; cols?: number; rows?: number }) => {
     try {
@@ -304,6 +308,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       const cwd = await validateFilePath(requestedCwd, getWorkspaceAllowedDirs(workspaceId))
       const { shell, args } = resolveDefaultShell()
       const id = randomUUID()
+      const nodePty = await import('node-pty')
       const pty = nodePty.spawn(shell, args, {
         name: 'xterm-256color',
         cols: Math.max(20, payload?.cols ?? 80),
@@ -346,12 +351,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     if (!terminal || terminal.clientId !== ctx.clientId) return
     terminalProcesses.delete(id)
     terminal.pty.kill()
-  })
-}
-
-export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps): void {
-  const { sessionManager } = deps
-  const windowManager = deps.windowManager
+  })
 
   // Auto-update handlers
   server.handle(RPC_CHANNELS.update.CHECK, async () => {
