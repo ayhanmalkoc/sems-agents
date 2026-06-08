@@ -2485,7 +2485,19 @@ function AppShellContent({
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
-                <SidebarWorkspacesSection
+                {isAgentsNavigation(navState) ? (
+                  <AgentsListPanel
+                    agents={agentProfiles}
+                    workspaceRootPath={activeWorkspace?.rootPath}
+                    onAgentClick={handleAgentSelect}
+                    onDuplicateAgent={handleDuplicateAgent}
+                    onDeleteAgent={handleDeleteAgent}
+                    onImproveAgent={handleImproveAgent}
+                    onCreateAgent={handleCreateAgent}
+                    selectedAgentId={navState.details ? navState.details.agentId : null}
+                  />
+                ) : (
+                  <SidebarWorkspacesSection
                     workspaces={workspaces}
                     activeWorkspaceId={activeWorkspaceId}
                     workspaceUnreadMap={workspaceUnreadMap}
@@ -2512,6 +2524,7 @@ function AppShellContent({
                     onSendToWorkspace={(ids) => setSendToWorkspaceIds(ids)}
                     onDeleteSession={(sessionId) => handleDeleteSession(sessionId)}
                   />
+                )}
               </div>
 
               <div className="shrink-0 border-t border-foreground/5 px-2 py-2">
@@ -3199,18 +3212,7 @@ function AppShellContent({
               }
             />
             {/* Content: SessionList, SourcesListPanel, or SettingsNavigator based on navigation state */}
-            {isAgentsNavigation(navState) && (
-              <AgentsListPanel
-                agents={agentProfiles}
-                workspaceRootPath={activeWorkspace?.rootPath}
-                onAgentClick={handleAgentSelect}
-                onDuplicateAgent={handleDuplicateAgent}
-                onDeleteAgent={handleDeleteAgent}
-                onImproveAgent={handleImproveAgent}
-                onCreateAgent={handleCreateAgent}
-                selectedAgentId={isAgentsNavigation(navState) && navState.details ? navState.details.agentId : null}
-              />
-            )}            {isSourcesNavigation(navState) && (
+            {isSourcesNavigation(navState) && (
               /* Sources List - filtered by type if sourceFilter is active */
               <SourcesListPanel
                 sources={sources}
@@ -3309,7 +3311,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
+          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3350,7 +3352,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}
