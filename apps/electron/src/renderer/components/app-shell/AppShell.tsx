@@ -31,6 +31,8 @@ import {
 import { SourceAvatar } from "@/components/ui/source-avatar"
 import { TopBar } from "./TopBar"
 import { SidebarWorkspacesSection } from "./SidebarWorkspacesSection"
+import { SidebarFilterPills } from "./SidebarFilterPills"
+import { SidebarSectionPanel } from "./SidebarSectionPanel"
 import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { cn } from "@/lib/utils"
@@ -2448,12 +2450,9 @@ function AppShellContent({
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
                 {isAgentsNavigation(navState) ? (
-                  <div className="flex min-h-full flex-col">
-                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
-                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Agents
-                      </span>
-                      {activeWorkspace && (
+                  <SidebarSectionPanel
+                    title="Agents"
+                    action={activeWorkspace ? (
                         <div className="flex items-center gap-1">
                           <EditPopover
                             trigger={
@@ -2470,8 +2469,8 @@ function AppShellContent({
                             onClick={handleCreateAgent}
                           />
                         </div>
-                      )}
-                    </div>
+                      ) : undefined}
+                  >
                     <AgentsListPanel
                       agents={agentProfiles}
                       workspaceRootPath={activeWorkspace?.rootPath}
@@ -2482,14 +2481,11 @@ function AppShellContent({
                       onCreateAgent={handleCreateAgent}
                       selectedAgentId={navState.details ? navState.details.agentId : null}
                     />
-                  </div>
+                  </SidebarSectionPanel>
                 ) : (isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? (
-                  <div className="flex min-h-full flex-col">
-                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
-                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {t("sidebar.resources")}
-                      </span>
-                      {activeWorkspace && (
+                  <SidebarSectionPanel
+                    title={t("sidebar.resources")}
+                    action={activeWorkspace ? (
                         isSkillsNavigation(navState) ? (
                           <EditPopover
                             trigger={
@@ -2516,32 +2512,19 @@ function AppShellContent({
                             )}
                           />
                         )
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-1 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {[
-                        { key: 'sources', label: t("sidebar.sources"), count: sources.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: handleSourcesClick },
-                        { key: 'api', label: t("sidebar.apis"), count: sourceTypeCounts.api, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api', onClick: handleSourcesApiClick },
-                        { key: 'mcp', label: t("sidebar.mcps"), count: sourceTypeCounts.mcp, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp', onClick: handleSourcesMcpClick },
-                        { key: 'local', label: 'Local', count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
-                        { key: 'skills', label: t("sidebar.skills"), count: skills.length, active: isSkillsNavigation(navState), onClick: handleSkillsClick },
-                      ].map((item) => (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={item.onClick}
-                          className={cn(
-                            "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
-                            item.active
-                              ? "bg-foreground/8 text-foreground"
-                              : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
-                          )}
-                        >
-                          <span className="truncate">{item.label}</span>
-                          <span className="text-[10px] text-muted-foreground/70">{item.count}</span>
-                        </button>
-                      ))}
-                    </div>
+                      ) : undefined}
+                    filters={
+                      <SidebarFilterPills
+                        items={[
+                          { key: 'sources', label: t("sidebar.sources"), count: sources.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: handleSourcesClick },
+                          { key: 'api', label: t("sidebar.apis"), count: sourceTypeCounts.api, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api', onClick: handleSourcesApiClick },
+                          { key: 'mcp', label: t("sidebar.mcps"), count: sourceTypeCounts.mcp, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp', onClick: handleSourcesMcpClick },
+                          { key: 'local', label: 'Local', count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
+                          { key: 'skills', label: t("sidebar.skills"), count: skills.length, active: isSkillsNavigation(navState), onClick: handleSkillsClick },
+                        ]}
+                      />
+                    }
+                  >
                     <div className="min-h-0 flex-1 border-t border-foreground/5 pt-1">
                       {isSourcesNavigation(navState) ? (
                         <SourcesListPanel
@@ -2564,14 +2547,11 @@ function AppShellContent({
                         />
                       ) : null}
                     </div>
-                  </div>
+                  </SidebarSectionPanel>
                 ) : isAutomationsNavigation(navState) ? (
-                  <div className="flex min-h-full flex-col">
-                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
-                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {t("sidebar.automations")}
-                      </span>
-                      {activeWorkspace && (
+                  <SidebarSectionPanel
+                    title={t("sidebar.automations")}
+                    action={activeWorkspace ? (
                         <EditPopover
                           trigger={
                             <HeaderIconButton
@@ -2581,31 +2561,18 @@ function AppShellContent({
                           }
                           {...getEditConfig('automation-config', activeWorkspace.rootPath)}
                         />
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-1 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {[
-                        { key: 'all', label: t("sidebar.allAutomations"), count: automations.length, active: !automationFilter, onClick: handleAutomationsClick },
-                        { key: 'scheduled', label: t("sidebar.scheduled"), count: automationTypeCounts.scheduled, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled', onClick: handleAutomationsScheduledClick },
-                        { key: 'event', label: t("sidebar.eventBased"), count: automationTypeCounts.event, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'event', onClick: handleAutomationsEventClick },
-                        { key: 'agentic', label: t("sidebar.agentic"), count: automationTypeCounts.agentic, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic', onClick: handleAutomationsAgenticClick },
-                      ].map((item) => (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={item.onClick}
-                          className={cn(
-                            "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
-                            item.active
-                              ? "bg-foreground/8 text-foreground"
-                              : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
-                          )}
-                        >
-                          <span className="truncate">{item.label}</span>
-                          <span className="text-[10px] text-muted-foreground/70">{item.count}</span>
-                        </button>
-                      ))}
-                    </div>
+                      ) : undefined}
+                    filters={
+                      <SidebarFilterPills
+                        items={[
+                          { key: 'all', label: t("sidebar.allAutomations"), count: automations.length, active: !automationFilter, onClick: handleAutomationsClick },
+                          { key: 'scheduled', label: t("sidebar.scheduled"), count: automationTypeCounts.scheduled, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled', onClick: handleAutomationsScheduledClick },
+                          { key: 'event', label: t("sidebar.eventBased"), count: automationTypeCounts.event, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'event', onClick: handleAutomationsEventClick },
+                          { key: 'agentic', label: t("sidebar.agentic"), count: automationTypeCounts.agentic, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic', onClick: handleAutomationsAgenticClick },
+                        ]}
+                      />
+                    }
+                  >
                     <AutomationsListPanel
                       automations={automations}
                       automationFilter={automationFilter ? { kind: AUTOMATION_TYPE_TO_FILTER_KIND[automationFilter.automationType] ?? 'all' } : undefined}
@@ -2617,7 +2584,7 @@ function AppShellContent({
                       selectedAutomationId={navState.details ? navState.details.automationId : null}
                       workspaceRootPath={activeWorkspace?.rootPath}
                     />
-                  </div>
+                  </SidebarSectionPanel>
                 ) : (
                   <SidebarWorkspacesSection
                     workspaces={workspaces}
@@ -3271,106 +3238,10 @@ function AppShellContent({
                     </DropdownMenu>
                     )
                   )}
-                  {/* Add Agent button (only for agents mode) */}
-                  {isAgentsNavigation(navState) && activeWorkspace && (
-                    <div className="flex items-center gap-1">
-                      <EditPopover
-                        trigger={
-                          <HeaderIconButton
-                            icon={<Bot className="h-4 w-4" />}
-                            tooltip="Create Agent with AI"
-                          />
-                        }
-                        {...getEditConfig('add-agent', activeWorkspace.rootPath)}
-                      />
-                      <HeaderIconButton
-                        icon={<Plus className="h-4 w-4" />}
-                        tooltip="Add Agent"
-                        onClick={handleCreateAgent}
-                      />
-                    </div>
-                  )}                  {/* Add Source button (only for sources mode) - uses filter-aware edit config */}
-                  {isSourcesNavigation(navState) && activeWorkspace && (
-                    <EditPopover
-                      trigger={
-                        <HeaderIconButton
-                          icon={<Plus className="h-4 w-4" />}
-                          tooltip={t("sidebarMenu.addSource")}
-                          data-tutorial="add-source-button"
-                        />
-                      }
-                      {...getEditConfig(
-                        sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source',
-                        activeWorkspace.rootPath
-                      )}
-                    />
-                  )}
-                  {/* Add Skill button (only for skills mode) */}
-                  {isSkillsNavigation(navState) && activeWorkspace && (
-                    <EditPopover
-                      trigger={
-                        <HeaderIconButton
-                          icon={<Plus className="h-4 w-4" />}
-                          tooltip={t("sidebarMenu.addSkill")}
-                          data-tutorial="add-skill-button"
-                        />
-                      }
-                      {...getEditConfig('add-skill', activeWorkspace.rootPath)}
-                    />
-                  )}
-                  {/* Add Automation button (only for automations mode) */}
-                  {isAutomationsNavigation(navState) && activeWorkspace && (
-                    <EditPopover
-                      trigger={
-                        <HeaderIconButton
-                          icon={<Plus className="h-4 w-4" />}
-                          tooltip={t("sidebarMenu.addAutomation")}
-                        />
-                      }
-                      {...getEditConfig('automation-config', activeWorkspace.rootPath)}
-                    />
-                  )}
                 </>
               }
             />
-            {/* Content: SessionList, SourcesListPanel, or SettingsNavigator based on navigation state */}
-            {isSourcesNavigation(navState) && (
-              /* Sources List - filtered by type if sourceFilter is active */
-              <SourcesListPanel
-                sources={sources}
-                sourceFilter={sourceFilter}
-                workspaceRootPath={activeWorkspace?.rootPath}
-                onDeleteSource={handleDeleteSource}
-                onSourceClick={handleSourceSelect}
-                selectedSourceSlug={isSourcesNavigation(navState) && navState.details ? navState.details.sourceSlug : null}
-                localMcpEnabled={localMcpEnabled}
-              />
-            )}
-            {isSkillsNavigation(navState) && activeWorkspaceId && (
-              /* Skills List */
-              <SkillsListPanel
-                skills={skills}
-                workspaceId={activeWorkspaceId}
-                workspaceRootPath={activeWorkspace?.rootPath}
-                onSkillClick={handleSkillSelect}
-                onDeleteSkill={handleDeleteSkill}
-                selectedSkillSlug={isSkillsNavigation(navState) && navState.details?.type === 'skill' ? navState.details.skillSlug : null}
-              />
-            )}
-            {isAutomationsNavigation(navState) && (
-              /* Automations List - filtered by type if automationFilter is active */
-              <AutomationsListPanel
-                automations={automations}
-                automationFilter={automationFilter ? { kind: AUTOMATION_TYPE_TO_FILTER_KIND[automationFilter.automationType] ?? 'all' } : undefined}
-                onAutomationClick={handleAutomationSelect}
-                onTestAutomation={handleTestAutomation}
-                onToggleAutomation={handleToggleAutomation}
-                onDuplicateAutomation={handleDuplicateAutomation}
-                onDeleteAutomation={handleDeleteAutomation}
-                selectedAutomationId={isAutomationsNavigation(navState) && navState.details ? navState.details.automationId : null}
-                workspaceRootPath={activeWorkspace?.rootPath}
-              />
-            )}
+            {/* Content: legacy sessions navigator only. Other resource navigators live in the app sidebar. */}
             {isSessionsNavigation(navState) && (
               /* Sessions List */
               <>
