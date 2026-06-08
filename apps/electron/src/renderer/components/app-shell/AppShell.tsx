@@ -2518,12 +2518,12 @@ function AppShellContent({
                         )
                       )}
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-1 px-3 pb-2">
+                    <div className="flex shrink-0 gap-1 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {[
                         { key: 'sources', label: t("sidebar.sources"), count: sources.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: handleSourcesClick },
                         { key: 'api', label: t("sidebar.apis"), count: sourceTypeCounts.api, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api', onClick: handleSourcesApiClick },
                         { key: 'mcp', label: t("sidebar.mcps"), count: sourceTypeCounts.mcp, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp', onClick: handleSourcesMcpClick },
-                        { key: 'local', label: t("sidebar.localFolders"), count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
+                        { key: 'local', label: 'Local', count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
                         { key: 'skills', label: t("sidebar.skills"), count: skills.length, active: isSkillsNavigation(navState), onClick: handleSkillsClick },
                       ].map((item) => (
                         <button
@@ -2531,7 +2531,7 @@ function AppShellContent({
                           type="button"
                           onClick={item.onClick}
                           className={cn(
-                            "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
+                            "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
                             item.active
                               ? "bg-foreground/8 text-foreground"
                               : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
@@ -2583,7 +2583,7 @@ function AppShellContent({
                         />
                       )}
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-1 px-3 pb-2">
+                    <div className="flex shrink-0 gap-1 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {[
                         { key: 'all', label: t("sidebar.allAutomations"), count: automations.length, active: !automationFilter, onClick: handleAutomationsClick },
                         { key: 'scheduled', label: t("sidebar.scheduled"), count: automationTypeCounts.scheduled, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled', onClick: handleAutomationsScheduledClick },
@@ -2595,7 +2595,7 @@ function AppShellContent({
                           type="button"
                           onClick={item.onClick}
                           className={cn(
-                            "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
+                            "inline-flex h-7 shrink-0 items-center gap-1 rounded-[7px] px-2 text-xs transition-colors",
                             item.active
                               ? "bg-foreground/8 text-foreground"
                               : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
