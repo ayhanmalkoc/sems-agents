@@ -87,6 +87,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     try {
       fitAddon.fit()
       const created = await window.electronAPI.createTerminal({
+        workspaceId: activeWorkspace.id,
         cwd: activeWorkspace.rootPath,
         cols: terminal.cols,
         rows: terminal.rows,
@@ -109,7 +110,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.rootPath, disposeTerminal, fit, onTitleChange])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, onTitleChange])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {

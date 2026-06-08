@@ -297,9 +297,9 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     }
   })
 
-  server.handle(RPC_CHANNELS.terminal.CREATE, async (ctx, payload: { cwd?: string; cols?: number; rows?: number }) => {
+  server.handle(RPC_CHANNELS.terminal.CREATE, async (ctx, payload: { workspaceId?: string; cwd?: string; cols?: number; rows?: number }) => {
     try {
-      const workspaceId = ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
+      const workspaceId = payload?.workspaceId ?? ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
       const requestedCwd = payload?.cwd ? resolve(payload.cwd.startsWith('~') ? payload.cwd.replace(/^~/, homedir()) : payload.cwd) : homedir()
       const cwd = await validateFilePath(requestedCwd, getWorkspaceAllowedDirs(workspaceId))
       const { shell, args } = resolveDefaultShell()

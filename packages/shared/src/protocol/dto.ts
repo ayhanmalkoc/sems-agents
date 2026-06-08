@@ -582,6 +582,7 @@ export interface TestAutomationResult {
 // ---------------------------------------------------------------------------
 
 export interface TerminalCreatePayload {
+  workspaceId?: string
   cwd?: string
   cols?: number
   rows?: number
