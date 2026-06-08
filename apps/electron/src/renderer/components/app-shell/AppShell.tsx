@@ -2413,15 +2413,17 @@ function AppShellContent({
                     <div>
                       <ContextMenu modal={true}>
                         <ContextMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
+                          <button
+                            type="button"
                             onClick={(e) => handleNewChat(e.metaKey || e.ctrlKey)}
-                            className="flex h-8 w-full items-center justify-start gap-2 rounded-[8px] px-2 text-left text-sm font-normal text-foreground/80 shadow-none transition-colors hover:bg-foreground/4 hover:text-foreground"
+                            className="group flex w-full items-center gap-2 rounded-[6px] px-2 py-[5px] text-[13px] font-normal text-foreground/80 outline-none hover:bg-sidebar-hover focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
                             data-tutorial="new-chat-button"
                           >
-                            <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+                            <span className="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                              <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+                            </span>
                             {t("session.newSession")}
-                          </Button>
+                          </button>
                         </ContextMenuTrigger>
                         <StyledContextMenuContent>
                           <ContextMenuProvider>
