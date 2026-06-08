@@ -38,7 +38,13 @@ function buildTerminalEnv(): Record<string, string> {
 
 function resolveDefaultShell(): { shell: string; args: string[] } {
   if (process.platform === 'win32') {
-    const shell = process.env.ComSpec || 'cmd.exe'
+    const candidates = [
+      'C:\\Program Files\\PowerShell\\7\\pwsh.exe',
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      process.env.ComSpec,
+      'cmd.exe',
+    ].filter(Boolean) as string[]
+    const shell = candidates.find((candidate) => candidate.includes('\\') ? existsSync(candidate) : true) ?? 'cmd.exe'
     return { shell, args: [] }
   }
   const shell = process.env.SHELL || (existsSync('/bin/zsh') ? '/bin/zsh' : existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh')
