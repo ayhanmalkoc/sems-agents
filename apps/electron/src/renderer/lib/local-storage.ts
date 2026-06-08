@@ -31,6 +31,10 @@ export const KEYS = {
   // Session files panel state
   sessionFilesExpandedFolders: 'session-files-expanded', // Expanded folders in session files tree (keyed by sessionId)
 
+  // Right workspace tool dock
+  rightWorkspacePanelOpen: 'right-workspace-panel-open',
+  rightWorkspacePanelWidth: 'right-workspace-panel-width',
+
   // Theme
   theme: 'theme',
 
@@ -127,3 +131,4 @@ export function setRaw(key: StorageKey, value: string, suffix?: string): void {
 export function getKeyString(key: StorageKey, suffix?: string): string {
   return buildKey(key, suffix)
 }
+

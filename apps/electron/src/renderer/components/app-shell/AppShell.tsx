@@ -125,6 +125,7 @@ import { PanelHeader } from "./PanelHeader"
 import { FabNewChat } from "./FabNewChat"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
+import { RightWorkspacePanel, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
 import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
 import { WorkspaceCreationScreen, type CreationStep } from "@/components/workspace/WorkspaceCreationScreen"
 import { fullscreenOverlayOpenAtom } from "@/atoms/overlay"
@@ -543,7 +544,50 @@ function AppShellContent({
   const [sessionListWidth, setSessionListWidth] = React.useState(() => {
     return storage.get(storage.KEYS.sessionListWidth, 300)
   })
+  const [isRightDockOpen, setIsRightDockOpen] = React.useState(() => {
+    return storage.get(storage.KEYS.rightWorkspacePanelOpen, false)
+  })
+  const [rightDockWidth, setRightDockWidth] = React.useState(() => {
+    return storage.get(storage.KEYS.rightWorkspacePanelWidth, 360)
+  })
+  const [rightDockTabs, setRightDockTabs] = React.useState<RightDockTab[]>([])
+  const [activeRightDockTabId, setActiveRightDockTabId] = React.useState<string | null>(null)
 
+
+  React.useEffect(() => {
+    storage.set(storage.KEYS.rightWorkspacePanelOpen, isRightDockOpen)
+  }, [isRightDockOpen])
+
+  React.useEffect(() => {
+    storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
+  }, [rightDockWidth])
+
+  const openRightDockTool = useCallback((type: RightDockToolType) => {
+    const tab: RightDockTab = { id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type }
+    setRightDockTabs((prev) => [...prev, tab])
+    setActiveRightDockTabId(tab.id)
+    setIsRightDockOpen(true)
+  }, [])
+
+  const closeRightDockTab = useCallback((tabId: string) => {
+    setRightDockTabs((prev) => {
+      const index = prev.findIndex((tab) => tab.id === tabId)
+      if (index === -1) return prev
+      const next = prev.filter((tab) => tab.id !== tabId)
+      setActiveRightDockTabId((current) => {
+        if (current !== tabId) return current
+        return next[index]?.id ?? next[index - 1]?.id ?? null
+      })
+      return next
+    })
+  }, [])
+
+  const handleRightDockResizeStart = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    rightDockResizeStartXRef.current = event.clientX
+    rightDockResizeStartWidthRef.current = rightDockWidth
+    setIsResizing('right-dock')
+  }, [rightDockWidth])
   // Hides both sidebar and navigator (CMD+. toggle)
   // Seed from either focused window param or persisted preference, then keep it toggleable.
   const [isSidebarAndNavigatorHidden, setIsSidebarAndNavigatorHidden] = React.useState(() => {
@@ -574,13 +618,15 @@ function AppShellContent({
     })
   }, [])
 
-  const [isResizing, setIsResizing] = React.useState<'sidebar' | 'session-list' | null>(null)
+  const [isResizing, setIsResizing] = React.useState<'sidebar' | 'session-list' | 'right-dock' | null>(null)
   const [workspaceCreationStep, setWorkspaceCreationStep] = React.useState<CreationStep | null>(null)
   const setFullscreenOverlayOpen = useSetAtom(fullscreenOverlayOpenAtom)
   const [sidebarHandleY, setSidebarHandleY] = React.useState<number | null>(null)
   const [sessionListHandleY, setSessionListHandleY] = React.useState<number | null>(null)
   const resizeHandleRef = React.useRef<HTMLDivElement>(null)
   const sessionListHandleRef = React.useRef<HTMLDivElement>(null)
+  const rightDockResizeStartXRef = React.useRef(0)
+  const rightDockResizeStartWidthRef = React.useRef(360)
   const [session, setSession] = useSession()
   const { resolvedMode, isDark, setMode } = useTheme()
   const { canGoBack, canGoForward, goBack, goForward, navigateToSource, navigateToSession } = useNavigation()
@@ -1303,6 +1349,10 @@ function AppShellContent({
           const rect = sessionListHandleRef.current.getBoundingClientRect()
           setSessionListHandleY(e.clientY - rect.top)
         }
+      } else if (isResizing === 'right-dock') {
+        const delta = rightDockResizeStartXRef.current - e.clientX
+        const newWidth = Math.min(Math.max(rightDockResizeStartWidthRef.current + delta, 300), 640)
+        setRightDockWidth(newWidth)
       }
     }
 
@@ -1313,6 +1363,8 @@ function AppShellContent({
       } else if (isResizing === 'session-list') {
         storage.set(storage.KEYS.sessionListWidth, sessionListWidth)
         setSessionListHandleY(null)
+      } else if (isResizing === 'right-dock') {
+        storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
       }
       setIsResizing(null)
     }
@@ -1328,6 +1380,7 @@ function AppShellContent({
     isResizing,
     sidebarWidth,
     sessionListWidth,
+    rightDockWidth,
     isSidebarVisible,
   ])
 
@@ -1353,8 +1406,8 @@ function AppShellContent({
 
   // Reload skills when active session's workingDirectory changes (for project-level skills)
   // Skills are loaded from: global (~/.agents/skills/), workspace, and project ({workingDirectory}/.agents/skills/)
-  const activeSessionWorkingDirectory = session.selected
-    ? sessionMetaMap.get(session.selected)?.workingDirectory
+  const activeSessionWorkingDirectory = effectiveSessionId
+    ? sessionMetaMap.get(effectiveSessionId)?.workingDirectory
     : undefined
   React.useEffect(() => {
     if (!activeWorkspaceId) return
@@ -2052,15 +2105,8 @@ function AppShellContent({
   }, [])
 
   const handleOpenFilesTool = useCallback(async () => {
-    const directory = activeSessionWorkingDirectory || activeWorkspace?.rootPath
-    if (!directory) return
-    try {
-      await window.electronAPI.showInFolder(directory)
-    } catch (error) {
-      console.error('[Chat] Failed to open files tool:', error)
-      toast.error(t('toast.failedToOpenFile'))
-    }
-  }, [activeSessionWorkingDirectory, activeWorkspace?.rootPath, t])
+    openRightDockTool('files')
+  }, [openRightDockTool])
 
   // Delete Source - simplified since agents system is removed
   const handleDeleteSource = useCallback(async (sourceSlug: string) => {
@@ -2385,6 +2431,8 @@ function AppShellContent({
           onAddBrowserPanel={() => { void handleNewBrowserWindow() }}
           onOpenFilesTool={() => { void handleOpenFilesTool() }}
           hasFilesTool={Boolean(activeSessionWorkingDirectory || activeWorkspace?.rootPath)}
+          onToggleRightDock={() => setIsRightDockOpen((prev) => !prev)}
+          isRightDockOpen={isRightDockOpen}
           isCompact={isAutoCompact}
         />
 
@@ -3306,11 +3354,24 @@ function AppShellContent({
           }
           navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
-          isRightSidebarVisible={false}
+          isRightSidebarVisible={isRightDockOpen && !isAutoCompact}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
         />
-
+        {isRightDockOpen && !isAutoCompact && (
+          <RightWorkspacePanel
+            width={rightDockWidth}
+            tabs={rightDockTabs}
+            activeTabId={activeRightDockTabId}
+            activeSessionId={effectiveSessionId}
+            sessionFolderPath={activeSessionWorkingDirectory}
+            onAddTab={openRightDockTool}
+            onSelectTab={setActiveRightDockTabId}
+            onCloseTab={closeRightDockTab}
+            onClosePanel={() => setIsRightDockOpen(false)}
+            onResizeStart={handleRightDockResizeStart}
+          />
+        )}
         {/* Sidebar Resize Handle (absolute, hidden in focused mode) */}
         {!effectiveSidebarAndNavigatorHidden && (
         <div
@@ -3623,3 +3684,5 @@ function AppShellContent({
     </AppShellProvider>
   )
 }
+
+

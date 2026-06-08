@@ -59,6 +59,8 @@ interface TopBarProps {
   onAddBrowserPanel: () => void
   onOpenFilesTool?: () => void
   hasFilesTool?: boolean
+  onToggleRightDock?: () => void
+  isRightDockOpen?: boolean
   /** When true, hides controls that don't apply in compact/mobile layout */
   isCompact?: boolean
 }
@@ -87,6 +89,8 @@ export function TopBar({
   onAddBrowserPanel,
   onOpenFilesTool,
   hasFilesTool = false,
+  onToggleRightDock,
+  isRightDockOpen = false,
   isCompact,
 }: TopBarProps) {
   const { t } = useTranslation()
@@ -299,9 +303,21 @@ export function TopBar({
             </StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
+
+        {onToggleRightDock && (
+          <TopBarButton
+            aria-label="Toggle right tools panel"
+            isActive={isRightDockOpen}
+            onClick={onToggleRightDock}
+            className="h-[26px] w-[26px] rounded-lg"
+          >
+            <Icons.PanelRight className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
+          </TopBarButton>
+        )}
       </div>
       )}
       </div>
     </div>
   )
 }
+
