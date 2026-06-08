@@ -2703,10 +2703,24 @@ function AppShellContent({
                   activeWorkspaceId={activeWorkspaceId}
                   workspaceUnreadMap={workspaceUnreadMap}
                   sessionsByWorkspaceId={sidebarSessionsByWorkspaceId}
+                  selectedSessionId={focusedSessionId ?? session.selected}
+                  sessionStatuses={effectiveSessionStatuses}
+                  labels={displayLabelConfigs}
                   onSelectWorkspace={onSelectWorkspace}
                   onNewSession={handleWorkspaceSidebarNewSession}
                   onSelectSession={handleWorkspaceSidebarSessionSelect}
                   onAddWorkspace={openWorkspaceCreation}
+                  onRenameSession={onRenameSession}
+                  onFlagSession={onFlagSession}
+                  onUnflagSession={onUnflagSession}
+                  onArchiveSession={onArchiveSession}
+                  onUnarchiveSession={onUnarchiveSession}
+                  onMarkUnread={onMarkSessionUnread}
+                  onSessionStatusChange={onSessionStatusChange}
+                  onLabelsChange={handleSessionLabelsChange}
+                  onOpenInNewWindow={(workspaceId, sessionId) => window.electronAPI.openSessionInNewWindow(workspaceId, sessionId)}
+                  onSendToWorkspace={(ids) => setSendToWorkspaceIds(ids)}
+                  onDeleteSession={(sessionId) => handleDeleteSession(sessionId)}
                 />
                 {/* Agent Tree: Hierarchical list of agents */}
                 {/* Agents section removed */}

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Cloud, Folder, FolderPlus, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Cloud, Folder, FolderPlus, MoreHorizontal, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CrossfadeAvatar } from '@/components/ui/avatar'
 import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
@@ -10,6 +10,14 @@ import {
   StyledDropdownMenuContent,
   StyledDropdownMenuItem,
 } from '@/components/ui/styled-dropdown'
+import { DropdownMenuProvider } from '@/components/ui/menu-context'
+import { SessionMenu } from './SessionMenu'
+import { getSessionStatus } from '@/utils/session'
+import { getStateIcon } from '@/config/session-status-config'
+import { Spinner } from '@craft-agent/ui'
+import { hasUnreadMeta } from '@/utils/session'
+import type { SessionStatusId, SessionStatus } from '@/config/session-status-config'
+import type { LabelConfig } from '@craft-agent/shared/labels'
 import type { SessionMeta } from '@/atoms/sessions'
 import type { Workspace } from '../../../shared/types'
 import type { CreationStep } from '@/components/workspace/WorkspaceCreationScreen'
@@ -25,7 +33,21 @@ interface SidebarWorkspacesSectionProps {
   onSelectWorkspace: (workspaceId: string) => void | Promise<void>
   onNewSession: (workspaceId: string) => void | Promise<void>
   onSelectSession: (workspaceId: string, sessionId: string) => void | Promise<void>
+  selectedSessionId?: string | null
+  sessionStatuses: SessionStatus[]
+  labels: LabelConfig[]
   onAddWorkspace: (step: CreationStep) => void
+  onRenameSession: (sessionId: string, name: string) => void
+  onFlagSession?: (sessionId: string) => void
+  onUnflagSession?: (sessionId: string) => void
+  onArchiveSession?: (sessionId: string) => void
+  onUnarchiveSession?: (sessionId: string) => void
+  onMarkUnread: (sessionId: string) => void
+  onSessionStatusChange: (sessionId: string, state: SessionStatusId) => void
+  onLabelsChange?: (sessionId: string, labels: string[]) => void
+  onOpenInNewWindow: (workspaceId: string, sessionId: string) => void
+  onSendToWorkspace?: (sessionIds: string[]) => void
+  onDeleteSession: (sessionId: string) => Promise<boolean>
 }
 
 export function SidebarWorkspacesSection({
@@ -36,14 +58,38 @@ export function SidebarWorkspacesSection({
   onSelectWorkspace,
   onNewSession,
   onSelectSession,
+  selectedSessionId,
+  sessionStatuses,
+  labels,
   onAddWorkspace,
+  onRenameSession,
+  onFlagSession,
+  onUnflagSession,
+  onArchiveSession,
+  onUnarchiveSession,
+  onMarkUnread,
+  onSessionStatusChange,
+  onLabelsChange,
+  onOpenInNewWindow,
+  onSendToWorkspace,
+  onDeleteSession,
 }: SidebarWorkspacesSectionProps) {
   const { t } = useTranslation()
   const workspaceIconMap = useWorkspaceIcons(workspaces)
-  const [expandedWorkspaces, setExpandedWorkspaces] = React.useState<Set<string>>(() => new Set())
+  const [openWorkspaceIds, setOpenWorkspaceIds] = React.useState<Set<string>>(() => new Set(activeWorkspaceId ? [activeWorkspaceId] : []))
+  const [expandedSessionListIds, setExpandedSessionListIds] = React.useState<Set<string>>(() => new Set())
 
-  const toggleExpanded = React.useCallback((workspaceId: string) => {
-    setExpandedWorkspaces(prev => {
+  const toggleWorkspaceOpen = React.useCallback((workspaceId: string) => {
+    setOpenWorkspaceIds(prev => {
+      const next = new Set(prev)
+      if (next.has(workspaceId)) next.delete(workspaceId)
+      else next.add(workspaceId)
+      return next
+    })
+  }, [])
+
+  const toggleSessionList = React.useCallback((workspaceId: string) => {
+    setExpandedSessionListIds(prev => {
       const next = new Set(prev)
       if (next.has(workspaceId)) next.delete(workspaceId)
       else next.add(workspaceId)
@@ -88,8 +134,9 @@ export function SidebarWorkspacesSection({
         {workspaces.map(workspace => {
           const isActive = workspace.id === activeWorkspaceId
           const allSessions = sessionsByWorkspaceId.get(workspace.id) ?? []
-          const expanded = expandedWorkspaces.has(workspace.id)
-          const visibleSessions = expanded ? allSessions : allSessions.slice(0, DEFAULT_VISIBLE_SESSIONS)
+          const isOpen = openWorkspaceIds.has(workspace.id)
+          const sessionsExpanded = expandedSessionListIds.has(workspace.id)
+          const visibleSessions = sessionsExpanded ? allSessions : allSessions.slice(0, DEFAULT_VISIBLE_SESSIONS)
           const hiddenCount = Math.max(0, allSessions.length - DEFAULT_VISIBLE_SESSIONS)
 
           return (
@@ -103,7 +150,10 @@ export function SidebarWorkspacesSection({
                 <button
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  onClick={() => onSelectWorkspace(workspace.id)}
+                  onClick={() => {
+                    onSelectWorkspace(workspace.id)
+                    toggleWorkspaceOpen(workspace.id)
+                  }}
                 >
                   <CrossfadeAvatar
                     src={workspaceIconMap.get(workspace.id)}
@@ -121,6 +171,7 @@ export function SidebarWorkspacesSection({
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/8 hover:text-foreground group-hover/workspace:opacity-100"
                   onClick={(event) => {
                     event.stopPropagation()
+                    setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
                     onNewSession(workspace.id)
                   }}
                   aria-label={t('session.newSession')}
@@ -129,33 +180,78 @@ export function SidebarWorkspacesSection({
                 </button>
               </div>
 
-              {visibleSessions.length > 0 && (
+              {isOpen && visibleSessions.length > 0 && (
                 <div className="ml-6 mt-0.5 space-y-0.5 border-l border-foreground/8 pl-2">
-                  {visibleSessions.map(session => (
-                    <button
-                      key={session.id}
-                      type="button"
-                      className="flex h-7 w-full items-center rounded-[7px] px-2 text-left text-[12.5px] text-foreground/70 hover:bg-foreground/4 hover:text-foreground"
-                      onClick={() => onSelectSession(workspace.id, session.id)}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{getSessionTitle(session)}</span>
-                    </button>
-                  ))}
-                  {hiddenCount > 0 && !expanded && (
+                  {visibleSessions.map(session => {
+                    const isSelected = selectedSessionId === session.id
+                    return (
+                    <div key={session.id} className="group/session relative flex items-center">
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex h-7 w-full min-w-0 items-center gap-1.5 rounded-[7px] px-2 pr-7 text-left text-[12.5px] transition-colors',
+                          isSelected ? 'bg-foreground/7 text-foreground' : 'text-foreground/70 hover:bg-foreground/4 hover:text-foreground',
+                        )}
+                        onClick={() => onSelectSession(workspace.id, session.id)}
+                      >
+                        {session.isProcessing ? <Spinner className="h-3 w-3 shrink-0" /> : <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center [&>svg]:h-3.5 [&>svg]:w-3.5">{getStateIcon(getSessionStatus(session), sessionStatuses)}</span>}
+                        <span className="min-w-0 flex-1 truncate">{getSessionTitle(session)}</span>
+                        {hasUnreadMeta(session) && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute right-0.5 flex h-6 w-6 items-center justify-center rounded-[7px] text-muted-foreground opacity-0 hover:bg-foreground/8 hover:text-foreground group-hover/session:opacity-100 data-[state=open]:opacity-100"
+                            onClick={(event) => event.stopPropagation()}
+                            aria-label={t('common.more')}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <StyledDropdownMenuContent align="start">
+                          <DropdownMenuProvider>
+                            <SessionMenu
+                              item={session}
+                              sessionStatuses={sessionStatuses}
+                              labels={labels}
+                              onLabelsChange={onLabelsChange ? (nextLabels) => onLabelsChange(session.id, nextLabels) : undefined}
+                              hasRemoteWorkspaces={workspaces.length > 1}
+                              onRename={() => {
+                                const nextName = window.prompt(t('chat.enterSessionName'), getSessionTitle(session))
+                                if (nextName?.trim()) onRenameSession(session.id, nextName.trim())
+                              }}
+                              onFlag={() => onFlagSession?.(session.id)}
+                              onUnflag={() => onUnflagSession?.(session.id)}
+                              onArchive={() => onArchiveSession?.(session.id)}
+                              onUnarchive={() => onUnarchiveSession?.(session.id)}
+                              onMarkUnread={() => onMarkUnread(session.id)}
+                              onSessionStatusChange={(state) => onSessionStatusChange(session.id, state)}
+                              onOpenInNewWindow={() => onOpenInNewWindow(workspace.id, session.id)}
+                              onSendToWorkspace={onSendToWorkspace ? () => onSendToWorkspace([session.id]) : undefined}
+                              onDelete={() => { void onDeleteSession(session.id) }}
+                            />
+                          </DropdownMenuProvider>
+                        </StyledDropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    )
+                  })}
+                  {hiddenCount > 0 && !sessionsExpanded && (
                     <button
                       type="button"
                       className="flex h-7 w-full items-center gap-1 rounded-[7px] px-2 text-left text-[12px] text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
-                      onClick={() => toggleExpanded(workspace.id)}
+                      onClick={() => toggleSessionList(workspace.id)}
                     >
                       <ChevronDown className="h-3 w-3" />
                       {t('workspace.moreSessions', { count: hiddenCount })}
                     </button>
                   )}
-                  {expanded && allSessions.length > DEFAULT_VISIBLE_SESSIONS && (
+                  {sessionsExpanded && allSessions.length > DEFAULT_VISIBLE_SESSIONS && (
                     <button
                       type="button"
                       className="flex h-7 w-full items-center gap-1 rounded-[7px] px-2 text-left text-[12px] text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
-                      onClick={() => toggleExpanded(workspace.id)}
+                      onClick={() => toggleSessionList(workspace.id)}
                     >
                       <ChevronRight className="h-3 w-3" />
                       {t('workspace.lessSessions')}
