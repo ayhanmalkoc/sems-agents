@@ -60,6 +60,12 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     }
   }, [])
 
+  const focusTerminal = React.useCallback(() => {
+    requestAnimationFrame(() => {
+      terminalRef.current?.focus()
+    })
+  }, [])
+
   const startTerminal = React.useCallback(async () => {
     if (!activeWorkspace?.rootPath || !containerRef.current) return
     setStarting(true)
@@ -92,6 +98,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
     terminal.writeln('Starting terminal...')
+    focusTerminal()
 
     try {
       try { fitAddon.fit() } catch { /* layout may not be ready on first open */ }
@@ -108,6 +115,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       setShell(created.shell)
       onTitleChange?.('Terminal')
       terminal.clear()
+      focusTerminal()
       terminal.onData((data) => {
         const id = terminalIdRef.current
         if (id) void window.electronAPI.terminalInput(id, data)
@@ -122,7 +130,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, isDark, onTitleChange])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark, onTitleChange])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {
@@ -153,6 +161,10 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     return () => observer.disconnect()
   }, [fit])
 
+  React.useEffect(() => {
+    if (!starting && terminalRef.current) focusTerminal()
+  }, [focusTerminal, starting])
+
   if (!activeWorkspace?.rootPath) {
     return (
       <div className={cn('flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground', className)}>
@@ -172,7 +184,16 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
         <PanelHeaderCenterButton aria-label="Clear terminal" tooltip="Clear terminal" onClick={() => terminalRef.current?.clear()} icon={<Trash2 className="h-3.5 w-3.5" />} />
         <PanelHeaderCenterButton aria-label="Stop terminal" tooltip="Stop terminal" disabled={!terminalIdRef.current && exited} onClick={() => void disposeTerminal(true).then(() => setExited(true))} icon={<Square className="h-3.5 w-3.5" />} />
       </div>
-      <div ref={containerRef} className={cn('min-h-0 flex-1 overflow-hidden px-2 py-2 [&_.xterm]:h-full', isDark ? 'bg-[#111113]' : 'bg-white')} />
+      <div
+        ref={containerRef}
+        role="textbox"
+        aria-label="Terminal"
+        tabIndex={0}
+        onMouseDown={focusTerminal}
+        onClick={focusTerminal}
+        onFocus={focusTerminal}
+        className={cn('min-h-0 flex-1 cursor-text overflow-hidden px-2 py-2 [&_.xterm]:h-full', isDark ? 'bg-[#111113]' : 'bg-white')}
+      />
     </div>
   )
 }
