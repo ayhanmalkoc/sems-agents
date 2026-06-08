@@ -1,16 +1,18 @@
 import * as React from 'react'
-import { FolderOpen, Globe, GitCompare, Plus, Terminal, X } from 'lucide-react'
+import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDropdownMenuItem } from '@/components/ui/styled-dropdown'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { SessionFilesSection } from './SessionFilesSection'
 
-export type RightDockToolType = 'files' | 'browser' | 'inspect' | 'terminal'
+export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
 
 export interface RightDockTab {
   id: string
   type: RightDockToolType
+  title?: string
+  content?: React.ReactNode
 }
 
 interface ToolConfig {
@@ -22,6 +24,7 @@ interface ToolConfig {
 }
 
 const TOOL_CONFIGS: ToolConfig[] = [
+  { type: 'chat', label: 'Chat', description: 'Open a chat in the side panel', icon: <MessageSquare className="h-4 w-4" /> },
   { type: 'files', label: 'Files', description: 'Browse session files', shortcut: 'Ctrl+P', icon: <FolderOpen className="h-4 w-4" /> },
   { type: 'browser', label: 'Browser', description: 'Open a web preview', shortcut: 'Ctrl+T', icon: <Globe className="h-4 w-4" /> },
   { type: 'inspect', label: 'Inspect', description: 'Review code changes', shortcut: 'Ctrl+Shift+G', icon: <GitCompare className="h-4 w-4" /> },
@@ -126,7 +129,7 @@ export function RightWorkspacePanel({
                     <X className="h-3.5 w-3.5" />
                   </span>
                 </span>
-                <span className="truncate">{tool.label}</span>
+                <span className="truncate">{tab.title ?? tool.label}</span>
               </button>
             )
           })}
@@ -156,7 +159,9 @@ export function RightWorkspacePanel({
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab ? (
-          activeTab.type === 'files' ? (
+          activeTab.content ? (
+            activeTab.content
+          ) : activeTab.type === 'files' ? (
             <FilesTool activeSessionId={activeSessionId} sessionFolderPath={sessionFolderPath} />
           ) : (
             <PlaceholderTool tool={TOOL_BY_TYPE.get(activeTab.type)!} />

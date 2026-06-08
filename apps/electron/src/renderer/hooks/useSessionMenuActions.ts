@@ -27,7 +27,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { navigate, routes } from '@/lib/navigate'
 import { extractLabelId, toggleLabelInList } from '@craft-agent/shared/labels'
 import type { SessionMeta } from '@/atoms/sessions'
 
@@ -165,7 +164,7 @@ export function useSessionMenuActions({
   }, [sessionId, t])
 
   const openInNewPanel = React.useCallback(() => {
-    navigate(routes.view.allSessions(sessionId), { newPanel: true })
+    window.dispatchEvent(new CustomEvent('craft:open-session-in-right-dock', { detail: { sessionId } }))
   }, [sessionId])
 
   const openSharedInBrowser = React.useCallback(() => {

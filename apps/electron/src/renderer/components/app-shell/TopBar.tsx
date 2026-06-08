@@ -58,6 +58,8 @@ interface TopBarProps {
   onAddSessionPanel: () => void
   onAddBrowserPanel: () => void
   onOpenFilesTool?: () => void
+  onOpenInspectTool?: () => void
+  onOpenTerminalTool?: () => void
   hasFilesTool?: boolean
   onToggleRightDock?: () => void
   isRightDockOpen?: boolean
@@ -88,6 +90,8 @@ export function TopBar({
   onAddSessionPanel,
   onAddBrowserPanel,
   onOpenFilesTool,
+  onOpenInspectTool,
+  onOpenTerminalTool,
   hasFilesTool = false,
   onToggleRightDock,
   isRightDockOpen = false,
@@ -248,12 +252,20 @@ export function TopBar({
             </StyledDropdownMenuItem>
             <StyledDropdownMenuItem onClick={onAddBrowserPanel}>
               <Icons.Globe className="h-3.5 w-3.5" />
-              {t("browser.newWindow")}
+              Browser
             </StyledDropdownMenuItem>
-            <StyledDropdownMenuSeparator />
             <StyledDropdownMenuItem disabled={!hasFilesTool || !onOpenFilesTool} onClick={onOpenFilesTool}>
               <Icons.FolderOpen className="h-3.5 w-3.5" />
               {t("menu.files")}
+            </StyledDropdownMenuItem>
+            <StyledDropdownMenuSeparator />
+            <StyledDropdownMenuItem onClick={onOpenInspectTool}>
+              <Icons.GitCompare className="h-3.5 w-3.5" />
+              Inspect
+            </StyledDropdownMenuItem>
+            <StyledDropdownMenuItem onClick={onOpenTerminalTool}>
+              <Icons.Terminal className="h-3.5 w-3.5" />
+              Terminal
             </StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>

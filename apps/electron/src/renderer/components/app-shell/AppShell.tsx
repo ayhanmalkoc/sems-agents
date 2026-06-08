@@ -1237,7 +1237,7 @@ function AppShellContent({
 
   // New chat
   useAction('app.newChat', () => handleNewChat())
-  useAction('app.newChatInPanel', () => handleNewChat(true))
+  useAction('app.newChatInPanel', () => { void openNewChatInRightDock() })
 
   // Settings
   useAction('app.settings', onOpenSettings)
@@ -2012,6 +2012,39 @@ function AppShellContent({
     setTimeout(() => focusZone('chat', { intent: 'programmatic' }), 50)
   }, [activeWorkspace, focusZone, navigate])
 
+  const openSessionInRightDock = useCallback((sessionId: string, title?: string) => {
+    const tabId = `chat-${sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const navStateOverride: NavigationState = {
+      navigator: 'sessions',
+      filter: { kind: 'allSessions' },
+      details: { type: 'session', sessionId },
+    }
+    const tab: RightDockTab = {
+      id: tabId,
+      type: 'chat',
+      title: title ?? (sessionMetaMap.get(sessionId) ? getSessionTitle(sessionMetaMap.get(sessionId)!) : 'Chat'),
+      content: <MainContentPanel navStateOverride={navStateOverride} className="h-full rounded-none border-0" />,
+    }
+    setRightDockTabs((prev) => [...prev, tab])
+    setActiveRightDockTabId(tab.id)
+    setIsRightDockOpen(true)
+  }, [sessionMetaMap, t])
+
+  const openNewChatInRightDock = useCallback(async () => {
+    if (!activeWorkspaceId) return
+    const created = await contextValue.onCreateSession(activeWorkspaceId)
+    openSessionInRightDock(created.id, t('session.newSession'))
+  }, [activeWorkspaceId, contextValue, openSessionInRightDock, t])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const sessionId = (event as CustomEvent<{ sessionId?: string }>).detail?.sessionId
+      if (sessionId) openSessionInRightDock(sessionId)
+    }
+    window.addEventListener('craft:open-session-in-right-dock', handler)
+    return () => window.removeEventListener('craft:open-session-in-right-dock', handler)
+  }, [openSessionInRightDock])
+
   const openWorkspaceCreation = useCallback((step: CreationStep) => {
     setWorkspaceCreationStep(step)
     setFullscreenOverlayOpen(true)
@@ -2427,9 +2460,11 @@ function AppShellContent({
           canGoForward={canGoForward}
           onToggleSidebar={handleToggleSidebar}
           onToggleFocusMode={() => setIsSidebarAndNavigatorHidden(prev => !prev)}
-          onAddSessionPanel={() => handleNewChat(true)}
-          onAddBrowserPanel={() => { void handleNewBrowserWindow() }}
+          onAddSessionPanel={() => { void openNewChatInRightDock() }}
+          onAddBrowserPanel={() => openRightDockTool('browser')}
           onOpenFilesTool={() => { void handleOpenFilesTool() }}
+          onOpenInspectTool={() => openRightDockTool('inspect')}
+          onOpenTerminalTool={() => openRightDockTool('terminal')}
           hasFilesTool={Boolean(activeSessionWorkingDirectory || activeWorkspace?.rootPath)}
           onToggleRightDock={() => setIsRightDockOpen((prev) => !prev)}
           isRightDockOpen={isRightDockOpen}
@@ -3365,7 +3400,7 @@ function AppShellContent({
             activeTabId={activeRightDockTabId}
             activeSessionId={effectiveSessionId}
             sessionFolderPath={activeSessionWorkingDirectory}
-            onAddTab={openRightDockTool}
+            onAddTab={(type) => { type === 'chat' ? void openNewChatInRightDock() : openRightDockTool(type) }}
             onSelectTab={setActiveRightDockTabId}
             onCloseTab={closeRightDockTab}
             onClosePanel={() => setIsRightDockOpen(false)}
