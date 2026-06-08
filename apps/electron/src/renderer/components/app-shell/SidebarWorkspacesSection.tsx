@@ -103,6 +103,28 @@ export function SidebarWorkspacesSection({
     })
   }, [])
 
+  React.useEffect(() => {
+    if (!selectedSessionId) return
+
+    for (const [workspaceId, sessions] of sessionsByWorkspaceId.entries()) {
+      const selectedIndex = sessions.findIndex(session => session.id === selectedSessionId)
+      if (selectedIndex === -1) continue
+
+      setOpenWorkspaceIds(prev => {
+        if (prev.has(workspaceId)) return prev
+        return new Set(prev).add(workspaceId)
+      })
+
+      if (selectedIndex >= DEFAULT_VISIBLE_SESSIONS) {
+        setExpandedSessionListIds(prev => {
+          if (prev.has(workspaceId)) return prev
+          return new Set(prev).add(workspaceId)
+        })
+      }
+      return
+    }
+  }, [selectedSessionId, sessionsByWorkspaceId])
+
   return (
     <section className="px-2 py-2">
       <div className="mb-1 flex items-center justify-between px-2">
