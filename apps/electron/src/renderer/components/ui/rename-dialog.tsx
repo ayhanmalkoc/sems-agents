@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,7 @@ interface RenameDialogProps {
   onValueChange: (value: string) => void
   onSubmit: () => void
   placeholder?: string
+  description?: string
 }
 
 export function RenameDialog({
@@ -29,6 +31,7 @@ export function RenameDialog({
   onValueChange,
   onSubmit,
   placeholder,
+  description,
 }: RenameDialogProps) {
   const { t } = useTranslation()
   const effectivePlaceholder = placeholder ?? t("common.enterName")
@@ -58,6 +61,7 @@ export function RenameDialog({
       <DialogContent className="sm:max-w-[400px]" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <div className="py-4">
           <Input

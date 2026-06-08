@@ -22,6 +22,8 @@ import type { SessionMeta } from '@/atoms/sessions'
 import type { Workspace } from '../../../shared/types'
 import type { CreationStep } from '@/components/workspace/WorkspaceCreationScreen'
 import { getSessionTitle } from '@/utils/session'
+import { RenameDialog } from '@/components/ui/rename-dialog'
+import * as storage from '@/lib/local-storage'
 
 const DEFAULT_VISIBLE_SESSIONS = 5
 
@@ -82,8 +84,15 @@ export function SidebarWorkspacesSection({
 }: SidebarWorkspacesSectionProps) {
   const { t } = useTranslation()
   const workspaceIconMap = useWorkspaceIcons(workspaces)
-  const [openWorkspaceIds, setOpenWorkspaceIds] = React.useState<Set<string>>(() => new Set(activeWorkspaceId ? [activeWorkspaceId] : []))
-  const [expandedSessionListIds, setExpandedSessionListIds] = React.useState<Set<string>>(() => new Set())
+  const [openWorkspaceIds, setOpenWorkspaceIds] = React.useState<Set<string>>(() => {
+    const saved = storage.get<string[]>(storage.KEYS.workspaceSidebarOpenIds, [])
+    return new Set(saved.length > 0 ? saved : activeWorkspaceId ? [activeWorkspaceId] : [])
+  })
+  const [expandedSessionListIds, setExpandedSessionListIds] = React.useState<Set<string>>(() => {
+    return new Set(storage.get<string[]>(storage.KEYS.workspaceSidebarExpandedSessionIds, []))
+  })
+  const [renamingWorkspace, setRenamingWorkspace] = React.useState<Workspace | null>(null)
+  const [renameValue, setRenameValue] = React.useState('')
 
   const toggleWorkspaceOpen = React.useCallback((workspaceId: string) => {
     setOpenWorkspaceIds(prev => {
@@ -102,6 +111,14 @@ export function SidebarWorkspacesSection({
       return next
     })
   }, [])
+
+  React.useEffect(() => {
+    storage.set(storage.KEYS.workspaceSidebarOpenIds, [...openWorkspaceIds])
+  }, [openWorkspaceIds])
+
+  React.useEffect(() => {
+    storage.set(storage.KEYS.workspaceSidebarExpandedSessionIds, [...expandedSessionListIds])
+  }, [expandedSessionListIds])
 
   React.useEffect(() => {
     if (!selectedSessionId) return
@@ -126,6 +143,7 @@ export function SidebarWorkspacesSection({
   }, [selectedSessionId, sessionsByWorkspaceId])
 
   return (
+    <>
     <section className="px-2 py-2">
       <div className="mb-1 flex items-center justify-between px-2">
         <div className="text-[11px] font-medium text-muted-foreground/70">
@@ -223,8 +241,8 @@ export function SidebarWorkspacesSection({
                     <DropdownMenuProvider>
                       <StyledDropdownMenuItem
                         onClick={() => {
-                          const name = window.prompt(t('workspace.renameWorkspace'), workspace.name)?.trim()
-                          if (name && name !== workspace.name) onRenameWorkspace(workspace, name)
+                          setRenamingWorkspace(workspace)
+                          setRenameValue(workspace.name)
                         }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -341,5 +359,25 @@ export function SidebarWorkspacesSection({
         })}
       </div>
     </section>
+    <RenameDialog
+      open={!!renamingWorkspace}
+      onOpenChange={(open) => {
+        if (!open) setRenamingWorkspace(null)
+      }}
+      title={t('workspace.renameWorkspaceTitle')}
+      description={t('workspace.renameWorkspaceDescription')}
+      value={renameValue}
+      onValueChange={setRenameValue}
+      onSubmit={() => {
+        const name = renameValue.trim()
+        if (renamingWorkspace && name && name !== renamingWorkspace.name) {
+          onRenameWorkspace(renamingWorkspace, name)
+        }
+        setRenamingWorkspace(null)
+      }}
+      placeholder={t('workspace.newWorkspaceName')}
+    />
+    </>
   )
 }
+

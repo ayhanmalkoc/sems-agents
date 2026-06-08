@@ -1432,6 +1432,8 @@
   "workspace.removeWorkspace": "Remove workspace",
   "workspace.removeWorkspaceConfirm": "Remove \"{{name}}\" from the workspace list? Files and sessions will not be deleted.",
   "workspace.renameWorkspace": "Rename",
+  "workspace.renameWorkspaceTitle": "Rename workspace",
+  "workspace.renameWorkspaceDescription": "Keep it short and recognizable",
   "workspace.revealInExplorer": "Reveal in Explorer",
   "workspace.selectWorkspace": "Select Workspace",
   "workspace.selectWorkspaceDesc": "Choose a workspace on this server, or create a new one.",

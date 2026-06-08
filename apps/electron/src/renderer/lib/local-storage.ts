@@ -20,6 +20,8 @@ export const KEYS = {
   viewFilters: 'view-filters', // Per-view filter map: { [viewKey]: { statuses, labels } }
   expandedFolders: 'expanded-folders',
   collapsedSidebarItems: 'collapsed-sidebar-items',
+  workspaceSidebarOpenIds: 'workspace-sidebar-open-ids',
+  workspaceSidebarExpandedSessionIds: 'workspace-sidebar-expanded-session-ids',
   chatGroupingMode: 'chat-grouping-mode', // How to group chats: 'date' | 'status'
   collapsedSessionGroups: 'collapsed-session-groups', // Collapsed group keys in session list
 
