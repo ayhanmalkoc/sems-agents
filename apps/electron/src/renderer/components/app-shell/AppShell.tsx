@@ -2407,146 +2407,40 @@ function AppShellContent({
               />
             ) : (
             <div className="flex h-full flex-col select-none">
-              {/* Sidebar Top Section */}
-              <div className="flex-1 flex flex-col min-h-0">
-                {/* New Session Button - Gmail-style, with context menu for "Open in New Window" */}
-                <div className="px-2 pb-2 shrink-0">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <ContextMenu modal={true}>
-                          <ContextMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              onClick={(e) => handleNewChat(e.metaKey || e.ctrlKey)}
-                              className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
-                              data-tutorial="new-chat-button"
-                            >
-                              <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
-                              {t("session.newSession")}
-                            </Button>
-                          </ContextMenuTrigger>
-                          <StyledContextMenuContent>
-                            <ContextMenuProvider>
-                              <SidebarMenu type="newSession" />
-                            </ContextMenuProvider>
-                          </StyledContextMenuContent>
-                        </ContextMenu>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{newChatHotkey}</TooltipContent>
-                  </Tooltip>
+              <div className="shrink-0 px-2 pb-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ContextMenu modal={true}>
+                        <ContextMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            onClick={(e) => handleNewChat(e.metaKey || e.ctrlKey)}
+                            className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+                            data-tutorial="new-chat-button"
+                          >
+                            <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+                            {t("session.newSession")}
+                          </Button>
+                        </ContextMenuTrigger>
+                        <StyledContextMenuContent>
+                          <ContextMenuProvider>
+                            <SidebarMenu type="newSession" />
+                          </ContextMenuProvider>
+                        </StyledContextMenuContent>
+                      </ContextMenu>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{newChatHotkey}</TooltipContent>
+                </Tooltip>
 
-                </div>
-                {/* Primary Nav: All Sessions (▸ Statuses, Flagged, Archived), Labels | Sources, Skills | Settings */}
-                {/* pb-4 provides clearance so the last item scrolls above the mask-fade-bottom gradient */}
-                <div className="flex-1 overflow-y-auto min-h-0 mask-fade-bottom pb-4">
                 <LeftSidebar
                   isCollapsed={false}
                   getItemProps={getSidebarItemProps}
                   focusedItemId={focusedSidebarItemId}
                   links={[
-                    // --- Sessions Section ---
-                    // All Sessions: expandable with status children (sortable) + Flagged & Archived as trailing items
-                    {
-                      id: "nav:allSessions",
-                      title: t("sidebar.allSessions"),
-                      label: String(workspaceSessionMetas.length),
-                      icon: Inbox,
-                      variant: sessionFilter?.kind === 'allSessions' ? "default" : "ghost",
-                      onClick: handleAllSessionsClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:allSessions'),
-                      onToggle: () => toggleExpanded('nav:allSessions'),
-                      contextMenu: {
-                        type: 'allSessions',
-                        onConfigureStatuses: openConfigureStatuses,
-                        onMarkAllRead: () => {
-                          if (!activeWorkspaceId) return
-                          // Optimistic: clear hasUnread on all workspace session metas
-                          setSessionMetaMap(prev => {
-                            const next = new Map(prev)
-                            for (const [id, meta] of next) {
-                              if (meta.workspaceId === activeWorkspaceId && meta.hasUnread) {
-                                next.set(id, { ...meta, hasUnread: false })
-                              }
-                            }
-                            return next
-                          })
-                          window.electronAPI.markAllSessionsRead(activeWorkspaceId)
-                        },
-                      },
-                      // Enable flat DnD reorder for status items
-                      sortable: { onReorder: handleStatusReorder },
-                      items: [
-                        // Status items (sortable via SortableStatusList)
-                        ...effectiveSessionStatuses.map(state => ({
-                          id: `nav:state:${state.id}`,
-                          title: t(`status.${state.id}`, state.label),
-                          label: String(sessionStatusCounts[state.id] || 0),
-                          icon: state.icon,
-                          iconColor: state.resolvedColor,
-                          iconColorable: state.iconColorable,
-                          variant: (sessionFilter?.kind === 'state' && sessionFilter.stateId === state.id ? "default" : "ghost") as "default" | "ghost",
-                          onClick: () => handleSessionStatusClick(state.id),
-                          contextMenu: {
-                            type: 'status' as const,
-                            statusId: state.id,
-                            onConfigureStatuses: openConfigureStatuses,
-                          },
-                        })),
-                        // Separator: SortableStatusList splits here — items after become non-sortable trailingItems
-                        { id: 'separator:states-flagged', type: 'separator' as const },
-                        // Flagged (trailing, non-sortable)
-                        {
-                          id: "nav:flagged",
-                          title: t("sidebar.flagged"),
-                          label: String(flaggedCount),
-                          icon: <Flag className="h-3.5 w-3.5" />,
-                          variant: (sessionFilter?.kind === 'flagged' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleFlaggedClick,
-                        },
-                        // Archived (trailing, non-sortable)
-                        {
-                          id: "nav:archived",
-                          title: t("sidebar.archived"),
-                          label: archivedCount > 0 ? String(archivedCount) : undefined,
-                          icon: Archive,
-                          variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleArchivedClick,
-                        },
-                      ],
-                    },
-                    // Labels: navigable header (shows all labeled sessions) + hierarchical tree (drag-and-drop reorder + re-parent)
-                    {
-                      id: "nav:labels",
-                      title: t("sidebar.labels"),
-                      icon: Tag,
-                      // Only highlighted when "Labels" itself is selected (not sub-labels)
-                      variant: (sessionFilter?.kind === 'label' && sessionFilter.labelId === '__all__') ? "default" as const : "ghost" as const,
-                      // Clicking navigates to "all labeled sessions" view
-                      onClick: () => handleLabelClick('__all__'),
-                      expandable: true,
-                      expanded: isExpanded('nav:labels'),
-                      onToggle: () => toggleExpanded('nav:labels'),
-                      contextMenu: {
-                        type: 'labels' as const,
-                        onConfigureLabels: openConfigureLabels,
-                        onAddLabel: handleAddLabel,
-                      },
-                      items: buildLabelSidebarItems(labelTree),
-                    },
-                    // --- Separator ---
-                    { id: "separator:chats-sources", type: "separator" },
-                    // --- Agents, Resources & Automations Section ---
-                    {
-                      id: "nav:agents",
-                      title: "Agents",
-                      label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length),
-                      icon: Bot,
-                      variant: isAgentsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleAgentsClick,
-                    },
+                    { id: "nav:search", title: t("common.search"), icon: Search, variant: searchActive ? "default" : "ghost", onClick: () => setSearchActive(true) },
+                    { id: "nav:agents", title: "Agents", label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),
@@ -2569,64 +2463,14 @@ function AppShellContent({
                           expandable: true,
                           expanded: isExpanded('nav:sources'),
                           onToggle: () => toggleExpanded('nav:sources'),
-                          contextMenu: {
-                            type: 'sources',
-                            onAddSource: () => openAddSource(),
-                          },
+                          contextMenu: { type: 'sources', onAddSource: () => openAddSource() },
                           items: [
-                            {
-                              id: "nav:sources:api",
-                              title: t("sidebar.apis"),
-                              label: String(sourceTypeCounts.api),
-                              icon: Globe,
-                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost",
-                              onClick: handleSourcesApiClick,
-                              contextMenu: {
-                                type: 'sources' as const,
-                                onAddSource: () => openAddSource('api'),
-                                sourceType: 'api',
-                              },
-                            },
-                            {
-                              id: "nav:sources:mcp",
-                              title: t("sidebar.mcps"),
-                              label: String(sourceTypeCounts.mcp),
-                              icon: <McpIcon className="h-3.5 w-3.5" />,
-                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost",
-                              onClick: handleSourcesMcpClick,
-                              contextMenu: {
-                                type: 'sources' as const,
-                                onAddSource: () => openAddSource('mcp'),
-                                sourceType: 'mcp',
-                              },
-                            },
-                            {
-                              id: "nav:sources:local",
-                              title: t("sidebar.localFolders"),
-                              label: String(sourceTypeCounts.local),
-                              icon: FolderOpen,
-                              variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost",
-                              onClick: handleSourcesLocalClick,
-                              contextMenu: {
-                                type: 'sources' as const,
-                                onAddSource: () => openAddSource('local'),
-                                sourceType: 'local',
-                              },
-                            },
+                            { id: "nav:sources:api", title: t("sidebar.apis"), label: String(sourceTypeCounts.api), icon: Globe, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost", onClick: handleSourcesApiClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('api'), sourceType: 'api' } },
+                            { id: "nav:sources:mcp", title: t("sidebar.mcps"), label: String(sourceTypeCounts.mcp), icon: <McpIcon className="h-3.5 w-3.5" />, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost", onClick: handleSourcesMcpClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('mcp'), sourceType: 'mcp' } },
+                            { id: "nav:sources:local", title: t("sidebar.localFolders"), label: String(sourceTypeCounts.local), icon: FolderOpen, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost", onClick: handleSourcesLocalClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('local'), sourceType: 'local' } },
                           ],
                         },
-                        {
-                          id: "nav:skills",
-                          title: t("sidebar.skills"),
-                          label: String(skills.length),
-                          icon: Zap,
-                          variant: isSkillsNavigation(navState) ? "default" : "ghost",
-                          onClick: handleSkillsClick,
-                          contextMenu: {
-                            type: 'skills',
-                            onAddSkill: openAddSkill,
-                          },
-                        },
+                        { id: "nav:skills", title: t("sidebar.skills"), label: String(skills.length), icon: Zap, variant: isSkillsNavigation(navState) ? "default" : "ghost", onClick: handleSkillsClick, contextMenu: { type: 'skills', onAddSkill: openAddSkill } },
                       ],
                     },
                     {
@@ -2639,94 +2483,55 @@ function AppShellContent({
                       expandable: true,
                       expanded: isExpanded('nav:automations'),
                       onToggle: () => toggleExpanded('nav:automations'),
-                      contextMenu: {
-                        type: 'automations' as const,
-                        onAddAutomation: openAddAutomation,
-                      },
+                      contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
                       items: [
-                        {
-                          id: "nav:automations:scheduled",
-                          title: t("sidebar.scheduled"),
-                          label: String(automationTypeCounts.scheduled),
-                          icon: Clock,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled') ? "default" : "ghost",
-                          onClick: handleAutomationsScheduledClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
-                        {
-                          id: "nav:automations:event",
-                          title: t("sidebar.eventBased"),
-                          label: String(automationTypeCounts.event),
-                          icon: Radio,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'event') ? "default" : "ghost",
-                          onClick: handleAutomationsEventClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
-                        {
-                          id: "nav:automations:agentic",
-                          title: t("sidebar.agentic"),
-                          label: String(automationTypeCounts.agentic),
-                          icon: Bot,
-                          variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic') ? "default" : "ghost",
-                          onClick: handleAutomationsAgenticClick,
-                          contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation },
-                        },
+                        { id: "nav:automations:scheduled", title: t("sidebar.scheduled"), label: String(automationTypeCounts.scheduled), icon: Clock, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled') ? "default" : "ghost", onClick: handleAutomationsScheduledClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
+                        { id: "nav:automations:event", title: t("sidebar.eventBased"), label: String(automationTypeCounts.event), icon: Radio, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'event') ? "default" : "ghost", onClick: handleAutomationsEventClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
+                        { id: "nav:automations:agentic", title: t("sidebar.agentic"), label: String(automationTypeCounts.agentic), icon: Bot, variant: (automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic') ? "default" : "ghost", onClick: handleAutomationsAgenticClick, contextMenu: { type: 'automations' as const, onAddAutomation: openAddAutomation } },
                       ],
-                    },
-                    // --- Separator ---
-                    { id: "separator:skills-settings", type: "separator" },
-                    // --- Settings ---
-                    {
-                      id: "nav:settings",
-                      title: t("sidebar.settings"),
-                      icon: Settings,
-                      variant: isSettingsNavigation(navState) ? "default" : "ghost",
-                      onClick: () => handleSettingsClick(),
-                    },
-                    // --- What's New ---
-                    {
-                      id: "nav:whats-new",
-                      title: t("sidebar.whatsNew"),
-                      icon: hasUnseenReleaseNotes ? (
-                        <span className="relative">
-                          <Cake className="h-3.5 w-3.5" />
-                          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
-                        </span>
-                      ) : Cake,
-                      variant: "ghost" as const,
-                      onClick: handleWhatsNewClick,
                     },
                   ]}
                 />
-                <SidebarWorkspacesSection
-                  workspaces={workspaces}
-                  activeWorkspaceId={activeWorkspaceId}
-                  workspaceUnreadMap={workspaceUnreadMap}
-                  sessionsByWorkspaceId={sidebarSessionsByWorkspaceId}
-                  selectedSessionId={focusedSessionId ?? session.selected}
-                  sessionStatuses={effectiveSessionStatuses}
-                  labels={displayLabelConfigs}
-                  onSelectWorkspace={onSelectWorkspace}
-                  onNewSession={handleWorkspaceSidebarNewSession}
-                  onSelectSession={handleWorkspaceSidebarSessionSelect}
-                  onAddWorkspace={openWorkspaceCreation}
-                  onRenameSession={onRenameSession}
-                  onFlagSession={onFlagSession}
-                  onUnflagSession={onUnflagSession}
-                  onArchiveSession={onArchiveSession}
-                  onUnarchiveSession={onUnarchiveSession}
-                  onMarkUnread={onMarkSessionUnread}
-                  onSessionStatusChange={onSessionStatusChange}
-                  onLabelsChange={handleSessionLabelsChange}
-                  onOpenInNewWindow={(workspaceId, sessionId) => window.electronAPI.openSessionInNewWindow(workspaceId, sessionId)}
-                  onSendToWorkspace={(ids) => setSendToWorkspaceIds(ids)}
-                  onDeleteSession={(sessionId) => handleDeleteSession(sessionId)}
-                />
-                {/* Agent Tree: Hierarchical list of agents */}
-                {/* Agents section removed */}
-                </div>
               </div>
 
+              <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
+                <SidebarWorkspacesSection
+                    workspaces={workspaces}
+                    activeWorkspaceId={activeWorkspaceId}
+                    workspaceUnreadMap={workspaceUnreadMap}
+                    sessionsByWorkspaceId={sidebarSessionsByWorkspaceId}
+                    selectedSessionId={focusedSessionId ?? session.selected}
+                    sessionStatuses={effectiveSessionStatuses}
+                    labels={displayLabelConfigs}
+                    onSelectWorkspace={onSelectWorkspace}
+                    onNewSession={handleWorkspaceSidebarNewSession}
+                    onSelectSession={handleWorkspaceSidebarSessionSelect}
+                    onAddWorkspace={openWorkspaceCreation}
+                    onRenameSession={onRenameSession}
+                    onFlagSession={onFlagSession}
+                    onUnflagSession={onUnflagSession}
+                    onArchiveSession={onArchiveSession}
+                    onUnarchiveSession={onUnarchiveSession}
+                    onMarkUnread={onMarkSessionUnread}
+                    onSessionStatusChange={onSessionStatusChange}
+                    onLabelsChange={handleSessionLabelsChange}
+                    onOpenInNewWindow={(workspaceId, sessionId) => window.electronAPI.openSessionInNewWindow(workspaceId, sessionId)}
+                    onSendToWorkspace={(ids) => setSendToWorkspaceIds(ids)}
+                    onDeleteSession={(sessionId) => handleDeleteSession(sessionId)}
+                  />
+              </div>
+
+              <div className="shrink-0 border-t border-foreground/5 px-2 py-2">
+                <LeftSidebar
+                  isCollapsed={false}
+                  getItemProps={getSidebarItemProps}
+                  focusedItemId={focusedSidebarItemId}
+                  links={[
+                    { id: "nav:settings", title: t("sidebar.settings"), icon: Settings, variant: isSettingsNavigation(navState) ? "default" : "ghost", onClick: () => handleSettingsClick() },
+                    { id: "nav:whats-new", title: t("sidebar.whatsNew"), icon: hasUnseenReleaseNotes ? (<span className="relative"><Cake className="h-3.5 w-3.5" /><span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-accent" /></span>) : Cake, variant: "ghost" as const, onClick: handleWhatsNewClick },
+                  ]}
+                />
+              </div>
             </div>
             )}
           </div>
