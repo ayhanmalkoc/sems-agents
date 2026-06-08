@@ -203,7 +203,10 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
         ref={containerRef}
         onMouseDown={focusTerminal}
         onClick={focusTerminal}
-        className={cn('min-h-0 flex-1 cursor-text overflow-hidden px-2 py-2 [&_.xterm]:h-full', isDark ? 'bg-[#111113]' : 'bg-white')}
+        className={cn(
+          'min-h-0 flex-1 cursor-text overflow-hidden [&_.xterm]:h-full [&_.xterm-screen]:h-full [&_.xterm-viewport]:!h-full',
+          isDark ? 'bg-[#111113]' : 'bg-white'
+        )}
       />
     </div>
   )
