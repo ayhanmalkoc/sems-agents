@@ -3514,7 +3514,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isSettingsNavigation(navState) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
+          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3555,7 +3555,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}
