@@ -74,6 +74,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onDeleteSession,
     isRightDockOpen,
     onToggleRightDock,
+    isRightDockPanel,
     leadingAction,
     isCompactMode,
     sessionListSearchQuery,
@@ -629,7 +630,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     <div className="flex items-center gap-1.5">
       {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} />}
       {isCompactMode ? compactInfoButton : shareButton}
-      {!isCompactMode && onToggleRightDock && (
+      {!isCompactMode && !isRightDockPanel && onToggleRightDock && (
         <PanelHeaderCenterButton
           aria-label="Toggle right tools panel"
           tooltip="Toggle right tools panel"

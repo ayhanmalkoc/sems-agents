@@ -139,6 +139,7 @@ export interface AppShellContextType {
   rightSidebarButton?: React.ReactNode
   isRightDockOpen?: boolean
   onToggleRightDock?: () => void
+  isRightDockPanel?: boolean
 
   // Leading action button for panel header (e.g., back button in compact mode)
   leadingAction?: React.ReactNode
