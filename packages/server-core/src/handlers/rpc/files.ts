@@ -3,7 +3,7 @@ import { isAbsolute, join, resolve, dirname, parse as parsePath } from 'path'
 import { homedir } from 'os'
 import { validatePathFormat } from '../../utils/path-validation'
 import { randomUUID } from 'crypto'
-import { RPC_CHANNELS, type FileAttachment, type DirectoryListingResult } from '@craft-agent/shared/protocol'
+import { RPC_CHANNELS, type FileAttachment, type DirectoryListingResult, type FileEntryListingResult } from '@craft-agent/shared/protocol'
 import type { StoredAttachment } from '@craft-agent/core/types'
 import { readFileAttachment, validateImageForClaudeAPI, IMAGE_LIMITS } from '@craft-agent/shared/utils'
 import { getSessionAttachmentsPath, validateSessionId } from '@craft-agent/shared/sessions'
@@ -27,6 +27,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.file.GENERATE_THUMBNAIL,
   RPC_CHANNELS.fs.SEARCH,
   RPC_CHANNELS.fs.LIST_DIRECTORY,
+  RPC_CHANNELS.fs.LIST_ENTRIES,
 ] as const
 
 export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): void {
@@ -522,6 +523,63 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
       deps.platform.logger.error('[FS_SEARCH] error:', err)
       return []
     }
+  })
+
+
+  // List files and directories in a given path (for workspace explorer).
+  server.handle(RPC_CHANNELS.fs.LIST_ENTRIES, async (_ctx, dirPath: string) => {
+    if (dirPath === '~' || dirPath.startsWith('~/')) {
+      dirPath = dirPath === '~' ? homedir() : join(homedir(), dirPath.slice(2))
+    }
+
+    const pathCheck = validatePathFormat(dirPath)
+    if (!pathCheck.valid) {
+      throw new Error(pathCheck.reason!)
+    }
+
+    const resolved = resolve(dirPath)
+    const raw = await readdir(resolved, { withFileTypes: true })
+    const skipNames = new Set(['.git', 'node_modules'])
+    const entries: FileEntryListingResult['entries'] = []
+
+    for (const entry of raw) {
+      if (skipNames.has(entry.name)) continue
+      const fullPath = join(resolved, entry.name)
+      const isSymlink = entry.isSymbolicLink()
+      try {
+        const entryStat = isSymlink ? await stat(fullPath) : null
+        const isDirectory = entry.isDirectory() || Boolean(entryStat?.isDirectory())
+        const isFile = entry.isFile() || Boolean(entryStat?.isFile())
+        if (!isDirectory && !isFile) continue
+        entries.push({
+          name: entry.name,
+          path: fullPath,
+          type: isDirectory ? 'directory' : 'file',
+          size: isFile ? (entryStat?.size ?? (await stat(fullPath)).size) : undefined,
+          isSymlink,
+        })
+      } catch {
+        // Skip unreadable/broken entries.
+      }
+    }
+
+    entries.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    })
+
+    const totalEntries = entries.length
+    const truncated = totalEntries > 500
+    if (truncated) entries.length = 500
+
+    return {
+      currentPath: resolved,
+      parentPath: resolved === parsePath(resolved).root ? null : dirname(resolved),
+      platform: process.platform as FileEntryListingResult['platform'],
+      truncated,
+      totalEntries,
+      entries,
+    } satisfies FileEntryListingResult
   })
 
   // List directories in a given path (for remote directory browsing).

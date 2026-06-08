@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDropdownMenuItem } from '@/components/ui/styled-dropdown'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
-import { SessionFilesSection } from './SessionFilesSection'
+import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
 
@@ -42,6 +42,7 @@ export interface RightWorkspacePanelProps {
   onAddTab: (type: RightDockToolType) => void
   onSelectTab: (id: string) => void
   onCloseTab: (id: string) => void
+  onUpdateTabTitle?: (id: string, title: string) => void
   onClosePanel: () => void
   onResizeStart: (event: React.MouseEvent<HTMLDivElement>) => void
 }
@@ -60,22 +61,9 @@ function PlaceholderTool({ tool }: { tool: ToolConfig }) {
   )
 }
 
-function FilesTool({ activeSessionId, sessionFolderPath }: { activeSessionId?: string | null; sessionFolderPath?: string }) {
-  if (!activeSessionId) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-muted-foreground">
-        <div className="max-w-[260px] space-y-2">
-          <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground/70" />
-          <div className="text-sm font-medium text-foreground">Select a chat to view files</div>
-          <div className="text-xs">Files created or attached during the active chat will appear here.</div>
-        </div>
-      </div>
-    )
-  }
-
-  return <SessionFilesSection sessionId={activeSessionId} sessionFolderPath={sessionFolderPath} hideHeader className="h-full" />
+function FilesTool({ tabId, onUpdateTabTitle }: { tabId: string; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceFilesPanel className="h-full" onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
-
 export function RightWorkspacePanel({
   width,
   tabs,
@@ -85,6 +73,7 @@ export function RightWorkspacePanel({
   onAddTab,
   onSelectTab,
   onCloseTab,
+  onUpdateTabTitle,
   onClosePanel,
   onResizeStart,
 }: RightWorkspacePanelProps) {
@@ -162,7 +151,7 @@ export function RightWorkspacePanel({
           activeTab.content ? (
             activeTab.content
           ) : activeTab.type === 'files' ? (
-            <FilesTool activeSessionId={activeSessionId} sessionFolderPath={sessionFolderPath} />
+            <FilesTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
           ) : (
             <PlaceholderTool tool={TOOL_BY_TYPE.get(activeTab.type)!} />
           )

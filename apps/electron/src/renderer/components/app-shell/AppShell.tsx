@@ -569,6 +569,10 @@ function AppShellContent({
     setIsRightDockOpen(true)
   }, [])
 
+  const updateRightDockTabTitle = useCallback((tabId: string, title: string) => {
+    setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, title } : tab))
+  }, [])
+
   const closeRightDockTab = useCallback((tabId: string) => {
     setRightDockTabs((prev) => {
       const index = prev.findIndex((tab) => tab.id === tabId)
@@ -3403,6 +3407,7 @@ function AppShellContent({
             onAddTab={(type) => { type === 'chat' ? void openNewChatInRightDock() : openRightDockTool(type) }}
             onSelectTab={setActiveRightDockTabId}
             onCloseTab={closeRightDockTab}
+            onUpdateTabTitle={updateRightDockTabTitle}
             onClosePanel={() => setIsRightDockOpen(false)}
             onResizeStart={handleRightDockResizeStart}
           />

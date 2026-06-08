@@ -321,6 +321,23 @@ export interface DirectoryListingResult {
   entries: Array<{ name: string; path: string; isSymlink: boolean }>
 }
 
+
+/** Server-side file/directory listing for workspace explorers. */
+export interface FileEntryListingResult {
+  currentPath: string
+  parentPath: string | null
+  platform: 'win32' | 'darwin' | 'linux'
+  truncated: boolean
+  totalEntries: number
+  entries: Array<{
+    name: string
+    path: string
+    type: 'file' | 'directory'
+    size?: number
+    isSymlink: boolean
+  }>
+}
+
 // ---------------------------------------------------------------------------
 // File types
 // ---------------------------------------------------------------------------

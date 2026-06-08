@@ -210,6 +210,7 @@ import type {
   TestAutomationResult,
   WindowCloseRequest,
   DirectoryListingResult,
+  FileEntryListingResult,
   RemoteSessionTransferPayload,
   ImportRemoteSessionTransferResult,
 } from '@craft-agent/shared/protocol'
@@ -323,6 +324,7 @@ export interface ElectronAPI {
 
   // Server filesystem browsing (remote mode)
   listServerDirectory(dirPath: string): Promise<DirectoryListingResult>
+  listFileEntries(dirPath: string): Promise<FileEntryListingResult>
   // Debug: send renderer logs to main process log file
   debugLog(...args: unknown[]): void
 
