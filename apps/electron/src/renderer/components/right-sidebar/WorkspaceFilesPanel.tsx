@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Code2, Copy, ExternalLink, File, FileCode, FileText, Folder, FolderOpen, Image, MoreHorizontal, PanelRightClose, PanelRightOpen, Search, Terminal } from 'lucide-react'
+import { ChevronDown, ChevronRight, Code2, Copy, ExternalLink, File, FileCode, FileText, Folder, FolderOpen, Github, Image, Monitor, MoreHorizontal, PanelRightClose, PanelRightOpen, Search, Smartphone, Terminal } from 'lucide-react'
 import { Markdown } from '@craft-agent/ui'
 import { toast } from 'sonner'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuSub, StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator, StyledDropdownMenuSubTrigger, StyledDropdownMenuSubContent } from '@/components/ui/styled-dropdown'
@@ -227,6 +227,10 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
     if (target) void window.electronAPI.showInFolder(target)
   }, [rootPath, selectedFile])
 
+  const openWorkspaceFolder = useCallback(() => {
+    if (rootPath) void window.electronAPI.showInFolder(rootPath)
+  }, [rootPath])
+
   const renderTree = (items: EntryNode[], depth = 0) => (
     <div className={depth === 0 ? 'space-y-0.5' : 'space-y-0.5 pl-3'}>
       {items.map((entry) => {
@@ -282,28 +286,38 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
           </StyledDropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <TopBarButton aria-label="Open workspace" className="h-7 rounded-lg px-2">
-              <ExternalLink className="h-4 w-4 text-foreground/60" />
-              <span className="text-xs">Open</span>
-            </TopBarButton>
-          </DropdownMenuTrigger>
+          <div className="flex h-7 items-center overflow-hidden rounded-lg border border-foreground/10 bg-background shadow-minimal">
+            <button
+              type="button"
+              aria-label="Open workspace"
+              onClick={openWorkspaceFolder}
+              className="flex h-full items-center gap-1.5 px-2 text-xs text-foreground transition-colors hover:bg-foreground/5"
+            >
+              <Code2 className="h-4 w-4 text-blue-500" />
+              <span>Open</span>
+            </button>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Choose app"
+                className="flex h-full w-6 items-center justify-center border-l border-foreground/10 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+          </div>
           <StyledDropdownMenuContent align="end" minWidth="min-w-52">
-            <StyledDropdownMenuItem disabled={!selectedFile} onClick={openDefault}><ExternalLink className="h-3.5 w-3.5" />Default app</StyledDropdownMenuItem>
-            <StyledDropdownMenuItem disabled><Code2 className="h-3.5 w-3.5" />VS Code</StyledDropdownMenuItem>
-            <DropdownMenuSub>
-              <StyledDropdownMenuSubTrigger><Terminal className="h-3.5 w-3.5" />This location</StyledDropdownMenuSubTrigger>
-              <StyledDropdownMenuSubContent>
-                <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Terminal</StyledDropdownMenuItem>
-                <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Git Bash</StyledDropdownMenuItem>
-              </StyledDropdownMenuSubContent>
-            </DropdownMenuSub>
-            <StyledDropdownMenuItem onClick={revealSelected}><FolderOpen className="h-3.5 w-3.5" />Open workspace folder</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Code2 className="h-3.5 w-3.5 text-blue-500" />VS Code</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Monitor className="h-3.5 w-3.5" />Antigravity</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Github className="h-3.5 w-3.5 text-purple-500" />GitHub Desktop</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem onClick={openWorkspaceFolder}><ExternalLink className="h-3.5 w-3.5" />Default app</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Terminal</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Git Bash</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled><Smartphone className="h-3.5 w-3.5" />Android Studio</StyledDropdownMenuItem>
+            <StyledDropdownMenuSeparator />
+            <StyledDropdownMenuItem onClick={openWorkspaceFolder}><FolderOpen className="h-3.5 w-3.5" />Open folder</StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
-        <TopBarButton aria-label="Reveal in file manager" onClick={revealSelected} className="h-7 w-7 rounded-lg">
-          <FolderOpen className="h-4 w-4 text-foreground/60" />
-        </TopBarButton>
         <TopBarButton aria-label="Toggle file tree" onClick={() => setTreeOpen((value) => !value)} isActive={treeOpen} className="h-7 w-7 rounded-lg">
           {treeOpen ? <PanelRightClose className="h-4 w-4 text-foreground/60" /> : <PanelRightOpen className="h-4 w-4 text-foreground/60" />}
         </TopBarButton>
