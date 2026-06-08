@@ -2436,30 +2436,7 @@ function AppShellContent({
                       icon: Layers,
                       variant: (isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? "default" : "ghost",
                       onClick: handleSourcesClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:resources'),
-                      onToggle: () => toggleExpanded('nav:resources'),
-                      items: [
-                        {
-                          id: "nav:sources",
-                          title: t("sidebar.sources"),
-                          label: String(sources.length),
-                          icon: DatabaseZap,
-                          variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
-                          onClick: handleSourcesClick,
-                          dataTutorial: "sources-nav",
-                          expandable: true,
-                          expanded: isExpanded('nav:sources'),
-                          onToggle: () => toggleExpanded('nav:sources'),
-                          contextMenu: { type: 'sources', onAddSource: () => openAddSource() },
-                          items: [
-                            { id: "nav:sources:api", title: t("sidebar.apis"), label: String(sourceTypeCounts.api), icon: Globe, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost", onClick: handleSourcesApiClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('api'), sourceType: 'api' } },
-                            { id: "nav:sources:mcp", title: t("sidebar.mcps"), label: String(sourceTypeCounts.mcp), icon: <McpIcon className="h-3.5 w-3.5" />, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost", onClick: handleSourcesMcpClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('mcp'), sourceType: 'mcp' } },
-                            { id: "nav:sources:local", title: t("sidebar.localFolders"), label: String(sourceTypeCounts.local), icon: FolderOpen, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost", onClick: handleSourcesLocalClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('local'), sourceType: 'local' } },
-                          ],
-                        },
-                        { id: "nav:skills", title: t("sidebar.skills"), label: String(skills.length), icon: Zap, variant: isSkillsNavigation(navState) ? "default" : "ghost", onClick: handleSkillsClick, contextMenu: { type: 'skills', onAddSkill: openAddSkill } },
-                      ],
+                      contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource() },
                     },
                     {
                       id: "nav:automations",
@@ -2510,6 +2487,91 @@ function AppShellContent({
                       onCreateAgent={handleCreateAgent}
                       selectedAgentId={navState.details ? navState.details.agentId : null}
                     />
+                  </div>
+                ) : (isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? (
+                  <div className="flex min-h-full flex-col">
+                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {t("sidebar.resources")}
+                      </span>
+                      {activeWorkspace && (
+                        isSkillsNavigation(navState) ? (
+                          <EditPopover
+                            trigger={
+                              <HeaderIconButton
+                                icon={<Plus className="h-4 w-4" />}
+                                tooltip={t("sidebarMenu.addSkill")}
+                                data-tutorial="add-skill-button"
+                              />
+                            }
+                            {...getEditConfig('add-skill', activeWorkspace.rootPath)}
+                          />
+                        ) : (
+                          <EditPopover
+                            trigger={
+                              <HeaderIconButton
+                                icon={<Plus className="h-4 w-4" />}
+                                tooltip={t("sidebarMenu.addSource")}
+                                data-tutorial="add-source-button"
+                              />
+                            }
+                            {...getEditConfig(
+                              sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source',
+                              activeWorkspace.rootPath
+                            )}
+                          />
+                        )
+                      )}
+                    </div>
+                    <div className="shrink-0 px-2 pb-2">
+                      <LeftSidebar
+                        isCollapsed={false}
+                        getItemProps={getSidebarItemProps}
+                        focusedItemId={focusedSidebarItemId}
+                        links={[
+                          {
+                            id: "resources-panel:sources",
+                            title: t("sidebar.sources"),
+                            label: String(sources.length),
+                            icon: DatabaseZap,
+                            variant: (isSourcesNavigation(navState) && !sourceFilter) ? "default" : "ghost",
+                            onClick: handleSourcesClick,
+                            dataTutorial: "sources-nav",
+                            expandable: true,
+                            expanded: true,
+                            contextMenu: { type: 'sources', onAddSource: () => openAddSource() },
+                            items: [
+                              { id: "resources-panel:sources:api", title: t("sidebar.apis"), label: String(sourceTypeCounts.api), icon: Globe, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api') ? "default" : "ghost", onClick: handleSourcesApiClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('api'), sourceType: 'api' } },
+                              { id: "resources-panel:sources:mcp", title: t("sidebar.mcps"), label: String(sourceTypeCounts.mcp), icon: <McpIcon className="h-3.5 w-3.5" />, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp') ? "default" : "ghost", onClick: handleSourcesMcpClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('mcp'), sourceType: 'mcp' } },
+                              { id: "resources-panel:sources:local", title: t("sidebar.localFolders"), label: String(sourceTypeCounts.local), icon: FolderOpen, variant: (sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local') ? "default" : "ghost", onClick: handleSourcesLocalClick, contextMenu: { type: 'sources' as const, onAddSource: () => openAddSource('local'), sourceType: 'local' } },
+                            ],
+                          },
+                          { id: "resources-panel:skills", title: t("sidebar.skills"), label: String(skills.length), icon: Zap, variant: isSkillsNavigation(navState) ? "default" : "ghost", onClick: handleSkillsClick, contextMenu: { type: 'skills', onAddSkill: openAddSkill } },
+                        ]}
+                      />
+                    </div>
+                    <div className="min-h-0 flex-1 border-t border-foreground/5 pt-1">
+                      {isSourcesNavigation(navState) ? (
+                        <SourcesListPanel
+                          sources={sources}
+                          sourceFilter={sourceFilter}
+                          workspaceRootPath={activeWorkspace?.rootPath}
+                          onDeleteSource={handleDeleteSource}
+                          onSourceClick={handleSourceSelect}
+                          selectedSourceSlug={navState.details ? navState.details.sourceSlug : null}
+                          localMcpEnabled={localMcpEnabled}
+                        />
+                      ) : activeWorkspaceId ? (
+                        <SkillsListPanel
+                          skills={skills}
+                          workspaceId={activeWorkspaceId}
+                          workspaceRootPath={activeWorkspace?.rootPath}
+                          onSkillClick={handleSkillSelect}
+                          onDeleteSkill={handleDeleteSkill}
+                          selectedSkillSlug={navState.details?.type === 'skill' ? navState.details.skillSlug : null}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 ) : isAutomationsNavigation(navState) ? (
                   <div className="flex min-h-full flex-col">
@@ -3379,7 +3441,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
+          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3420,7 +3482,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}
