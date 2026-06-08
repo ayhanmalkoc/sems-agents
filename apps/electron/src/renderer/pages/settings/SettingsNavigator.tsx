@@ -34,6 +34,7 @@ const SETTINGS_GROUPS: Array<{ label: string; ids: SettingsSubpage[] }> = [
   { label: 'General', ids: ['app', 'appearance', 'input', 'preferences', 'shortcuts'] },
   { label: 'AI & Workspace', ids: ['ai', 'workspace', 'permissions', 'labels'] },
   { label: 'Integrations', ids: ['messaging', 'server'] },
+  { label: 'Archive', ids: ['archivedSessions'] },
 ]
 
 function SettingsRow({ item, selected, onSelect }: { item: SettingsItem; selected: boolean; onSelect: () => void }) {

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Cloud, Folder, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Cloud, Flag, Folder, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CrossfadeAvatar } from '@/components/ui/avatar'
 import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
@@ -92,6 +92,7 @@ export function SidebarWorkspacesSection({
     return new Set(storage.get<string[]>(storage.KEYS.workspaceSidebarExpandedSessionIds, []))
   })
   const [renamingWorkspace, setRenamingWorkspace] = React.useState<Workspace | null>(null)
+  const [renamingSession, setRenamingSession] = React.useState<SessionMeta | null>(null)
   const [renameValue, setRenameValue] = React.useState('')
 
   const toggleWorkspaceOpen = React.useCallback((workspaceId: string) => {
@@ -291,6 +292,7 @@ export function SidebarWorkspacesSection({
                       >
                         {session.isProcessing ? <Spinner className="h-3 w-3 shrink-0" /> : <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center [&>svg]:h-3.5 [&>svg]:w-3.5">{getStateIcon(getSessionStatus(session), sessionStatuses)}</span>}
                         <span className="min-w-0 flex-1 truncate">{getSessionTitle(session)}</span>
+                        {session.isFlagged && <Flag className="h-3 w-3 shrink-0 text-info" />}
                         {hasUnreadMeta(session) && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
                       </button>
                       <DropdownMenu>
@@ -313,8 +315,8 @@ export function SidebarWorkspacesSection({
                               onLabelsChange={onLabelsChange ? (nextLabels) => onLabelsChange(session.id, nextLabels) : undefined}
                               hasRemoteWorkspaces={workspaces.length > 1}
                               onRename={() => {
-                                const nextName = window.prompt(t('chat.enterSessionName'), getSessionTitle(session))
-                                if (nextName?.trim()) onRenameSession(session.id, nextName.trim())
+                                setRenamingSession(session)
+                                setRenameValue(getSessionTitle(session))
                               }}
                               onFlag={() => onFlagSession?.(session.id)}
                               onUnflag={() => onUnflagSession?.(session.id)}
@@ -359,6 +361,23 @@ export function SidebarWorkspacesSection({
         })}
       </div>
     </section>
+    <RenameDialog
+      open={!!renamingSession}
+      onOpenChange={(open) => {
+        if (!open) setRenamingSession(null)
+      }}
+      title={t('chat.renameSession')}
+      value={renameValue}
+      onValueChange={setRenameValue}
+      onSubmit={() => {
+        const name = renameValue.trim()
+        if (renamingSession && name && name !== getSessionTitle(renamingSession)) {
+          onRenameSession(renamingSession.id, name)
+        }
+        setRenamingSession(null)
+      }}
+      placeholder={t('chat.enterSessionName')}
+    />
     <RenameDialog
       open={!!renamingWorkspace}
       onOpenChange={(open) => {

@@ -17,3 +17,4 @@ export { default as PreferencesPage, meta as PreferencesMeta } from './Preferenc
 
 // Re-export types
 export type { DetailsPageMeta } from '@/lib/navigation-registry'
+export { default as ArchivedSessionsSettingsPage, meta as ArchivedSessionsMeta } from './ArchivedSessionsSettingsPage'
