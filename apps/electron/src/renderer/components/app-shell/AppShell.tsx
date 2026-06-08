@@ -2521,6 +2521,36 @@ function AppShellContent({
                       selectedAgentId={navState.details ? navState.details.agentId : null}
                     />
                   </div>
+                ) : isAutomationsNavigation(navState) ? (
+                  <div className="flex min-h-full flex-col">
+                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {t("sidebar.automations")}
+                      </span>
+                      {activeWorkspace && (
+                        <EditPopover
+                          trigger={
+                            <HeaderIconButton
+                              icon={<Plus className="h-4 w-4" />}
+                              tooltip={t("sidebarMenu.addAutomation")}
+                            />
+                          }
+                          {...getEditConfig('automation-config', activeWorkspace.rootPath)}
+                        />
+                      )}
+                    </div>
+                    <AutomationsListPanel
+                      automations={automations}
+                      automationFilter={automationFilter ? { kind: AUTOMATION_TYPE_TO_FILTER_KIND[automationFilter.automationType] ?? 'all' } : undefined}
+                      onAutomationClick={handleAutomationSelect}
+                      onTestAutomation={handleTestAutomation}
+                      onToggleAutomation={handleToggleAutomation}
+                      onDuplicateAutomation={handleDuplicateAutomation}
+                      onDeleteAutomation={handleDeleteAutomation}
+                      selectedAutomationId={navState.details ? navState.details.automationId : null}
+                      workspaceRootPath={activeWorkspace?.rootPath}
+                    />
+                  </div>
                 ) : (
                   <SidebarWorkspacesSection
                     workspaces={workspaces}
@@ -3336,7 +3366,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
+          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3377,7 +3407,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}
