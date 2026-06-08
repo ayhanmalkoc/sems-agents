@@ -157,13 +157,13 @@ export function SidebarWorkspacesSection({
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   onClick={() => {
-                    if (allSessions.length === 0) {
-                      setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
-                      onNewSession(workspace.id)
+                    setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
+                    const latestSession = allSessions[0]
+                    if (latestSession) {
+                      onSelectSession(workspace.id, latestSession.id)
                       return
                     }
-                    onSelectWorkspace(workspace.id)
-                    toggleWorkspaceOpen(workspace.id)
+                    onNewSession(workspace.id)
                   }}
                 >
                   <CrossfadeAvatar
