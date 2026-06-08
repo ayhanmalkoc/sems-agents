@@ -37,7 +37,6 @@ import {
 import { SourceAvatar } from "@/components/ui/source-avatar"
 import { TopBar } from "./TopBar"
 import { SidebarWorkspacesSection } from "./SidebarWorkspacesSection"
-import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { McpIcon } from "../icons/McpIcon"
 import { cn } from "@/lib/utils"
@@ -727,10 +726,9 @@ function AppShellContent({
       }
     })
   }, [sessionFilterKey])
-  // Global search and chat find are intentionally separate surfaces.
-  const [searchDialogOpen, setSearchDialogOpen] = React.useState(false)
-  const [chatFindActive, setChatFindActive] = React.useState(false)
-  const [chatFindQuery, setChatFindQuery] = React.useState('')
+  // Search state for session list
+  const [searchActive, setSearchActive] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
 
   // Grouping mode for chat list: per-view (stored in viewFiltersMap), forced to 'date' for state sub-views
   const isStateSubView = sessionFilter?.kind === 'state'
@@ -768,10 +766,10 @@ function AppShellContent({
 
   // Reset match info when search is deactivated
   React.useEffect(() => {
-    if (!chatFindActive || !chatFindQuery) {
+    if (!searchActive || !searchQuery) {
       setChatMatchInfo({ sessionId: null, count: 0, index: 0 })
     }
-  }, [chatFindActive, chatFindQuery])
+  }, [searchActive, searchQuery])
 
   // Filter dropdown: inline search query for filtering statuses/labels in a flat list.
   // When empty, the dropdown shows hierarchical submenus. When typing, shows a flat filtered list.
@@ -788,12 +786,12 @@ function AppShellContent({
   }, [navState])
 
   React.useEffect(() => {
-    setChatFindActive(false)
-    setChatFindQuery('')
+    setSearchActive(false)
+    setSearchQuery('')
   }, [navFilterKey])
 
-  // Cmd+F opens global search. Chat find is a separate in-chat surface.
-  useAction('app.search', () => setSearchDialogOpen(true))
+  // Cmd+F to activate search
+  useAction('app.search', () => setSearchActive(true))
 
   // Unified sidebar keyboard navigation state
   // Load expanded folders from localStorage (default: all collapsed)
@@ -883,9 +881,9 @@ function AppShellContent({
 
     // Clear transient UI state only on workspace SWITCH (not initial mount)
     if (previousWorkspaceId !== null && previousWorkspaceId !== activeWorkspaceId) {
-      // Clear chat find state
-      setChatFindActive(false)
-      setChatFindQuery('')
+      // Clear search state
+      setSearchActive(false)
+      setSearchQuery('')
 
       // Clear filter dropdown state
       setFilterDropdownQuery('')
@@ -1237,10 +1235,10 @@ function AppShellContent({
 
   // Search match navigation (CMD+G next, CMD+SHIFT+G prev)
   useAction('chat.nextSearchMatch', () => chatDisplayRef.current?.goToNextMatch(), {
-    enabled: () => chatFindActive && (chatMatchInfo.count ?? 0) > 0
+    enabled: () => searchActive && (chatMatchInfo.count ?? 0) > 0
   })
   useAction('chat.prevSearchMatch', () => chatDisplayRef.current?.goToPrevMatch(), {
-    enabled: () => chatFindActive && (chatMatchInfo.count ?? 0) > 0
+    enabled: () => searchActive && (chatMatchInfo.count ?? 0) > 0
   })
 
   // ESC to stop processing - requires double-press within 1 second
@@ -1694,13 +1692,9 @@ function AppShellContent({
     onSessionSourcesChange: handleSessionSourcesChange,
     rightSidebarButton: null,
     isCompactMode: isAutoCompact,
-    // Chat find state for ChatDisplay highlighting
-    sessionListSearchQuery: chatFindActive ? chatFindQuery : undefined,
-    isSearchModeActive: chatFindActive,
-    setSessionListSearchQuery: setChatFindQuery,
-    onOpenChatFind: () => setChatFindActive(true),
-    onCloseChatFind: () => { setChatFindActive(false); setChatFindQuery('') },
-    chatFindMatchInfo: chatMatchInfo,
+    // Search state for ChatDisplay highlighting
+    sessionListSearchQuery: searchActive ? searchQuery : undefined,
+    isSearchModeActive: searchActive,
     chatDisplayRef,
     onChatMatchInfoChange: handleChatMatchInfoChange,
     onTestAutomation: handleTestAutomation,
@@ -1710,7 +1704,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, chatFindActive, chatFindQuery, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -1984,8 +1978,8 @@ function AppShellContent({
     if (!activeWorkspace) return
 
     // Exit search mode and switch to All Sessions
-    setChatFindActive(false)
-    setChatFindQuery('')
+    setSearchActive(false)
+    setSearchQuery('')
 
     // Delegate to NavigationContext which handles session creation
     navigate(
@@ -2018,8 +2012,8 @@ function AppShellContent({
     if (workspaceId !== activeWorkspaceId) {
       await Promise.resolve(onSelectWorkspace(workspaceId))
     }
-    setChatFindActive(false)
-    setChatFindQuery('')
+    setSearchActive(false)
+    setSearchQuery('')
     setTimeout(() => {
       navigate(routes.action.newSession())
       focusZone('chat', { intent: 'programmatic' })
@@ -2058,24 +2052,6 @@ function AppShellContent({
     }
     setTimeout(() => navigate(routes.view.allSessions(sessionId)), workspaceId === activeWorkspaceId ? 0 : 50)
   }, [activeWorkspaceId, navigate, onSelectWorkspace])
-
-
-  const handleGlobalSearchWorkspaceOpen = useCallback(async (workspaceId: string) => {
-    const latestSession = sidebarSessionsByWorkspaceId.get(workspaceId)?.[0]
-    if (latestSession) {
-      await handleWorkspaceSidebarSessionSelect(workspaceId, latestSession.id)
-      return
-    }
-    await handleWorkspaceSidebarNewSession(workspaceId)
-  }, [handleWorkspaceSidebarNewSession, handleWorkspaceSidebarSessionSelect, sidebarSessionsByWorkspaceId])
-
-  const handleGlobalSearchSourceOpen = useCallback((sourceSlug: string, sourceType?: 'api' | 'mcp' | 'local') => {
-    navigate(routes.view.sources({ sourceSlug, type: sourceType }))
-  }, [])
-
-  const handleGlobalSearchAutomationOpen = useCallback((automationId: string) => {
-    navigate(routes.view.automations({ automationId }))
-  }, [])
 
   // Create a brand new dedicated browser window and focus it.
   // Intentionally unbound: this action should always create a NEW window.
@@ -2464,7 +2440,7 @@ function AppShellContent({
                   focusedItemId={focusedSidebarItemId}
                   links={[
                     { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
-                    { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
+                    { id: "nav:search", title: t("common.search"), icon: Search, variant: searchActive ? "default" : "ghost", onClick: () => setSearchActive(true) },
                     { id: "nav:agents", title: "Agents", label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
                     {
                       id: "nav:resources",
@@ -2604,7 +2580,7 @@ function AppShellContent({
                         chatGroupingMode={chatGroupingMode}
                         setChatGroupingMode={setChatGroupingMode}
                         isStateSubView={isStateSubView}
-                        onOpenSearch={() => setSearchDialogOpen(true)}
+                        onOpenSearch={() => setSearchActive(true)}
                       />
                     ) : (
                     <DropdownMenu onOpenChange={(open) => { if (!open) { setFilterDropdownQuery(''); setFilterAltHeld(false) } }}>
@@ -2972,7 +2948,7 @@ function AppShellContent({
                             <StyledDropdownMenuSeparator />
                             <StyledDropdownMenuItem
                               onClick={() => {
-                                setSearchDialogOpen(true)
+                                setSearchActive(true)
                               }}
                             >
                               <Search className="h-3.5 w-3.5" />
@@ -3289,7 +3265,7 @@ function AppShellContent({
                 {/* Key on sidebarMode forces full remount when switching views, skipping animations */}
                 <SessionList
                   key={sessionFilter?.kind}
-                  items={filteredSessionMetas}
+                  items={searchActive ? workspaceSessionMetas : filteredSessionMetas}
                   onDelete={handleDeleteSession}
                   onFlag={onFlagSession}
                   onUnflag={onUnflagSession}
@@ -3317,10 +3293,13 @@ function AppShellContent({
                     }
                   }}
                   sessionOptions={sessionOptions}
-                  searchActive={false}
-                  searchQuery=""
-                  onSearchChange={() => {}}
-                  onSearchClose={() => {}}
+                  searchActive={searchActive}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onSearchClose={() => {
+                    setSearchActive(false)
+                    setSearchQuery('')
+                  }}
                   sessionStatuses={effectiveSessionStatuses}
                   evaluateViews={evaluateViews}
                   labels={displayLabelConfigs}
@@ -3636,23 +3615,6 @@ function AppShellContent({
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         onTransferComplete={handleTransferComplete}
-      />
-
-      <SearchCommandDialog
-        open={searchDialogOpen}
-        onOpenChange={setSearchDialogOpen}
-        sessions={Array.from(sessionMetaMap.values())}
-        workspaces={workspaces}
-        agents={agentProfiles}
-        sources={sources}
-        skills={skills}
-        automations={automations}
-        onOpenSession={handleWorkspaceSidebarSessionSelect}
-        onOpenWorkspace={handleGlobalSearchWorkspaceOpen}
-        onOpenAgent={(agentId) => navigate(routes.view.agents(agentId))}
-        onOpenSource={handleGlobalSearchSourceOpen}
-        onOpenSkill={(skillSlug) => navigate(routes.view.skills(skillSlug))}
-        onOpenAutomation={handleGlobalSearchAutomationOpen}
       />
 
       {/* Messaging dialogs (pairing-code + WA connect) — driven by messagingDialogAtom.
