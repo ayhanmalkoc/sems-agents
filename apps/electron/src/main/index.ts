@@ -771,6 +771,10 @@ app.whenReady().then(async () => {
         return remove(workspaceId)
       })
 
+      ipcMain.handle('shell:revealPath', async (_event, path: string) => {
+        shell.showItemInFolder(path)
+      })
+
       // Cross-server RPC — invoke a channel on an arbitrary remote server
       ipcMain.handle('server:invokeOnServer', async (_event, url: string, token: string, channel: string, ...args: unknown[]) => {
         const { connectToRemote } = await import('./handlers/workspace')

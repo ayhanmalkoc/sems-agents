@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Cloud, Folder, FolderPlus, MoreHorizontal, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Cloud, Folder, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CrossfadeAvatar } from '@/components/ui/avatar'
 import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
@@ -31,6 +31,9 @@ interface SidebarWorkspacesSectionProps {
   workspaceUnreadMap?: Record<string, boolean>
   sessionsByWorkspaceId: Map<string, SessionMeta[]>
   onSelectWorkspace: (workspaceId: string) => void | Promise<void>
+  onRenameWorkspace: (workspace: Workspace, name: string) => void | Promise<void>
+  onRevealWorkspace: (workspace: Workspace) => void | Promise<void>
+  onRemoveWorkspace: (workspace: Workspace) => void | Promise<void>
   onNewSession: (workspaceId: string) => void | Promise<void>
   onSelectSession: (workspaceId: string, sessionId: string) => void | Promise<void>
   selectedSessionId?: string | null
@@ -56,6 +59,9 @@ export function SidebarWorkspacesSection({
   workspaceUnreadMap,
   sessionsByWorkspaceId,
   onSelectWorkspace,
+  onRenameWorkspace,
+  onRevealWorkspace,
+  onRemoveWorkspace,
   onNewSession,
   onSelectSession,
   selectedSessionId,
@@ -151,6 +157,11 @@ export function SidebarWorkspacesSection({
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   onClick={() => {
+                    if (allSessions.length === 0) {
+                      setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
+                      onNewSession(workspace.id)
+                      return
+                    }
                     onSelectWorkspace(workspace.id)
                     toggleWorkspaceOpen(workspace.id)
                   }}
@@ -178,6 +189,41 @@ export function SidebarWorkspacesSection({
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/8 hover:text-foreground group-hover/workspace:opacity-100 data-[state=open]:opacity-100"
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={t('common.more')}
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <StyledDropdownMenuContent align="end" minWidth="min-w-48">
+                    <DropdownMenuProvider>
+                      <StyledDropdownMenuItem
+                        onClick={() => {
+                          const name = window.prompt(t('workspace.renameWorkspace'), workspace.name)?.trim()
+                          if (name && name !== workspace.name) onRenameWorkspace(workspace, name)
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t('workspace.renameWorkspace')}
+                      </StyledDropdownMenuItem>
+                      {!workspace.remoteServer && workspace.rootPath && (
+                        <StyledDropdownMenuItem onClick={() => onRevealWorkspace(workspace)}>
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          {t('workspace.revealInExplorer')}
+                        </StyledDropdownMenuItem>
+                      )}
+                      <StyledDropdownMenuItem onClick={() => onRemoveWorkspace(workspace)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t('common.remove')}
+                      </StyledDropdownMenuItem>
+                    </DropdownMenuProvider>
+                  </StyledDropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {isOpen && visibleSessions.length > 0 && (

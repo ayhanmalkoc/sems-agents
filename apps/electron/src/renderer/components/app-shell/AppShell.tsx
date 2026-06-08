@@ -2020,6 +2020,32 @@ function AppShellContent({
     }, workspaceId === activeWorkspaceId ? 0 : 50)
   }, [activeWorkspaceId, focusZone, navigate, onSelectWorkspace])
 
+
+  const handleWorkspaceSidebarRename = useCallback(async (workspace: Workspace, name: string) => {
+    await window.electronAPI.updateWorkspaceSetting(workspace.id, 'name', name)
+    toast.success(t('toast.saved'))
+    onRefreshWorkspaces?.()
+  }, [onRefreshWorkspaces, t])
+
+  const handleWorkspaceSidebarReveal = useCallback(async (workspace: Workspace) => {
+    if (!workspace.rootPath) return
+    await window.electronAPI.revealPath(workspace.rootPath)
+  }, [])
+
+  const handleWorkspaceSidebarRemove = useCallback(async (workspace: Workspace) => {
+    if (workspace.id === activeWorkspaceId) {
+      toast.error(t('toast.cannotRemoveActiveWorkspace'))
+      return
+    }
+    const confirmed = window.confirm(t('workspace.removeWorkspaceConfirm', { name: workspace.name }))
+    if (!confirmed) return
+    const removed = await window.electronAPI.removeWorkspace(workspace.id)
+    if (removed) {
+      toast.success(t('toast.removedWorkspace', { name: workspace.name }))
+      onRefreshWorkspaces?.()
+    }
+  }, [activeWorkspaceId, onRefreshWorkspaces, t])
+
   const handleWorkspaceSidebarSessionSelect = useCallback(async (workspaceId: string, sessionId: string) => {
     if (workspaceId !== activeWorkspaceId) {
       await Promise.resolve(onSelectWorkspace(workspaceId))
@@ -2479,6 +2505,9 @@ function AppShellContent({
                     sessionStatuses={effectiveSessionStatuses}
                     labels={displayLabelConfigs}
                     onSelectWorkspace={onSelectWorkspace}
+                    onRenameWorkspace={handleWorkspaceSidebarRename}
+                    onRevealWorkspace={handleWorkspaceSidebarReveal}
+                    onRemoveWorkspace={handleWorkspaceSidebarRemove}
                     onNewSession={handleWorkspaceSidebarNewSession}
                     onSelectSession={handleWorkspaceSidebarSessionSelect}
                     onAddWorkspace={openWorkspaceCreation}
