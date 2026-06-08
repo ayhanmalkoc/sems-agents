@@ -36,6 +36,7 @@ import {
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
 import { TopBar } from "./TopBar"
+import { SidebarWorkspacesSection } from "./SidebarWorkspacesSection"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { McpIcon } from "../icons/McpIcon"
 import { cn } from "@/lib/utils"
@@ -129,6 +130,8 @@ import { FabNewChat } from "./FabNewChat"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
 import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
+import { WorkspaceCreationScreen, type CreationStep } from "@/components/workspace/WorkspaceCreationScreen"
+import { fullscreenOverlayOpenAtom } from "@/atoms/overlay"
 import SettingsNavigator from "@/pages/settings/SettingsNavigator"
 import {
   PANEL_GAP,
@@ -576,6 +579,8 @@ function AppShellContent({
   }, [])
 
   const [isResizing, setIsResizing] = React.useState<'sidebar' | 'session-list' | null>(null)
+  const [workspaceCreationStep, setWorkspaceCreationStep] = React.useState<CreationStep | null>(null)
+  const setFullscreenOverlayOpen = useSetAtom(fullscreenOverlayOpenAtom)
   const [sidebarHandleY, setSidebarHandleY] = React.useState<number | null>(null)
   const [sessionListHandleY, setSessionListHandleY] = React.useState<number | null>(null)
   const resizeHandleRef = React.useRef<HTMLDivElement>(null)
@@ -1405,6 +1410,26 @@ function AppShellContent({
     return workspaceSessionMetas.filter(s => !s.isArchived)
   }, [workspaceSessionMetas])
 
+  const sidebarSessionsByWorkspaceId = useMemo(() => {
+    const result = new Map<string, SessionMeta[]>()
+    const workspaceByRemoteId = new Map<string, string>()
+    for (const workspace of workspaces) {
+      result.set(workspace.id, [])
+      const remoteWorkspaceId = workspace.remoteServer?.remoteWorkspaceId
+      if (remoteWorkspaceId) workspaceByRemoteId.set(remoteWorkspaceId, workspace.id)
+    }
+    for (const meta of sessionMetaMap.values()) {
+      if (meta.hidden || meta.isArchived) continue
+      const workspaceId = result.has(meta.workspaceId) ? meta.workspaceId : workspaceByRemoteId.get(meta.workspaceId)
+      if (!workspaceId) continue
+      result.get(workspaceId)?.push(meta)
+    }
+    for (const sessions of result.values()) {
+      sessions.sort((a, b) => (b.lastMessageAt ?? b.createdAt ?? 0) - (a.lastMessageAt ?? a.createdAt ?? 0))
+    }
+    return result
+  }, [sessionMetaMap, workspaces])
+
   const refreshWorkspaceUnreadMap = useCallback(async () => {
     try {
       const summary = await window.electronAPI.getUnreadSummary()
@@ -1966,6 +1991,42 @@ function AppShellContent({
     setTimeout(() => focusZone('chat', { intent: 'programmatic' }), 50)
   }, [activeWorkspace, focusZone, navigate])
 
+  const openWorkspaceCreation = useCallback((step: CreationStep) => {
+    setWorkspaceCreationStep(step)
+    setFullscreenOverlayOpen(true)
+  }, [setFullscreenOverlayOpen])
+
+  const closeWorkspaceCreation = useCallback(() => {
+    setWorkspaceCreationStep(null)
+    setFullscreenOverlayOpen(false)
+  }, [setFullscreenOverlayOpen])
+
+  const handleWorkspaceCreatedFromSidebar = useCallback((workspace: Workspace) => {
+    closeWorkspaceCreation()
+    toast.success(t('toast.createdWorkspace', { name: workspace.name }))
+    onRefreshWorkspaces?.()
+    onSelectWorkspace(workspace.id)
+  }, [closeWorkspaceCreation, onRefreshWorkspaces, onSelectWorkspace, t])
+
+  const handleWorkspaceSidebarNewSession = useCallback(async (workspaceId: string) => {
+    if (workspaceId !== activeWorkspaceId) {
+      await Promise.resolve(onSelectWorkspace(workspaceId))
+    }
+    setSearchActive(false)
+    setSearchQuery('')
+    setTimeout(() => {
+      navigate(routes.action.newSession())
+      focusZone('chat', { intent: 'programmatic' })
+    }, workspaceId === activeWorkspaceId ? 0 : 50)
+  }, [activeWorkspaceId, focusZone, navigate, onSelectWorkspace])
+
+  const handleWorkspaceSidebarSessionSelect = useCallback(async (workspaceId: string, sessionId: string) => {
+    if (workspaceId !== activeWorkspaceId) {
+      await Promise.resolve(onSelectWorkspace(workspaceId))
+    }
+    setTimeout(() => navigate(routes.view.allSessions(sessionId)), workspaceId === activeWorkspaceId ? 0 : 50)
+  }, [activeWorkspaceId, navigate, onSelectWorkspace])
+
   // Create a brand new dedicated browser window and focus it.
   // Intentionally unbound: this action should always create a NEW window.
   const handleNewBrowserWindow = useCallback(async () => {
@@ -2280,6 +2341,15 @@ function AppShellContent({
 
   return (
     <AppShellProvider value={appShellContextValue}>
+        <AnimatePresence>
+          {workspaceCreationStep && (
+            <WorkspaceCreationScreen
+              initialStep={workspaceCreationStep}
+              onWorkspaceCreated={handleWorkspaceCreatedFromSidebar}
+              onClose={closeWorkspaceCreation}
+            />
+          )}
+        </AnimatePresence>
         {/* === TOP BAR === */}
         <TopBar
           workspaces={workspaces}
@@ -2627,6 +2697,16 @@ function AppShellContent({
                       onClick: handleWhatsNewClick,
                     },
                   ]}
+                />
+                <SidebarWorkspacesSection
+                  workspaces={workspaces}
+                  activeWorkspaceId={activeWorkspaceId}
+                  workspaceUnreadMap={workspaceUnreadMap}
+                  sessionsByWorkspaceId={sidebarSessionsByWorkspaceId}
+                  onSelectWorkspace={onSelectWorkspace}
+                  onNewSession={handleWorkspaceSidebarNewSession}
+                  onSelectSession={handleWorkspaceSidebarSessionSelect}
+                  onAddWorkspace={openWorkspaceCreation}
                 />
                 {/* Agent Tree: Hierarchical list of agents */}
                 {/* Agents section removed */}

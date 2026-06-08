@@ -13,7 +13,7 @@ import { AddWorkspaceStep_ConnectRemote } from "./AddWorkspaceStep_ConnectRemote
 import type { Workspace } from "../../../shared/types"
 import { toast } from "sonner"
 
-type CreationStep = 'choice' | 'create' | 'open' | 'remote'
+export type CreationStep = 'choice' | 'create' | 'open' | 'remote'
 
 interface WorkspaceCreationScreenProps {
   /** Callback when a workspace is created successfully */
@@ -21,6 +21,8 @@ interface WorkspaceCreationScreenProps {
   /** Callback when the screen is dismissed */
   onClose: () => void
   className?: string
+  /** Initial step for direct workspace creation flows */
+  initialStep?: CreationStep
   /** When set, skip choice step and open ConnectRemote in reconnect mode */
   reconnectWorkspace?: Workspace
   /** Reconnect an existing remote workspace and resolve only on real success. */
@@ -39,12 +41,13 @@ export function WorkspaceCreationScreen({
   onWorkspaceCreated,
   onClose,
   className,
+  initialStep,
   reconnectWorkspace,
   onReconnectWorkspace,
 }: WorkspaceCreationScreenProps) {
   const { t } = useTranslation()
   // Start at 'remote' step directly when reconnecting
-  const [step, setStep] = useState<CreationStep>(reconnectWorkspace ? 'remote' : 'choice')
+  const [step, setStep] = useState<CreationStep>(reconnectWorkspace ? 'remote' : (initialStep ?? 'choice'))
   const [isCreating, setIsCreating] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 1920, height: 1080 })
 
