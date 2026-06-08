@@ -71,6 +71,12 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     })
   }, [])
 
+  const scrollTerminalToPrompt = React.useCallback(() => {
+    requestAnimationFrame(() => {
+      terminalRef.current?.scrollToBottom()
+    })
+  }, [])
+
   const startTerminal = React.useCallback(async () => {
     if (!activeWorkspace?.rootPath || !containerRef.current) return
     setStarting(true)
@@ -120,6 +126,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       setShell(created.shell)
       onTitleChangeRef.current?.('Terminal')
       terminal.clear()
+      scrollTerminalToPrompt()
       focusTerminal()
       terminal.onData((data) => {
         const id = terminalIdRef.current
@@ -135,11 +142,14 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark, scrollTerminalToPrompt])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {
-      if (event.id === terminalIdRef.current) terminalRef.current?.write(event.data)
+      if (event.id === terminalIdRef.current) {
+        terminalRef.current?.write(event.data)
+        scrollTerminalToPrompt()
+      }
     })
     const offExit = window.electronAPI.onTerminalExit((event) => {
       if (event.id !== terminalIdRef.current) return
@@ -151,7 +161,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       offData()
       offExit()
     }
-  }, [])
+  }, [scrollTerminalToPrompt])
 
   React.useEffect(() => {
     void startTerminal()
@@ -191,12 +201,8 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       </div>
       <div
         ref={containerRef}
-        role="textbox"
-        aria-label="Terminal"
-        tabIndex={0}
         onMouseDown={focusTerminal}
         onClick={focusTerminal}
-        onFocus={focusTerminal}
         className={cn('min-h-0 flex-1 cursor-text overflow-hidden px-2 py-2 [&_.xterm]:h-full', isDark ? 'bg-[#111113]' : 'bg-white')}
       />
     </div>
