@@ -177,18 +177,6 @@ export function SidebarWorkspacesSection({
                   {workspace.remoteServer && <Cloud className="h-3 w-3 shrink-0 text-muted-foreground" />}
                   {workspaceUnreadMap?.[workspace.id] && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
                 </button>
-                <button
-                  type="button"
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/8 hover:text-foreground group-hover/workspace:opacity-100"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
-                    onNewSession(workspace.id)
-                  }}
-                  aria-label={t('session.newSession')}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -224,6 +212,18 @@ export function SidebarWorkspacesSection({
                     </DropdownMenuProvider>
                   </StyledDropdownMenuContent>
                 </DropdownMenu>
+                <button
+                  type="button"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/8 hover:text-foreground group-hover/workspace:opacity-100"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setOpenWorkspaceIds(prev => new Set(prev).add(workspace.id))
+                    onNewSession(workspace.id)
+                  }}
+                  aria-label={t('session.newSession')}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
               </div>
 
               {isOpen && visibleSessions.length > 0 && (
