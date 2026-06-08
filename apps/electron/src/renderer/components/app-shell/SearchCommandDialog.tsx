@@ -64,6 +64,11 @@ function groupResults(label: string, results: SearchResult[]) {
   return { label, results: results.slice(0, GROUP_LIMIT) }
 }
 
+function cleanSnippet(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  return value.replace(/\s+/g, ' ').trim()
+}
+
 export function SearchCommandDialog({
   open,
   onOpenChange,
@@ -128,8 +133,7 @@ export function SearchCommandDialog({
   }, [activeWorkspaceId, open, query])
 
   const groups = React.useMemo(() => {
-    const contentResultBySessionId = new Map(contentResults.map(result => [result.sessionId, result]))
-    const metadataSessions = sessions
+    const visibleSessions = sessions
       .filter(session => !session.hidden && !session.isArchived)
       .sort((a, b) => (b.lastMessageAt ?? b.createdAt ?? 0) - (a.lastMessageAt ?? a.createdAt ?? 0))
       .filter(session => {
@@ -138,21 +142,18 @@ export function SearchCommandDialog({
       })
       .map<SearchResult>(session => {
         const workspace = workspaceById.get(session.workspaceId)
-        const contentResult = contentResultBySessionId.get(session.id)
         return {
           id: `session:${session.id}`,
           kind: 'session',
           title: getSessionTitle(session),
-          subtitle: contentResult?.matches[0]?.snippet || workspace?.name || session.preview,
-          badge: contentResult ? `${contentResult.matchCount} matches` : 'Session',
+          subtitle: workspace?.name || session.preview,
+          badge: t('globalSearch.badges.session'),
           icon: <Layers className="h-4 w-4" />,
           onSelect: () => onOpenSession(workspace?.id ?? session.workspaceId, session.id),
         }
       })
 
-    const metadataSessionIds = new Set(metadataSessions.map(result => result.id.replace('session:', '')))
     const contentSessions = contentResults
-      .filter(result => !metadataSessionIds.has(result.sessionId))
       .map<SearchResult | null>(result => {
         const session = sessions.find(item => item.id === result.sessionId)
         if (!session || session.hidden || session.isArchived) return null
@@ -161,15 +162,13 @@ export function SearchCommandDialog({
           id: `session-content:${session.id}`,
           kind: 'session',
           title: getSessionTitle(session),
-          subtitle: result.matches[0]?.snippet || workspace?.name || session.preview,
-          badge: `${result.matchCount} matches`,
+          subtitle: cleanSnippet(result.matches[0]?.snippet) || workspace?.name || session.preview,
+          badge: t('globalSearch.matchCount', { count: result.matchCount }),
           icon: <Layers className="h-4 w-4" />,
           onSelect: () => onOpenSession(workspace?.id ?? session.workspaceId, session.id),
         }
       })
       .filter(Boolean) as SearchResult[]
-
-    const visibleSessions = [...metadataSessions, ...contentSessions]
 
     const workspaceResults = workspaces
       .filter(workspace => textMatches(normalizedQuery, workspace.name, workspace.rootPath, workspace.remoteServer?.url))
@@ -178,7 +177,7 @@ export function SearchCommandDialog({
         kind: 'workspace',
         title: workspace.name,
         subtitle: workspace.remoteServer?.url || workspace.rootPath,
-        badge: 'Workspace',
+        badge: t('globalSearch.badges.workspace'),
         icon: <Folder className="h-4 w-4" />,
         onSelect: () => onOpenWorkspace(workspace.id),
       }))
@@ -191,7 +190,7 @@ export function SearchCommandDialog({
         kind: 'agent',
         title: agent.name,
         subtitle: agent.description || agent.model || agent.kind,
-        badge: 'Agent',
+        badge: t('globalSearch.badges.agent'),
         icon: <Bot className="h-4 w-4" />,
         onSelect: () => onOpenAgent(agent.id),
       }))
@@ -204,7 +203,7 @@ export function SearchCommandDialog({
         kind: 'source',
         title: sourceTitle(source),
         subtitle: source.config.tagline || source.config.slug,
-        badge: 'Source',
+        badge: t('globalSearch.badges.source'),
         icon: <DatabaseZap className="h-4 w-4" />,
         onSelect: () => onOpenSource(source.config.slug, sourceKind(source)),
       }))
@@ -216,7 +215,7 @@ export function SearchCommandDialog({
         kind: 'skill',
         title: skillTitle(skill),
         subtitle: skill.metadata?.description || skill.slug,
-        badge: 'Skill',
+        badge: t('globalSearch.badges.skill'),
         icon: <Zap className="h-4 w-4" />,
         onSelect: () => onOpenSkill(skill.slug),
       }))
@@ -228,20 +227,21 @@ export function SearchCommandDialog({
         kind: 'automation',
         title: automation.name,
         subtitle: automation.summary || automation.event,
-        badge: 'Automation',
+        badge: t('globalSearch.badges.automation'),
         icon: automation.event === 'SchedulerTick' ? <CalendarClock className="h-4 w-4" /> : <Workflow className="h-4 w-4" />,
         onSelect: () => onOpenAutomation(automation.id),
       }))
 
     return [
-      groupResults('Sessions', visibleSessions),
-      groupResults('Workspaces', workspaceResults),
-      groupResults('Agents', agentResults),
-      groupResults('Sources', sourceResults),
-      groupResults('Skills', skillResults),
-      groupResults('Automations', automationResults),
+      groupResults(t('globalSearch.groups.sessions'), visibleSessions),
+      groupResults(t('globalSearch.groups.chatContent'), contentSessions),
+      groupResults(t('globalSearch.groups.workspaces'), workspaceResults),
+      groupResults(t('globalSearch.groups.agents'), agentResults),
+      groupResults(t('globalSearch.groups.sources'), sourceResults),
+      groupResults(t('globalSearch.groups.skills'), skillResults),
+      groupResults(t('globalSearch.groups.automations'), automationResults),
     ].filter(Boolean) as Array<{ label: string; results: SearchResult[] }>
-  }, [agents, automations, contentResults, normalizedQuery, onOpenAgent, onOpenAutomation, onOpenSession, onOpenSkill, onOpenSource, onOpenWorkspace, sessions, skills, sources, workspaceById, workspaces])
+  }, [agents, automations, contentResults, normalizedQuery, onOpenAgent, onOpenAutomation, onOpenSession, onOpenSkill, onOpenSource, onOpenWorkspace, sessions, skills, sources, t, workspaceById, workspaces])
 
   const flatResults = React.useMemo(() => groups.flatMap(group => group.results), [groups])
 
@@ -273,7 +273,7 @@ export function SearchCommandDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl" showCloseButton={false}>
-        <DialogTitle className="sr-only">Search</DialogTitle>
+        <DialogTitle className="sr-only">{t('globalSearch.title')}</DialogTitle>
         <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
@@ -281,14 +281,14 @@ export function SearchCommandDialog({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search sessions, chat content, workspaces, agents, sources, skills, automations..."
+            placeholder={t('globalSearch.placeholder')}
             className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           />
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {groups.length === 0 ? (
             <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
-              {isSearchingContent ? 'Searching sessions...' : 'No results'}
+              {isSearchingContent ? t('globalSearch.searchingContent') : t('globalSearch.noResults')}
             </div>
           ) : groups.map(group => (
             <div key={group.label} className="mb-2 last:mb-0">
