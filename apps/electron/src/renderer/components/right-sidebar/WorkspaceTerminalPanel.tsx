@@ -32,6 +32,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   const [shell, setShell] = React.useState<string | null>(null)
   const [exited, setExited] = React.useState(false)
   const [starting, setStarting] = React.useState(false)
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
 
   const disposeTerminal = React.useCallback(async (kill: boolean) => {
     const id = terminalIdRef.current
@@ -51,7 +52,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     if (!terminal || !fitAddon) return
     try {
       fitAddon.fit()
-      if (id) void window.electronAPI.terminalResize(id, terminal.cols, terminal.rows)
+      if (id && Number.isFinite(terminal.cols) && Number.isFinite(terminal.rows)) void window.electronAPI.terminalResize(id, terminal.cols, terminal.rows)
     } catch {
       // xterm can throw while hidden during first layout; next resize handles it.
     }
@@ -61,6 +62,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     if (!activeWorkspace?.rootPath || !containerRef.current) return
     setStarting(true)
     setExited(false)
+    setErrorMessage(null)
     await disposeTerminal(true)
 
     const terminal = new Terminal({
@@ -85,12 +87,14 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     terminal.writeln('Starting terminal...')
 
     try {
-      fitAddon.fit()
+      try { fitAddon.fit() } catch { /* layout may not be ready on first open */ }
+      const cols = Number.isFinite(terminal.cols) && terminal.cols > 0 ? terminal.cols : 80
+      const rows = Number.isFinite(terminal.rows) && terminal.rows > 0 ? terminal.rows : 24
       const created = await window.electronAPI.createTerminal({
         workspaceId: activeWorkspace.id,
         cwd: activeWorkspace.rootPath,
-        cols: terminal.cols,
-        rows: terminal.rows,
+        cols,
+        rows,
       })
       terminalIdRef.current = created.id
       setCwd(created.cwd)
@@ -105,6 +109,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to start terminal'
       terminal.writeln(`\r\n${message}`)
+      setErrorMessage(message)
       toast.error(message)
       setExited(true)
     } finally {
@@ -153,8 +158,8 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     <div className={cn('flex h-full min-h-0 flex-col bg-background', className)}>
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-foreground/5 px-3">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-medium text-foreground">{shell ? basename(shell) : 'Terminal'}</div>
-          <div className="truncate text-[10px] text-muted-foreground">{cwd ?? activeWorkspace.rootPath}</div>
+          <div className="truncate text-xs font-medium text-foreground">{shell ? basename(shell) : starting ? 'Starting terminal...' : 'Terminal'}</div>
+          <div className="truncate text-[10px] text-muted-foreground">{errorMessage ?? cwd ?? activeWorkspace.rootPath}</div>
         </div>
         <PanelHeaderCenterButton aria-label="Restart terminal" tooltip="Restart terminal" disabled={starting} onClick={() => void startTerminal()} icon={<RotateCcw className="h-3.5 w-3.5" />} />
         <PanelHeaderCenterButton aria-label="Clear terminal" tooltip="Clear terminal" onClick={() => terminalRef.current?.clear()} icon={<Trash2 className="h-3.5 w-3.5" />} />
