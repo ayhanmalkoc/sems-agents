@@ -2486,16 +2486,41 @@ function AppShellContent({
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
                 {isAgentsNavigation(navState) ? (
-                  <AgentsListPanel
-                    agents={agentProfiles}
-                    workspaceRootPath={activeWorkspace?.rootPath}
-                    onAgentClick={handleAgentSelect}
-                    onDuplicateAgent={handleDuplicateAgent}
-                    onDeleteAgent={handleDeleteAgent}
-                    onImproveAgent={handleImproveAgent}
-                    onCreateAgent={handleCreateAgent}
-                    selectedAgentId={navState.details ? navState.details.agentId : null}
-                  />
+                  <div className="flex min-h-full flex-col">
+                    <div className="flex h-10 shrink-0 items-center justify-between px-3">
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Agents
+                      </span>
+                      {activeWorkspace && (
+                        <div className="flex items-center gap-1">
+                          <EditPopover
+                            trigger={
+                              <HeaderIconButton
+                                icon={<Bot className="h-4 w-4" />}
+                                tooltip="Create Agent with AI"
+                              />
+                            }
+                            {...getEditConfig('add-agent', activeWorkspace.rootPath)}
+                          />
+                          <HeaderIconButton
+                            icon={<Plus className="h-4 w-4" />}
+                            tooltip="Add Agent"
+                            onClick={handleCreateAgent}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <AgentsListPanel
+                      agents={agentProfiles}
+                      workspaceRootPath={activeWorkspace?.rootPath}
+                      onAgentClick={handleAgentSelect}
+                      onDuplicateAgent={handleDuplicateAgent}
+                      onDeleteAgent={handleDeleteAgent}
+                      onImproveAgent={handleImproveAgent}
+                      onCreateAgent={handleCreateAgent}
+                      selectedAgentId={navState.details ? navState.details.agentId : null}
+                    />
+                  </div>
                 ) : (
                   <SidebarWorkspacesSection
                     workspaces={workspaces}
