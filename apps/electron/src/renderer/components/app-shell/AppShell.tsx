@@ -35,6 +35,7 @@ import { SidebarFilterPills } from "./SidebarFilterPills"
 import { SidebarSectionPanel } from "./SidebarSectionPanel"
 import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
+import { PanelLeftRounded } from "../icons/PanelLeftRounded"
 import { cn } from "@/lib/utils"
 import { isMac } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
@@ -3399,6 +3400,17 @@ function AppShellContent({
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
         />
+        {!effectiveSidebarAndNavigatorHidden && !isSidebarVisible && (
+          <button
+            type="button"
+            aria-label={t("menu.toggleSidebar")}
+            onClick={handleToggleSidebar}
+            className="absolute left-2 top-2 z-panel grid h-8 w-8 place-items-center rounded-lg border border-foreground/10 bg-background/85 text-foreground/70 shadow-minimal backdrop-blur transition-colors hover:bg-foreground/5 hover:text-foreground"
+          >
+            <PanelLeftRounded className="h-[18px] w-[18px]" />
+          </button>
+        )}
+
         {isRightDockOpen && !isAutoCompact && (
           <RightWorkspacePanel
             width={rightDockWidth}
