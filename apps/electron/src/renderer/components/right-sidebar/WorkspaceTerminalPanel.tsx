@@ -30,11 +30,16 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   const terminalRef = React.useRef<Terminal | null>(null)
   const fitAddonRef = React.useRef<FitAddon | null>(null)
   const terminalIdRef = React.useRef<string | null>(null)
+  const onTitleChangeRef = React.useRef(onTitleChange)
   const [cwd, setCwd] = React.useState<string | null>(null)
   const [shell, setShell] = React.useState<string | null>(null)
   const [exited, setExited] = React.useState(false)
   const [starting, setStarting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    onTitleChangeRef.current = onTitleChange
+  }, [onTitleChange])
 
   const disposeTerminal = React.useCallback(async (kill: boolean) => {
     const id = terminalIdRef.current
@@ -113,7 +118,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
       terminalIdRef.current = created.id
       setCwd(created.cwd)
       setShell(created.shell)
-      onTitleChange?.('Terminal')
+      onTitleChangeRef.current?.('Terminal')
       terminal.clear()
       focusTerminal()
       terminal.onData((data) => {
@@ -130,7 +135,7 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark, onTitleChange])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {
