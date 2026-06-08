@@ -246,7 +246,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
             </button>
             {entry.type === 'directory' && expanded && (
               <div className="mt-0.5">
-                {entry.loading ? <div className="px-8 py-1 text-[11px] text-muted-foreground">Loading…</div> : null}
+                {entry.loading ? <div className="px-8 py-1 text-[11px] text-muted-foreground">Loading...</div> : null}
                 {entry.error ? <div className="px-8 py-1 text-[11px] text-destructive">{entry.error}</div> : null}
                 {entry.children ? renderTree(entry.children, depth + 1) : null}
               </div>
@@ -266,7 +266,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-foreground/10 px-3">
         <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
           <span>{workspaceName}</span>
-          {breadcrumbs.map((crumb, index) => <React.Fragment key={`${crumb}-${index}`}> <span className="mx-1">›</span> <span className={index === breadcrumbs.length - 1 ? 'font-medium text-foreground' : ''}>{crumb}</span></React.Fragment>)}
+          {breadcrumbs.map((crumb, index) => <React.Fragment key={`${crumb}-${index}`}> <span className="mx-1">/</span> <span className={index === breadcrumbs.length - 1 ? 'font-medium text-foreground' : ''}>{crumb}</span></React.Fragment>)}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -283,13 +283,13 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <TopBarButton aria-label="Open with" className="h-7 rounded-lg px-2" disabled={!selectedFile}>
+            <TopBarButton aria-label="Open workspace" className="h-7 rounded-lg px-2">
               <ExternalLink className="h-4 w-4 text-foreground/60" />
               <span className="text-xs">Open</span>
             </TopBarButton>
           </DropdownMenuTrigger>
           <StyledDropdownMenuContent align="end" minWidth="min-w-52">
-            <StyledDropdownMenuItem onClick={openDefault}><ExternalLink className="h-3.5 w-3.5" />Default app</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem disabled={!selectedFile} onClick={openDefault}><ExternalLink className="h-3.5 w-3.5" />Default app</StyledDropdownMenuItem>
             <StyledDropdownMenuItem disabled><Code2 className="h-3.5 w-3.5" />VS Code</StyledDropdownMenuItem>
             <DropdownMenuSub>
               <StyledDropdownMenuSubTrigger><Terminal className="h-3.5 w-3.5" />This location</StyledDropdownMenuSubTrigger>
@@ -298,7 +298,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
                 <StyledDropdownMenuItem disabled><Terminal className="h-3.5 w-3.5" />Git Bash</StyledDropdownMenuItem>
               </StyledDropdownMenuSubContent>
             </DropdownMenuSub>
-            <StyledDropdownMenuItem onClick={revealSelected}><FolderOpen className="h-3.5 w-3.5" />Open folder</StyledDropdownMenuItem>
+            <StyledDropdownMenuItem onClick={revealSelected}><FolderOpen className="h-3.5 w-3.5" />Open workspace folder</StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
         <TopBarButton aria-label="Reveal in file manager" onClick={revealSelected} className="h-7 w-7 rounded-lg">
@@ -311,7 +311,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
 
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-auto p-4">
-          {loadingPreview ? <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div> : null}
+          {loadingPreview ? <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading...</div> : null}
           {!loadingPreview && previewKind === 'empty' ? <div className="flex h-full items-center justify-center text-center text-muted-foreground"><div><FolderOpen className="mx-auto mb-2 h-8 w-8" /><div className="text-sm font-medium text-foreground">Open file</div><div className="text-xs">Select a file from the workspace tree.</div></div></div> : null}
           {!loadingPreview && previewKind === 'error' ? <div className="text-sm text-destructive">{error}</div> : null}
           {!loadingPreview && previewKind === 'binary' ? <div className="flex h-full items-center justify-center text-center text-muted-foreground"><div><File className="mx-auto mb-2 h-8 w-8" /><div className="text-sm font-medium text-foreground">Preview unavailable</div><button className="mt-3 rounded-md bg-foreground/10 px-3 py-1.5 text-xs text-foreground" onClick={openDefault}>Open in default app</button></div></div> : null}
@@ -324,11 +324,11 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
             <div className="border-b border-foreground/5 p-2">
               <div className="flex items-center gap-2 rounded-lg bg-foreground/5 px-2 py-1.5">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter files…" className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground" />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter files..." className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground" />
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto p-2">
-              {loadingRoot ? <div className="p-3 text-xs text-muted-foreground">Loading files…</div> : null}
+              {loadingRoot ? <div className="p-3 text-xs text-muted-foreground">Loading files...</div> : null}
               {error && !selectedFile ? <div className="p-3 text-xs text-destructive">{error}</div> : null}
               {!loadingRoot ? renderTree(visibleNodes) : null}
             </div>
