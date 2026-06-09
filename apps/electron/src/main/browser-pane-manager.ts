@@ -512,13 +512,18 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       pageView.webContents.setUserAgent(sanitizedUa)
     }
 
-    window.addBrowserView(pageView)
-    window.addBrowserView(nativeOverlayView)
-    window.addBrowserView(toolbarView)
-    window.setTopBrowserView(toolbarView)
-    void this.loadNativeOverlayPage(instance)
-
-    this.layoutAllViews(instance)
+    if (mode === 'dock') {
+      dockHostWindow!.addBrowserView(pageView)
+      pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
+      pageView.setAutoResize({ width: false, height: false })
+    } else {
+      window.addBrowserView(pageView)
+      window.addBrowserView(nativeOverlayView)
+      window.addBrowserView(toolbarView)
+      window.setTopBrowserView(toolbarView)
+      void this.loadNativeOverlayPage(instance)
+      this.layoutAllViews(instance)
+    }
 
     this.setupWindowListeners(instance)
     this.instances.set(instanceId, instance)
