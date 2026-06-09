@@ -183,6 +183,7 @@ export interface BrowserToolsOptions {
 const BROWSER_TOOL_DESCRIPTION = `Run browser actions using a CLI-like command (string or array input).
 
 All browser interactions use this single tool with strict validation and actionable feedback.
+If the user asks for dock, right panel, right sidebar, or side panel browsing, use \`open --dock\` before navigation. Use \`open --foreground\` only when the user explicitly wants a separate browser window.
 String mode supports batching with semicolons: \`fill @e1 value; fill @e2 value; click @e3\`
 Batch stops after navigation commands (click, navigate, back, forward) since page state may change.
 
@@ -192,7 +193,9 @@ Array mode bypasses string parsing and preserves raw arguments exactly (recommen
 
 Examples:
 - \`--help\`
-- \`open\`
+- \`open --dock\` — open browser in the right dock/right panel
+- \`open --foreground\` — open/focus a separate browser window
+- \`open\` — open default browser window in background
 - \`navigate https://example.com\`
 - \`snapshot\`
 - \`find login button\` — search elements by keyword

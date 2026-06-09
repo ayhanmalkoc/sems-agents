@@ -43,7 +43,7 @@ export function getBrowserToolHelp(): string {
     '',
     'Usage:',
     '  --help',
-    '  open [--foreground|-f] [--dock]                open browser (window by default, dock when requested)',
+    '  open [--foreground|-f] [--dock]                open browser; use --dock for right panel/dock requests',
     '  navigate <url>',
     '  snapshot',
     '  find <query>                                   search elements by keyword (matches role, name, value)',
