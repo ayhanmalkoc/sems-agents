@@ -641,6 +641,16 @@ export interface BrowserInstanceInfo {
    * and main processes that pre-date the field working unchanged.
    */
   workspaceId?: string | null
+  mode?: 'window' | 'dock'
+  dockTabId?: string | null
+}
+
+export interface BrowserDockBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+  visible: boolean
 }
 
 export interface DeepLinkNavigation {

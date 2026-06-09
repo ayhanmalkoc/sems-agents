@@ -62,6 +62,7 @@ const EXPECTED_CHANNELS: string[] = [
   'browser-pane:screenshot',
   'browser-pane:scroll',
   'browser-pane:select',
+  'browser-pane:set-dock-bounds',
   'browser-pane:snapshot',
   'browser-pane:state-changed',
   'browser-pane:stop',

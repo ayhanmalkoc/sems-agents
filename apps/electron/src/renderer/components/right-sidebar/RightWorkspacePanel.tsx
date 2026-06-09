@@ -6,6 +6,7 @@ import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
 import { WorkspaceTerminalPanel } from './WorkspaceTerminalPanel'
+import { WorkspaceBrowserPanel } from './WorkspaceBrowserPanel'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
 
@@ -36,6 +37,7 @@ const TOOL_BY_TYPE = new Map(TOOL_CONFIGS.map((tool) => [tool.type, tool]))
 
 export interface RightWorkspacePanelProps {
   width: number
+  isOpen?: boolean
   tabs: RightDockTab[]
   activeTabId: string | null
   activeSessionId?: string | null
@@ -70,8 +72,13 @@ function TerminalTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; is
   return <WorkspaceTerminalPanel className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
+function BrowserTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceBrowserPanel tabId={tabId} className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
+}
+
 export function RightWorkspacePanel({
   width,
+  isOpen = true,
   tabs,
   activeTabId,
   activeSessionId,
@@ -88,7 +95,7 @@ export function RightWorkspacePanel({
 
   return (
     <aside
-      className="relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] border border-foreground/10 bg-background/70 shadow-minimal backdrop-blur"
+      className={cn("relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] border border-foreground/10 bg-background/70 shadow-minimal backdrop-blur", !isOpen && "hidden")}
       style={{ width }}
     >
       <div
@@ -101,7 +108,7 @@ export function RightWorkspacePanel({
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const tool = TOOL_BY_TYPE.get(tab.type)!
-            const selected = tab.id === activeTabId
+            const selected = isOpen && tab.id === activeTabId
             return (
               <button
                 key={tab.id}
@@ -164,6 +171,8 @@ export function RightWorkspacePanel({
                   <FilesTool tabId={tab.id} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : tab.type === 'terminal' ? (
                   <TerminalTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
+                ) : tab.type === 'browser' ? (
+                  <BrowserTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : (
                   <PlaceholderTool tool={TOOL_BY_TYPE.get(tab.type)!} />
                 )}

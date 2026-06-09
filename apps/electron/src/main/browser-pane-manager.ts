@@ -17,6 +17,7 @@ import {
   type BrowserEmptyStateLaunchPayload,
   type BrowserEmptyStateLaunchResult,
   type BrowserInstanceInfo,
+  type BrowserDockBounds,
 } from '../shared/types'
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
 import { CodedError } from '@craft-agent/shared/protocol'
@@ -140,6 +141,10 @@ interface AgentControlLockState {
 interface BrowserInstance {
   id: string
   window: BrowserWindow
+  mode: 'window' | 'dock'
+  dockTabId: string | null
+  dockHostWindow: BrowserWindow | null
+  dockBounds: BrowserDockBounds | null
   toolbarView: BrowserView
   pageView: BrowserView
   nativeOverlayView: BrowserView
@@ -188,6 +193,9 @@ interface CreateBrowserInstanceOptions {
   ownerType?: 'session' | 'manual'
   ownerSessionId?: string
   workspaceId?: string | null
+  mode?: 'window' | 'dock'
+  dockTabId?: string
+  hostWebContentsId?: number
 }
 
 export interface BrowserScreenshotOptions {
@@ -363,9 +371,17 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   createInstance(id?: string, options?: CreateBrowserInstanceOptions): string {
     const instanceId = id || `browser-${++instanceCounter}`
     const shouldShow = options?.show ?? false
+    const mode = options?.mode ?? 'window'
     const ownerType = options?.ownerType ?? 'manual'
     const ownerSessionId = ownerType === 'session' ? (options?.ownerSessionId ?? null) : null
     const workspaceId = options?.workspaceId ?? null
+
+    const dockHostWindow = mode === 'dock'
+      ? (options?.hostWebContentsId && this.windowManager?.getWindowByWebContentsId(options.hostWebContentsId)) || this.windowManager?.getFocusedWindow() || null
+      : null
+    if (mode === 'dock' && !dockHostWindow) {
+      throw new Error('[browser-pane] Dock browser requires a host window')
+    }
 
     if (this.instances.has(instanceId)) {
       mainLog.warn(`[browser-pane] Instance already exists, reusing: ${instanceId}`)
@@ -446,6 +462,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const instance: BrowserInstance = {
       id: instanceId,
       window,
+      mode,
+      dockTabId: mode === 'dock' ? (options?.dockTabId ?? null) : null,
+      dockHostWindow,
+      dockBounds: null,
       toolbarView,
       pageView,
       nativeOverlayView,
@@ -463,7 +483,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       isVisible: false,
       isHiding: false,
       keepAliveOnWindowClose: true,
-      toolbarReady: false,
+      toolbarReady: mode === 'dock',
       toolbarMenuOpen: false,
       toolbarMenuHeight: 0,
       toolbarMenuOverlayActive: false,
@@ -504,7 +524,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     this.instances.set(instanceId, instance)
     this.emitStateChange(instance)
     mainLog.info(`[browser-pane] toolbar version: v4-react-chromeless`)
-    mainLog.info(`[browser-pane] Created instance: ${instanceId} (show=${shouldShow}, ownerType=${ownerType}, ownerSessionId=${ownerSessionId ?? 'none'})`)
+    mainLog.info(`[browser-pane] Created instance: ${instanceId} (mode=${mode}, show=${shouldShow}, ownerType=${ownerType}, ownerSessionId=${ownerSessionId ?? 'none'})`)
 
     void this.loadToolbarPage(instance)
       .finally(() => {
@@ -526,6 +546,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (!instance) {
       mainLog.info(`[browser-pane] destroy requested for missing instance id=${id}`)
       return
+    }
+
+    if (instance.mode === 'dock') {
+      try { instance.dockHostWindow?.removeBrowserView(instance.pageView) } catch { /* noop */ }
+      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
     }
 
     const destroyedBefore = instance.window.isDestroyed()
@@ -818,6 +843,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const instance = this.instances.get(id)
     if (!instance) return
 
+    if (instance.mode === 'dock') {
+      instance.dockBounds = instance.dockBounds ? { ...instance.dockBounds, visible: false } : null
+      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
+      instance.isVisible = false
+      this.emitStateChange(instance)
+      return
+    }
+
     // Re-entrancy guard: bail if a hide is already in progress. Prevents the
     // 'close' listener from re-entering hide() during teardown, which can crash
     // Chromium's compositor when the BrowserView is mid-load.
@@ -858,6 +891,21 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       instance.isHiding = false
       this.emitStateChange(instance)
     })
+  }
+
+  setDockBounds(id: string, bounds: BrowserDockBounds): void {
+    const instance = this.instances.get(id)
+    if (!instance || instance.mode !== 'dock') return
+    instance.dockBounds = bounds
+    if (bounds.visible && bounds.width > 0 && bounds.height > 0) {
+      instance.pageView.setBounds({ x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.round(bounds.width), height: Math.round(bounds.height) })
+      instance.pageView.setAutoResize({ width: false, height: false })
+      instance.isVisible = true
+    } else {
+      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
+      instance.isVisible = false
+    }
+    this.emitStateChange(instance)
   }
 
   async getAccessibilitySnapshot(id: string): Promise<AccessibilitySnapshot> {
@@ -1999,6 +2047,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private layoutToolbarView(instance: BrowserInstance): void {
+    if (instance.mode === 'dock') return
     const [width] = instance.window.getContentSize()
     const toolbarHeight = this.getToolbarEffectiveHeight(instance)
 
@@ -2007,6 +2056,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private updateNativeOverlayState(instance: BrowserInstance): void {
+    if (instance.mode === 'dock') {
+      instance.nativeOverlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
+      return
+    }
+
     const control = instance.agentControl
     const agentActive = !!control?.active
     const menuActive = !!instance.toolbarMenuOverlayActive

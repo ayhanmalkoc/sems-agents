@@ -13,6 +13,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.RELOAD,
   RPC_CHANNELS.browserPane.STOP,
   RPC_CHANNELS.browserPane.FOCUS,
+  RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS,
   RPC_CHANNELS.browserPane.LAUNCH,
   RPC_CHANNELS.browserPane.SNAPSHOT,
   RPC_CHANNELS.browserPane.CLICK,
@@ -45,7 +46,7 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
       })
     }
 
-    return browserPaneManager.createInstance(input?.id, { show: input?.show, workspaceId })
+    return browserPaneManager.createInstance(input?.id, { show: input?.show, workspaceId: input?.workspaceId ?? workspaceId, mode: input?.mode, dockTabId: input?.dockTabId, hostWebContentsId: ctx.webContentsId ?? undefined })
   })
 
   server.handle(RPC_CHANNELS.browserPane.DESTROY, (_ctx, id: string) => {
@@ -98,6 +99,10 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
 
   server.handle(RPC_CHANNELS.browserPane.FOCUS, (_ctx, id: string) => {
     browserPaneManager.focus(id)
+  })
+
+  server.handle(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS, (_ctx, id: string, bounds) => {
+    browserPaneManager.setDockBounds(id, bounds)
   })
 
   server.handle(RPC_CHANNELS.browserPane.LAUNCH, async (ctx, payload: BrowserEmptyStateLaunchPayload) => {
