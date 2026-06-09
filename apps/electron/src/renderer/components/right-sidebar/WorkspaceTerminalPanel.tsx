@@ -32,6 +32,7 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
   const fitAddonRef = React.useRef<FitAddon | null>(null)
   const terminalIdRef = React.useRef<string | null>(null)
   const startGenerationRef = React.useRef(0)
+  const isActiveRef = React.useRef(isActive)
   const onTitleChangeRef = React.useRef(onTitleChange)
   const [cwd, setCwd] = React.useState<string | null>(null)
   const [shell, setShell] = React.useState<string | null>(null)
@@ -42,6 +43,10 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
   React.useEffect(() => {
     onTitleChangeRef.current = onTitleChange
   }, [onTitleChange])
+
+  React.useEffect(() => {
+    isActiveRef.current = isActive
+  }, [isActive])
 
   const disposeTerminal = React.useCallback(async (kill: boolean) => {
     const id = terminalIdRef.current
@@ -69,11 +74,11 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
   }, [])
 
   const focusTerminal = React.useCallback(() => {
-    if (!isActive) return
+    if (!isActiveRef.current) return
     requestAnimationFrame(() => {
       terminalRef.current?.focus()
     })
-  }, [isActive])
+  }, [])
 
   const scrollTerminalToPrompt = React.useCallback(() => {
     requestAnimationFrame(() => {
