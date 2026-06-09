@@ -2,7 +2,7 @@
 // Protocol re-exports (channels, DTOs, events, wire types)
 // =============================================================================
 export * from '@craft-agent/shared/protocol'
-import type { BrowserDockBounds, BrowserDockOpenRequest, BrowserDockOpenResult } from '@craft-agent/shared/protocol'
+import type { BrowserDockBounds, BrowserDockOpenRequest, BrowserDockOpenResult, RightDockRequest, RightDockResult } from '@craft-agent/shared/protocol'
 
 // =============================================================================
 // Package re-exports (convenience for renderer imports)
@@ -647,6 +647,11 @@ export interface ElectronAPI {
     onStateChanged(callback: (info: BrowserInstanceInfo) => void): () => void
     onRemoved(callback: (id: string) => void): () => void
     onInteracted(callback: (id: string) => void): () => void
+  }
+
+  rightDock: {
+    complete(result: RightDockResult): Promise<void>
+    onRequested(callback: (request: RightDockRequest) => void): () => void
   }
 
   // LLM Connections (provider configurations)

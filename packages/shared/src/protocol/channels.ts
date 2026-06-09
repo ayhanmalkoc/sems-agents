@@ -382,6 +382,10 @@ export const RPC_CHANNELS = {
     REMOVED: 'browser-pane:removed',
     INTERACTED: 'browser-pane:interacted',
   },
+  rightDock: {
+    REQUEST: 'right-dock:request',
+    COMPLETE: 'right-dock:complete',
+  },
   automations: {
     GET: 'automations:get',
     TEST: 'automations:test',

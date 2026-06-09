@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -3791,6 +3791,43 @@ export class SessionManager implements ISessionManager {
               return bpm.detectSecurityChallenge(instanceId)
             },
           } satisfies BrowserPaneFns,
+          rightDockFns: {
+            status: async () => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'status' })
+              if (!result?.status) throw new Error('Right dock status is unavailable')
+              return result.status
+            },
+            open: async () => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'open' })
+              if (!result?.status) throw new Error('Right dock open is unavailable')
+              return result.status
+            },
+            close: async () => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'close' })
+              if (!result?.status) throw new Error('Right dock close is unavailable')
+              return result.status
+            },
+            tabs: async () => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'tabs' })
+              if (!result?.status) throw new Error('Right dock tabs are unavailable')
+              return result.status
+            },
+            openTool: async (toolType) => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'openTool', toolType })
+              if (!result?.status) throw new Error(`Right dock ${toolType} tab is unavailable`)
+              return result.status
+            },
+            selectTab: async (tabId) => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'selectTab', tabId })
+              if (!result?.status) throw new Error('Right dock select-tab is unavailable')
+              return result.status
+            },
+            closeTab: async (tabId) => {
+              const result = await bpm.requestRightDockAsync?.(sid, { workspaceId, command: 'closeTab', tabId })
+              if (!result?.status) throw new Error('Right dock close-tab is unavailable')
+              return result.status
+            },
+          } satisfies RightDockFns,
         })
       }
 

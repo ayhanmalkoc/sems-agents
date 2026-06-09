@@ -202,6 +202,7 @@ export {
   RenderTemplateSchema,
   // Browser tool schema
   BrowserToolSchema,
+  RightDockToolSchema,
   // Developer feedback schema
   SendDeveloperFeedbackSchema,
   // Descriptions

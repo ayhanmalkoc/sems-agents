@@ -15,6 +15,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.FOCUS,
   RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS,
   RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN,
+  RPC_CHANNELS.rightDock.COMPLETE,
   RPC_CHANNELS.browserPane.LAUNCH,
   RPC_CHANNELS.browserPane.SNAPSHOT,
   RPC_CHANNELS.browserPane.CLICK,
@@ -111,6 +112,10 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
 
   server.handle(RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN, (_ctx, result) => {
     browserPaneManager.completeDockOpen(result)
+  })
+
+  server.handle(RPC_CHANNELS.rightDock.COMPLETE, (_ctx, result) => {
+    browserPaneManager.completeRightDock(result)
   })
 
   server.handle(RPC_CHANNELS.browserPane.LAUNCH, async (ctx, payload: BrowserEmptyStateLaunchPayload) => {

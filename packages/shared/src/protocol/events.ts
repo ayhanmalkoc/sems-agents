@@ -13,6 +13,7 @@ import type {
   UpdateInfo,
   BrowserInstanceInfo,
   BrowserDockOpenRequest,
+  RightDockRequest,
   DeepLinkNavigation,
   TerminalDataEvent,
   TerminalExitEvent,
@@ -57,6 +58,7 @@ export interface BroadcastEventMap {
   [RPC_CHANNELS.browserPane.REMOVED]: [id: string]
   [RPC_CHANNELS.browserPane.INTERACTED]: [id: string]
   [RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST]: [request: BrowserDockOpenRequest]
+  [RPC_CHANNELS.rightDock.REQUEST]: [request: RightDockRequest]
 
   // Terminal events (per-window)
   [RPC_CHANNELS.terminal.DATA]: [event: TerminalDataEvent]

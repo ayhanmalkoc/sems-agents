@@ -8,7 +8,7 @@
  * so releaseBrowserOwnershipOnForcedStop() accepts IBrowserPaneManager.
  */
 
-import type { BrowserInstanceInfo } from '@craft-agent/shared/protocol'
+import type { BrowserInstanceInfo, RightDockCommand, RightDockResult, RightDockToolType } from '@craft-agent/shared/protocol'
 
 // ---------------------------------------------------------------------------
 // Supporting types — minimal subsets of BPM's internal types
@@ -178,6 +178,8 @@ export interface IBrowserPaneManager {
    * Async equivalent of {@link createForSession}. Required for the remote bridge.
    */
   createForSessionAsync(sessionId: string, options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string>
+
+  requestRightDockAsync?(sessionId: string, options: { workspaceId?: string | null; command: RightDockCommand; toolType?: RightDockToolType; tabId?: string }): Promise<RightDockResult>
 
   /** Get instance info by ID (sync; local-only). For remote-aware code use {@link getInstanceAsync}. */
   getInstance(id: string): BrowserInstanceSnapshot | undefined

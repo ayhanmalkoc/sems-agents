@@ -376,6 +376,10 @@ export const CHANNEL_MAP = {
   'browserPane.onRemoved': listener(RPC_CHANNELS.browserPane.REMOVED),
   'browserPane.onInteracted': listener(RPC_CHANNELS.browserPane.INTERACTED),
 
+  // Right workspace dock
+  'rightDock.complete': invoke(RPC_CHANNELS.rightDock.COMPLETE),
+  'rightDock.onRequested': listener(RPC_CHANNELS.rightDock.REQUEST),
+
   // LLM Connections
   listLlmConnections: invoke(RPC_CHANNELS.llmConnections.LIST),
   listLlmConnectionsWithStatus: invoke(RPC_CHANNELS.llmConnections.LIST_WITH_STATUS),

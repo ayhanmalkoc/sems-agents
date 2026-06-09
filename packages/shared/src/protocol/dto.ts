@@ -665,6 +665,40 @@ export interface BrowserDockOpenResult {
   error?: string
 }
 
+export type RightDockToolType = 'browser' | 'files' | 'terminal' | 'inspect' | 'chat'
+export type RightDockCommand = 'status' | 'open' | 'close' | 'tabs' | 'openTool' | 'selectTab' | 'closeTab'
+
+export interface RightDockTabSnapshot {
+  id: string
+  type: RightDockToolType
+  title?: string
+  active?: boolean
+  browserInstanceId?: string | null
+}
+
+export interface RightDockStatusSnapshot {
+  available: boolean
+  open: boolean
+  activeTabId?: string | null
+  tabs: RightDockTabSnapshot[]
+  reason?: string
+}
+
+export interface RightDockRequest {
+  requestId: string
+  sessionId: string
+  workspaceId?: string | null
+  command: RightDockCommand
+  toolType?: RightDockToolType
+  tabId?: string
+}
+
+export interface RightDockResult {
+  requestId: string
+  status?: RightDockStatusSnapshot
+  error?: string
+}
+
 export interface DeepLinkNavigation {
   view?: string
   tabType?: string

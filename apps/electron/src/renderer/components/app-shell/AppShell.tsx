@@ -127,6 +127,7 @@ import { FabNewChat } from "./FabNewChat"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
 import { RightWorkspacePanel, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
+import type { RightDockStatusSnapshot } from "@craft-agent/shared/protocol"
 import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
 import { WorkspaceCreationScreen, type CreationStep } from "@/components/workspace/WorkspaceCreationScreen"
 import { fullscreenOverlayOpenAtom } from "@/atoms/overlay"
@@ -609,6 +610,86 @@ function AppShellContent({
   const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
+
+  const buildRightDockStatus = useCallback((overrides?: { open?: boolean; tabs?: RightDockTab[]; activeTabId?: string | null; reason?: string }): RightDockStatusSnapshot => {
+    const tabs = overrides?.tabs ?? rightDockTabs
+    const activeTabId = overrides?.activeTabId ?? activeRightDockTabId
+    return {
+      available: !isAutoCompact,
+      open: overrides?.open ?? (isRightDockOpen && !isAutoCompact),
+      activeTabId,
+      reason: overrides?.reason,
+      tabs: tabs.map((tab) => ({
+        id: tab.id,
+        type: tab.type,
+        title: tab.title,
+        active: tab.id === activeTabId,
+      })),
+    }
+  }, [activeRightDockTabId, isAutoCompact, isRightDockOpen, rightDockTabs])
+
+  React.useEffect(() => {
+    return window.electronAPI.rightDock.onRequested((request) => {
+      const complete = (status: RightDockStatusSnapshot) => {
+        void window.electronAPI.rightDock.complete({ requestId: request.requestId, status })
+      }
+      const fail = (message: string) => {
+        void window.electronAPI.rightDock.complete({ requestId: request.requestId, error: message })
+      }
+
+      if (isAutoCompact) {
+        fail('Right dock unavailable in compact layout.')
+        return
+      }
+
+      if (request.command === 'status' || request.command === 'tabs') {
+        complete(buildRightDockStatus())
+        return
+      }
+      if (request.command === 'open') {
+        setIsRightDockOpen(true)
+        complete(buildRightDockStatus({ open: true }))
+        return
+      }
+      if (request.command === 'close') {
+        setIsRightDockOpen(false)
+        complete(buildRightDockStatus({ open: false }))
+        return
+      }
+      if (request.command === 'openTool') {
+        const toolType = request.toolType
+        if (!toolType) {
+          fail('openTool requires toolType')
+          return
+        }
+        const tabId = openRightDockTool(toolType)
+        const tab: RightDockTab = { id: tabId, type: toolType }
+        complete(buildRightDockStatus({ open: true, tabs: [...rightDockTabs, tab], activeTabId: tabId }))
+        return
+      }
+      if (request.command === 'selectTab') {
+        if (!request.tabId || !rightDockTabs.some((tab) => tab.id === request.tabId)) {
+          fail('selectTab requires an existing tabId')
+          return
+        }
+        setIsRightDockOpen(true)
+        setActiveRightDockTabId(request.tabId)
+        complete(buildRightDockStatus({ open: true, activeTabId: request.tabId }))
+        return
+      }
+      if (request.command === 'closeTab') {
+        if (!request.tabId || !rightDockTabs.some((tab) => tab.id === request.tabId)) {
+          fail('closeTab requires an existing tabId')
+          return
+        }
+        const nextTabs = rightDockTabs.filter((tab) => tab.id !== request.tabId)
+        closeRightDockTab(request.tabId)
+        complete(buildRightDockStatus({ tabs: nextTabs, activeTabId: nextTabs.at(-1)?.id ?? null }))
+        return
+      }
+      fail(`Unsupported right dock command: ${request.command}`)
+    })
+  }, [buildRightDockStatus, closeRightDockTab, isAutoCompact, openRightDockTool, rightDockTabs])
 
   React.useEffect(() => {
     return window.electronAPI.browserPane.onOpenDockRequested((request) => {

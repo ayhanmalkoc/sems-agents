@@ -160,6 +160,10 @@ export const BrowserToolSchema = z.object({
   ]).describe('Browser command as a string (e.g., "click @e1") or array (e.g., ["evaluate", "var x = 1; x + 2"]). Array mode preserves semicolons and whitespace in arguments.'),
 });
 
+export const RightDockToolSchema = z.object({
+  command: z.string().describe('Right dock command: status, open, close, tabs, open browser, open files, open terminal, select <tabId>, close-tab <tabId>.'),
+});
+
 export const SpawnSessionSchema = z.object({
   help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
   prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
@@ -425,6 +429,21 @@ Examples:
 - \`close\` — close and destroy the browser window
 - \`hide\` — hide the window while preserving state`,
 
+  right_dock: `Control the visible Craft right workspace dock.
+
+Use this when the user asks to manage the right panel, side panel, dock tabs, dock Browser, dock Files, or dock Terminal.
+
+Commands:
+- \`status\` — show whether the dock is available/open and list tabs
+- \`open\` — open the right dock panel
+- \`close\` — close the right dock panel
+- \`tabs\` — list dock tabs
+- \`open browser\` — open a Browser tab in the right dock
+- \`open files\` — open Files in the right dock
+- \`open terminal\` — open Terminal in the right dock
+- \`select <tabId>\` — activate a tab
+- \`close-tab <tabId>\` — close a tab`,
+
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via prompt instructions
@@ -550,6 +569,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Browser tool (backend-specific — requires BrowserPaneManager in Electron)
   // Single CLI-like tool that handles all browser actions via command string.
   { name: 'browser_tool', description: TOOL_DESCRIPTIONS.browser_tool, inputSchema: BrowserToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
+  { name: 'right_dock', description: TOOL_DESCRIPTIONS.right_dock, inputSchema: RightDockToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },

@@ -19,6 +19,9 @@ import {
   type BrowserInstanceInfo,
   type BrowserDockBounds,
   type BrowserDockOpenResult,
+  type RightDockCommand,
+  type RightDockResult,
+  type RightDockToolType,
 } from '../shared/types'
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
 import { CodedError, RPC_CHANNELS } from '@craft-agent/shared/protocol'
@@ -349,6 +352,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
   private pendingDockOpenRequests = new Map<string, { resolve: (id: string) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
+  private pendingRightDockRequests = new Map<string, { resolve: (result: RightDockResult) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
 
   setWindowManager(windowManager: WindowManager): void {
     this.windowManager = windowManager
@@ -940,8 +944,54 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         reject(new Error('Timed out opening browser dock tab'))
       }, 10_000)
       this.pendingDockOpenRequests.set(requestId, { resolve, reject, timeout })
-      hostWindow.webContents.send(RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST, { requestId, sessionId, workspaceId })
+      const eventSink = this.windowManager?.getRpcEventSink()
+      const clientId = this.windowManager?.getClientIdForWindow(hostWindow.webContents.id)
+      if (eventSink && clientId) {
+        eventSink(RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST, { to: 'client', clientId }, { requestId, sessionId, workspaceId })
+      } else {
+        hostWindow.webContents.send(RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST, { requestId, sessionId, workspaceId })
+      }
     })
+  }
+
+  async requestRightDockAsync(
+    sessionId: string,
+    options: { workspaceId?: string | null; command: RightDockCommand; toolType?: RightDockToolType; tabId?: string },
+  ): Promise<RightDockResult> {
+    const requestId = `right-dock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const workspaceId = options.workspaceId ?? null
+    const hostWindow = (workspaceId && this.windowManager?.getWindowByWorkspace(workspaceId)) || this.windowManager?.getFocusedWindow() || null
+    if (!hostWindow || hostWindow.isDestroyed()) {
+      throw new Error('[right-dock] Requires an active app window')
+    }
+
+    return await new Promise<RightDockResult>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pendingRightDockRequests.delete(requestId)
+        reject(new Error('Timed out waiting for right dock response'))
+      }, 10_000)
+      this.pendingRightDockRequests.set(requestId, { resolve, reject, timeout })
+      const payload = { requestId, sessionId, workspaceId, command: options.command, toolType: options.toolType, tabId: options.tabId }
+      const eventSink = this.windowManager?.getRpcEventSink()
+      const clientId = this.windowManager?.getClientIdForWindow(hostWindow.webContents.id)
+      if (eventSink && clientId) {
+        eventSink(RPC_CHANNELS.rightDock.REQUEST, { to: 'client', clientId }, payload)
+      } else {
+        hostWindow.webContents.send(RPC_CHANNELS.rightDock.REQUEST, payload)
+      }
+    })
+  }
+
+  completeRightDock(result: RightDockResult): void {
+    const pending = this.pendingRightDockRequests.get(result.requestId)
+    if (!pending) return
+    this.pendingRightDockRequests.delete(result.requestId)
+    clearTimeout(pending.timeout)
+    if (result.error) {
+      pending.reject(new Error(result.error))
+      return
+    }
+    pending.resolve(result)
   }
 
   completeDockOpen(result: BrowserDockOpenResult): void {

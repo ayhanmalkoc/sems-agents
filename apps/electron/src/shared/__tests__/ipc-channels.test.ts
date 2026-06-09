@@ -206,6 +206,8 @@ const EXPECTED_CHANNELS: string[] = [
   'remote:testConnection',
   'resources:export',
   'resources:import',
+  'right-dock:complete',
+  'right-dock:request',
   'rtk:getEnabled',
   'rtk:getGain',
   'rtk:getStatus',

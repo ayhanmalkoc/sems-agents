@@ -24,6 +24,7 @@ export {
   // Types
   type SessionScopedToolCallbacks,
   type BrowserPaneFns,
+  type RightDockFns,
   // Auth request types (unified auth flow)
   type AuthRequest,
   type AuthRequestType,
