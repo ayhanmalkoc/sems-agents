@@ -3561,11 +3561,14 @@ export class SessionManager implements ISessionManager {
         mergeSessionScopedToolCallbacks(sid, {
           browserPaneFns: {
             openPanel: async (options) => {
-              const instanceId = options?.background
-                ? await bpm.createForSessionAsync(sid, { show: false, workspaceId })
-                : await bpm.focusBoundForSessionAsync(sid, { workspaceId })
+              const mode = options?.mode ?? 'window'
+              const instanceId = mode === 'dock'
+                ? await bpm.createForSessionAsync(sid, { show: true, workspaceId, mode: 'dock' })
+                : options?.background
+                  ? await bpm.createForSessionAsync(sid, { show: false, workspaceId, mode: 'window' })
+                  : await bpm.focusBoundForSessionAsync(sid, { workspaceId })
               const info = await bpm.getInstanceAsync(instanceId)
-              sessionLog.info(`[browser-pane] route decision: browser_open session=${sid} instance=${instanceId} background=${options?.background ?? false} ownerType=${info?.ownerType ?? 'unknown'} ownerSessionId=${info?.ownerSessionId ?? 'none'} visible=${info?.isVisible ?? false}`)
+              sessionLog.info(`[browser-pane] route decision: browser_open session=${sid} instance=${instanceId} background=${options?.background ?? false} mode=${mode} ownerType=${info?.ownerType ?? 'unknown'} ownerSessionId=${info?.ownerSessionId ?? 'none'} visible=${info?.isVisible ?? false}`)
               return { instanceId }
             },
             navigate: async (url) => {

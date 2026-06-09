@@ -2609,11 +2609,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     switch (req.method) {
       // -- Session-scoped (no instanceId arg, takes a sessionId) ----------------
       case 'createForSession': {
-        const [, options] = args as [string, { show?: boolean } | undefined]
+        const [, options] = args as [string, { show?: boolean; mode?: 'window' | 'dock' } | undefined]
+        if (options?.mode === 'dock') {
+          return this.openDockForSessionAsync(ownerKey, { workspaceId: req.workspaceId })
+        }
         return this.createForSession(ownerKey, {
           show: options?.show ?? false,
           allowReuseManual: false,
           workspaceId: req.workspaceId,
+          mode: options?.mode ?? 'window',
         })
       }
       // Remote agents must NEVER reuse an existing manual / unbound window —
