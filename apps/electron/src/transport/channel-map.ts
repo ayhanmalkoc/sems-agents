@@ -369,6 +369,8 @@ export const CHANNEL_MAP = {
   'browserPane.stop': invoke(RPC_CHANNELS.browserPane.STOP),
   'browserPane.focus': invoke(RPC_CHANNELS.browserPane.FOCUS),
   'browserPane.setDockBounds': invoke(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS),
+  'browserPane.completeDockOpen': invoke(RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN),
+  'browserPane.onOpenDockRequested': listener(RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST),
   'browserPane.emptyStateLaunch': invoke(RPC_CHANNELS.browserPane.LAUNCH),
   'browserPane.onStateChanged': listener(RPC_CHANNELS.browserPane.STATE_CHANGED),
   'browserPane.onRemoved': listener(RPC_CHANNELS.browserPane.REMOVED),

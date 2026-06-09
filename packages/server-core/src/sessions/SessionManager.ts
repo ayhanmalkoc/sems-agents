@@ -3507,7 +3507,7 @@ export class SessionManager implements ISessionManager {
             workspaceId,
           })
           const info = await bpm.getInstanceAsync(instanceId)
-          sessionLog.info(`[browser-pane] tool target resolved: ${toolName} session=${sid} instance=${instanceId} ownerType=${info?.ownerType ?? 'unknown'} ownerSessionId=${info?.ownerSessionId ?? 'none'} visible=${info?.isVisible ?? false}`)
+          sessionLog.info(`[browser-pane] tool target resolved: ${toolName} session=${sid} instance=${instanceId} ownerType=${info?.ownerType ?? 'unknown'} ownerSessionId=${info?.ownerSessionId ?? 'none'} visible=${info?.isVisible ?? false} mode=${info?.mode ?? 'window'}`)
           return instanceId
         }
 

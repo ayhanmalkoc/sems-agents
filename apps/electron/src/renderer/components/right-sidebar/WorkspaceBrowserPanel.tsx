@@ -10,10 +10,13 @@ interface WorkspaceBrowserPanelProps {
   tabId: string
   className?: string
   isActive?: boolean
+  sessionId?: string | null
+  workspaceId?: string | null
+  dockRequestId?: string | null
   onTitleChange?: (title: string) => void
 }
 
-export function WorkspaceBrowserPanel({ tabId, className, isActive = true, onTitleChange }: WorkspaceBrowserPanelProps) {
+export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange }: WorkspaceBrowserPanelProps) {
   const { activeWorkspaceId } = useAppShellContext()
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const instanceIdRef = React.useRef<string | null>(null)
@@ -45,8 +48,9 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, onTit
         const id = await window.electronAPI.browserPane.create({
           mode: 'dock',
           dockTabId: tabId,
+          bindToSessionId: sessionId ?? undefined,
           show: true,
-          workspaceId: activeWorkspaceId ?? null,
+          workspaceId: workspaceId ?? activeWorkspaceId ?? null,
         })
         if (cancelled) {
           await window.electronAPI.browserPane.destroy(id)
@@ -56,9 +60,12 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, onTit
         setInstanceId(id)
         const instances = await window.electronAPI.browserPane.list()
         setInstanceInfo(instances.find((instance) => instance.id === id) ?? null)
+        if (dockRequestId) await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
         requestAnimationFrame(updateBounds)
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to start browser')
+        const message = error instanceof Error ? error.message : 'Failed to start browser'
+        setErrorMessage(message)
+        if (dockRequestId) await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, error: message })
       } finally {
         if (!cancelled) setStarting(false)
       }
@@ -70,7 +77,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, onTit
       instanceIdRef.current = null
       if (id) void window.electronAPI.browserPane.destroy(id)
     }
-  }, [activeWorkspaceId, tabId, updateBounds])
+  }, [activeWorkspaceId, dockRequestId, sessionId, tabId, updateBounds, workspaceId])
 
   React.useEffect(() => {
     const offState = window.electronAPI.browserPane.onStateChanged((info) => {

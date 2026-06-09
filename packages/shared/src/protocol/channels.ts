@@ -368,6 +368,8 @@ export const RPC_CHANNELS = {
     STOP: 'browser-pane:stop',
     FOCUS: 'browser-pane:focus',
     SET_DOCK_BOUNDS: 'browser-pane:set-dock-bounds',
+    OPEN_DOCK_REQUEST: 'browser-pane:open-dock-request',
+    COMPLETE_DOCK_OPEN: 'browser-pane:complete-dock-open',
     SNAPSHOT: 'browser-pane:snapshot',
     CLICK: 'browser-pane:click',
     FILL: 'browser-pane:fill',

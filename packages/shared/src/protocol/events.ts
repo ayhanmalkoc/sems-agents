@@ -12,6 +12,7 @@ import type {
   UnreadSummary,
   UpdateInfo,
   BrowserInstanceInfo,
+  BrowserDockOpenRequest,
   DeepLinkNavigation,
   TerminalDataEvent,
   TerminalExitEvent,
@@ -55,6 +56,7 @@ export interface BroadcastEventMap {
   [RPC_CHANNELS.browserPane.STATE_CHANGED]: [info: BrowserInstanceInfo]
   [RPC_CHANNELS.browserPane.REMOVED]: [id: string]
   [RPC_CHANNELS.browserPane.INTERACTED]: [id: string]
+  [RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST]: [request: BrowserDockOpenRequest]
 
   // Terminal events (per-window)
   [RPC_CHANNELS.terminal.DATA]: [event: TerminalDataEvent]

@@ -563,12 +563,23 @@ function AppShellContent({
     storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
   }, [rightDockWidth])
 
-  const openRightDockTool = useCallback((type: RightDockToolType) => {
-    const tab: RightDockTab = { id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type }
+  const openRightDockTool = useCallback((type: RightDockToolType, options?: Partial<RightDockTab>) => {
+    const tab: RightDockTab = { id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, ...options }
     setRightDockTabs((prev) => [...prev, tab])
     setActiveRightDockTabId(tab.id)
     setIsRightDockOpen(true)
+    return tab.id
   }, [])
+
+  React.useEffect(() => {
+    return window.electronAPI.browserPane.onOpenDockRequested((request) => {
+      openRightDockTool('browser', {
+        browserSessionId: request.sessionId,
+        browserWorkspaceId: request.workspaceId ?? null,
+        browserDockRequestId: request.requestId,
+      })
+    })
+  }, [openRightDockTool])
 
   const updateRightDockTabTitle = useCallback((tabId: string, title: string) => {
     setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, title } : tab))

@@ -15,6 +15,9 @@ export interface RightDockTab {
   type: RightDockToolType
   title?: string
   content?: React.ReactNode
+  browserSessionId?: string | null
+  browserWorkspaceId?: string | null
+  browserDockRequestId?: string | null
 }
 
 interface ToolConfig {
@@ -72,8 +75,8 @@ function TerminalTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; is
   return <WorkspaceTerminalPanel className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
-function BrowserTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
-  return <WorkspaceBrowserPanel tabId={tabId} className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
+function BrowserTool({ tab, isActive, onUpdateTabTitle }: { tab: RightDockTab; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceBrowserPanel tabId={tab.id} sessionId={tab.browserSessionId ?? null} workspaceId={tab.browserWorkspaceId ?? null} dockRequestId={tab.browserDockRequestId ?? null} className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tab.id, title)} />
 }
 
 export function RightWorkspacePanel({
@@ -172,7 +175,7 @@ export function RightWorkspacePanel({
                 ) : tab.type === 'terminal' ? (
                   <TerminalTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : tab.type === 'browser' ? (
-                  <BrowserTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
+                  <BrowserTool tab={tab} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : (
                   <PlaceholderTool tool={TOOL_BY_TYPE.get(tab.type)!} />
                 )}

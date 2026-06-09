@@ -14,6 +14,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.STOP,
   RPC_CHANNELS.browserPane.FOCUS,
   RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS,
+  RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN,
   RPC_CHANNELS.browserPane.LAUNCH,
   RPC_CHANNELS.browserPane.SNAPSHOT,
   RPC_CHANNELS.browserPane.CLICK,
@@ -42,7 +43,10 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
     if (input?.bindToSessionId) {
       return browserPaneManager.createForSession(input.bindToSessionId, {
         show: input.show ?? false,
-        workspaceId,
+        workspaceId: input.workspaceId ?? workspaceId,
+        mode: input.mode,
+        dockTabId: input.dockTabId,
+        hostWebContentsId: ctx.webContentsId ?? undefined,
       })
     }
 
@@ -103,6 +107,10 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
 
   server.handle(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS, (_ctx, id: string, bounds) => {
     browserPaneManager.setDockBounds(id, bounds)
+  })
+
+  server.handle(RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN, (_ctx, result) => {
+    browserPaneManager.completeDockOpen(result)
   })
 
   server.handle(RPC_CHANNELS.browserPane.LAUNCH, async (ctx, payload: BrowserEmptyStateLaunchPayload) => {

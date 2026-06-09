@@ -133,7 +133,7 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
    * Callers that need the actual instanceId should use the async-friendly
    * `createForSession` path via the browser-tool-runtime, which awaits.
    */
-  getOrCreateForSession(sessionId: string, _options?: { workspaceId?: string | null }): string {
+  getOrCreateForSession(sessionId: string, _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): string {
     // The remote bridge can't synchronously block on a WS round-trip. Return
     // an opaque sentinel — async-aware callers should use `getOrCreateForSessionAsync`.
     // workspaceId is carried on the wire via `BrowserCapabilityRequest.workspaceId`
@@ -142,14 +142,14 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
     return `remote-pending:${sessionId}`
   }
 
-  async getOrCreateForSessionAsync(sessionId: string, _options?: { workspaceId?: string | null }): Promise<string> {
+  async getOrCreateForSessionAsync(sessionId: string, _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string> {
     return await this.invoke('getOrCreateForSession', [sessionId])
   }
 
   setAgentControl(
     sessionId: string,
     meta: { displayName?: string; intent?: string },
-    _options?: { workspaceId?: string | null },
+    _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' },
   ): void {
     this.invokeSync('setAgentControl', [sessionId, meta])
   }
@@ -158,12 +158,12 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
   // IBrowserPaneManager — instance management
   // ---------------------------------------------------------------------------
 
-  createForSession(sessionId: string, options?: { show?: boolean; workspaceId?: string | null }): string {
+  createForSession(sessionId: string, options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock' }): string {
     this.invokeSync('createForSession', [sessionId, options])
     return `remote-pending:${sessionId}`
   }
 
-  async createForSessionAsync(sessionId: string, options?: { show?: boolean; workspaceId?: string | null }): Promise<string> {
+  async createForSessionAsync(sessionId: string, options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string> {
     return await this.invoke('createForSession', [sessionId, options])
   }
 
@@ -186,16 +186,16 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
     return await this.invoke('listInstances', [])
   }
 
-  focusBoundForSession(sessionId: string, _options?: { workspaceId?: string | null }): string {
+  focusBoundForSession(sessionId: string, _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): string {
     this.invokeSync('focusBoundForSession', [sessionId])
     return `remote-pending:${sessionId}`
   }
 
-  async focusBoundForSessionAsync(sessionId: string, _options?: { workspaceId?: string | null }): Promise<string> {
+  async focusBoundForSessionAsync(sessionId: string, _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string> {
     return await this.invoke('focusBoundForSession', [sessionId])
   }
 
-  bindSession(id: string, sessionId: string, _options?: { workspaceId?: string | null }): void {
+  bindSession(id: string, sessionId: string, _options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): void {
     this.invokeSync('bindSession', [id, sessionId])
   }
 

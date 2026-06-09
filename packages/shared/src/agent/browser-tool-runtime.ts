@@ -43,7 +43,7 @@ export function getBrowserToolHelp(): string {
     '',
     'Usage:',
     '  --help',
-    '  open [--foreground|-f]                         open browser (background by default)',
+    '  open [--foreground|-f] [--dock]                open browser (window by default, dock when requested)',
     '  navigate <url>',
     '  snapshot',
     '  find <query>                                   search elements by keyword (matches role, name, value)',
@@ -699,8 +699,9 @@ async function executeSingleCommand(args: {
 
   if (cmd === 'open') {
     const foreground = parts.includes('--foreground') || parts.includes('-f');
+    const dock = parts.includes('--dock');
     const windowsBefore = await fns.listWindows();
-    const result = await fns.openPanel({ background: !foreground });
+    const result = await fns.openPanel({ background: !foreground && !dock, mode: dock ? 'dock' : 'window' });
 
     let windowsAfter = await fns.listWindows();
     let win = windowsAfter.find((w) => w.id === result.instanceId);
@@ -719,10 +720,10 @@ async function executeSingleCommand(args: {
     }
 
     const reused = windowsBefore.some((w) => w.id === result.instanceId);
-    const mode = foreground ? 'foreground' : 'background';
+    const mode = dock ? 'dock' : foreground ? 'foreground' : 'background';
 
     const lines = [
-      `Opened in-app browser window in ${mode} (instance: ${result.instanceId})`,
+      `Opened in-app browser ${dock ? 'dock' : 'window'} in ${mode} mode (instance: ${result.instanceId})`,
       `Window state: ${reused ? 'reused existing window' : 'created new window'}`,
       `Session windows: ${summarizeWindows(windowsAfter)}`,
     ];
@@ -731,7 +732,7 @@ async function executeSingleCommand(args: {
     }
     if (win) {
       lines.push(
-        `Visible: ${win.isVisible}, ownerType: ${win.ownerType}, boundSessionId: ${win.boundSessionId ?? 'none'}`,
+        `Visible: ${win.isVisible}, mode: ${win.mode ?? 'window'}, ownerType: ${win.ownerType}, boundSessionId: ${win.boundSessionId ?? 'none'}`,
       );
     }
 
@@ -1640,6 +1641,7 @@ async function executeSingleCommand(args: {
         `  title: ${w.title || 'New Tab'}`,
         `  url: ${w.url || 'about:blank'}`,
         `  visible: ${w.isVisible}`,
+        `  mode: ${w.mode ?? 'window'}`,
         `  ownerType: ${w.ownerType}`,
         `  ownerSessionId: ${w.ownerSessionId ?? 'none'}`,
         `  boundSessionId: ${w.boundSessionId ?? 'none'}`,

@@ -18,9 +18,10 @@ import {
   type BrowserEmptyStateLaunchResult,
   type BrowserInstanceInfo,
   type BrowserDockBounds,
+  type BrowserDockOpenResult,
 } from '../shared/types'
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
-import { CodedError } from '@craft-agent/shared/protocol'
+import { CodedError, RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getBrowserLiveFxCornerRadii } from '../shared/browser-live-fx'
 import type {
   IBrowserPaneManager,
@@ -347,6 +348,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private popupParentByWebContentsId = new Map<number, string>()
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
+  private pendingDockOpenRequests = new Map<string, { resolve: (id: string) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
 
   setWindowManager(windowManager: WindowManager): void {
     this.windowManager = windowManager
@@ -730,8 +732,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   async createForSessionAsync(
     sessionId: string,
-    options?: { show?: boolean; workspaceId?: string | null },
+    options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock'; dockTabId?: string; hostWebContentsId?: number },
   ): Promise<string> {
+    if (options?.mode === 'dock') {
+      return this.openDockForSessionAsync(sessionId, { workspaceId: options.workspaceId })
+    }
     return this.createForSession(sessionId, options)
   }
 
@@ -911,6 +916,36 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       instance.isVisible = false
     }
     this.emitStateChange(instance)
+  }
+
+  async openDockForSessionAsync(sessionId: string, options?: { workspaceId?: string | null }): Promise<string> {
+    const requestId = `dock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const workspaceId = options?.workspaceId ?? null
+    const hostWindow = (workspaceId && this.windowManager?.getWindowByWorkspace(workspaceId)) || this.windowManager?.getFocusedWindow() || null
+    if (!hostWindow || hostWindow.isDestroyed()) {
+      throw new Error('[browser-pane] Dock browser requires an active app window')
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pendingDockOpenRequests.delete(requestId)
+        reject(new Error('Timed out opening browser dock tab'))
+      }, 10_000)
+      this.pendingDockOpenRequests.set(requestId, { resolve, reject, timeout })
+      hostWindow.webContents.send(RPC_CHANNELS.browserPane.OPEN_DOCK_REQUEST, { requestId, sessionId, workspaceId })
+    })
+  }
+
+  completeDockOpen(result: BrowserDockOpenResult): void {
+    const pending = this.pendingDockOpenRequests.get(result.requestId)
+    if (!pending) return
+    this.pendingDockOpenRequests.delete(result.requestId)
+    clearTimeout(pending.timeout)
+    if (result.error || !result.instanceId) {
+      pending.reject(new Error(result.error || 'Failed to open browser dock tab'))
+      return
+    }
+    pending.resolve(result.instanceId)
   }
 
   async getAccessibilitySnapshot(id: string): Promise<AccessibilitySnapshot> {
@@ -1862,8 +1897,20 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   createForSession(
     sessionId: string,
-    options?: { show?: boolean; allowReuseManual?: boolean; workspaceId?: string | null },
+    options?: { show?: boolean; allowReuseManual?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock'; dockTabId?: string; hostWebContentsId?: number },
   ): string {
+    if (options?.mode === 'dock') {
+      return this.createInstance(undefined, {
+        show: options.show ?? true,
+        ownerType: 'session',
+        ownerSessionId: sessionId,
+        workspaceId: options.workspaceId ?? null,
+        mode: 'dock',
+        dockTabId: options.dockTabId,
+        hostWebContentsId: options.hostWebContentsId,
+      })
+    }
+
     const workspaceId = options?.workspaceId ?? null
     const existing = this.getBoundForSession(sessionId)
     if (existing) {
@@ -2537,6 +2584,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       isVisible: instance.isVisible,
       title: instance.title,
       currentUrl: instance.currentUrl,
+      mode: instance.mode,
     }
   }
 

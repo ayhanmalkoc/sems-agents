@@ -21,6 +21,7 @@ export interface BrowserInstanceSnapshot {
   isVisible: boolean
   title: string
   currentUrl: string
+  mode?: 'window' | 'dock'
 }
 
 export interface BrowserScreenshotOptions {
@@ -153,30 +154,30 @@ export interface IBrowserPaneManager {
   unbindAllForSession(sessionId: string): void
 
   /** Get or create a browser instance for a session, returning the instance ID */
-  getOrCreateForSession(sessionId: string, options?: { workspaceId?: string | null }): string
+  getOrCreateForSession(sessionId: string, options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): string
 
   /**
    * Async equivalent of {@link getOrCreateForSession}. Required for the remote
    * bridge — the WS round-trip can't fit into a sync return.
    */
-  getOrCreateForSessionAsync(sessionId: string, options?: { workspaceId?: string | null }): Promise<string>
+  getOrCreateForSessionAsync(sessionId: string, options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string>
 
   /** Activate or update the agent control overlay for a session */
   setAgentControl(
     sessionId: string,
     meta: { displayName?: string; intent?: string },
-    options?: { workspaceId?: string | null },
+    options?: { workspaceId?: string | null; mode?: 'window' | 'dock' },
   ): void
 
   // -- Instance management -------------------------------------------------
 
   /** Create a browser instance for a session (optionally shown) */
-  createForSession(sessionId: string, options?: { show?: boolean; workspaceId?: string | null }): string
+  createForSession(sessionId: string, options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock' }): string
 
   /**
    * Async equivalent of {@link createForSession}. Required for the remote bridge.
    */
-  createForSessionAsync(sessionId: string, options?: { show?: boolean; workspaceId?: string | null }): Promise<string>
+  createForSessionAsync(sessionId: string, options?: { show?: boolean; workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string>
 
   /** Get instance info by ID (sync; local-only). For remote-aware code use {@link getInstanceAsync}. */
   getInstance(id: string): BrowserInstanceSnapshot | undefined
@@ -197,13 +198,13 @@ export interface IBrowserPaneManager {
   listInstancesAsync(): Promise<BrowserInstanceInfo[]>
 
   /** Focus the bound browser instance for a session, creating if needed */
-  focusBoundForSession(sessionId: string, options?: { workspaceId?: string | null }): string
+  focusBoundForSession(sessionId: string, options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): string
 
   /** Async equivalent of {@link focusBoundForSession}. */
-  focusBoundForSessionAsync(sessionId: string, options?: { workspaceId?: string | null }): Promise<string>
+  focusBoundForSessionAsync(sessionId: string, options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): Promise<string>
 
   /** Bind a browser instance to a session */
-  bindSession(id: string, sessionId: string, options?: { workspaceId?: string | null }): void
+  bindSession(id: string, sessionId: string, options?: { workspaceId?: string | null; mode?: 'window' | 'dock' }): void
 
   /** Focus a browser instance window */
   focus(id: string): void

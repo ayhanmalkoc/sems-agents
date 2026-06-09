@@ -653,6 +653,18 @@ export interface BrowserDockBounds {
   visible: boolean
 }
 
+export interface BrowserDockOpenRequest {
+  requestId: string
+  sessionId: string
+  workspaceId?: string | null
+}
+
+export interface BrowserDockOpenResult {
+  requestId: string
+  instanceId?: string
+  error?: string
+}
+
 export interface DeepLinkNavigation {
   view?: string
   tabType?: string
