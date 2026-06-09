@@ -11,6 +11,7 @@ import { useTheme } from '@/context/ThemeContext'
 
 interface WorkspaceTerminalPanelProps {
   className?: string
+  isActive?: boolean
   onTitleChange?: (title: string) => void
 }
 
@@ -19,7 +20,7 @@ function basename(path: string): string {
   return normalized.split('/').filter(Boolean).pop() || path
 }
 
-export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTerminalPanelProps) {
+export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChange }: WorkspaceTerminalPanelProps) {
   const { activeWorkspaceId, workspaces } = useAppShellContext()
   const { isDark } = useTheme()
   const activeWorkspace = React.useMemo(
@@ -68,10 +69,11 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   }, [])
 
   const focusTerminal = React.useCallback(() => {
+    if (!isActive) return
     requestAnimationFrame(() => {
       terminalRef.current?.focus()
     })
-  }, [])
+  }, [isActive])
 
   const scrollTerminalToPrompt = React.useCallback(() => {
     requestAnimationFrame(() => {
@@ -185,6 +187,12 @@ export function WorkspaceTerminalPanel({ className, onTitleChange }: WorkspaceTe
   React.useEffect(() => {
     if (!starting && terminalRef.current) focusTerminal()
   }, [focusTerminal, starting])
+
+  React.useEffect(() => {
+    if (!isActive || !terminalRef.current) return
+    fit()
+    focusTerminal()
+  }, [fit, focusTerminal, isActive])
 
   if (!activeWorkspace?.rootPath) {
     return (

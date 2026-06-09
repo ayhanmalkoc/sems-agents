@@ -66,8 +66,8 @@ function FilesTool({ tabId, onUpdateTabTitle }: { tabId: string; onUpdateTabTitl
   return <WorkspaceFilesPanel className="h-full" onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
-function TerminalTool({ tabId, onUpdateTabTitle }: { tabId: string; onUpdateTabTitle?: (id: string, title: string) => void }) {
-  return <WorkspaceTerminalPanel className="h-full" onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
+function TerminalTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceTerminalPanel className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
 export function RightWorkspacePanel({
@@ -152,17 +152,24 @@ export function RightWorkspacePanel({
         </TopBarButton>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab ? (
-          activeTab.content ? (
-            activeTab.content
-          ) : activeTab.type === 'files' ? (
-            <FilesTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
-          ) : activeTab.type === 'terminal' ? (
-            <TerminalTool tabId={activeTab.id} onUpdateTabTitle={onUpdateTabTitle} />
-          ) : (
-            <PlaceholderTool tool={TOOL_BY_TYPE.get(activeTab.type)!} />
-          )
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {tabs.length > 0 ? (
+          tabs.map((tab) => {
+            const selected = tab.id === activeTabId
+            return (
+              <div key={tab.id} className={cn('absolute inset-0 min-h-0', selected ? 'block' : 'hidden')}>
+                {tab.content ? (
+                  tab.content
+                ) : tab.type === 'files' ? (
+                  <FilesTool tabId={tab.id} onUpdateTabTitle={onUpdateTabTitle} />
+                ) : tab.type === 'terminal' ? (
+                  <TerminalTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
+                ) : (
+                  <PlaceholderTool tool={TOOL_BY_TYPE.get(tab.type)!} />
+                )}
+              </div>
+            )
+          })
         ) : (
           <div className="grid h-full content-center gap-3 p-4 sm:grid-cols-2">
             {TOOL_CONFIGS.map((tool) => (
