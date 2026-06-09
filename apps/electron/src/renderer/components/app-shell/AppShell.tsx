@@ -571,16 +571,6 @@ function AppShellContent({
     return tab.id
   }, [])
 
-  React.useEffect(() => {
-    return window.electronAPI.browserPane.onOpenDockRequested((request) => {
-      openRightDockTool('browser', {
-        browserSessionId: request.sessionId,
-        browserWorkspaceId: request.workspaceId ?? null,
-        browserDockRequestId: request.requestId,
-      })
-    })
-  }, [openRightDockTool])
-
   const updateRightDockTabTitle = useCallback((tabId: string, title: string) => {
     setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, title } : tab))
   }, [])
@@ -619,6 +609,24 @@ function AppShellContent({
   const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
+
+  React.useEffect(() => {
+    return window.electronAPI.browserPane.onOpenDockRequested((request) => {
+      console.info('[browser-pane] dock request received', request)
+      if (isAutoCompact) {
+        void window.electronAPI.browserPane.completeDockOpen({
+          requestId: request.requestId,
+          error: 'Dock browser unavailable in compact layout. Use a browser window instead.',
+        })
+        return
+      }
+      openRightDockTool('browser', {
+        browserSessionId: request.sessionId,
+        browserWorkspaceId: request.workspaceId ?? null,
+        browserDockRequestId: request.requestId,
+      })
+    })
+  }, [isAutoCompact, openRightDockTool])
 
   // What's New overlay
   const [showWhatsNew, setShowWhatsNew] = React.useState(false)

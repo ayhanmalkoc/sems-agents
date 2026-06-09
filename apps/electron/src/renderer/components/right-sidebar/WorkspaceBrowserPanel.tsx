@@ -41,10 +41,12 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
 
   React.useEffect(() => {
     let cancelled = false
+    let completedDockRequest = false
     async function start() {
       setStarting(true)
       setErrorMessage(null)
       try {
+        console.info('[browser-pane] dock tab mounted', { tabId, sessionId, workspaceId, dockRequestId })
         const id = await window.electronAPI.browserPane.create({
           mode: 'dock',
           dockTabId: tabId,
@@ -60,12 +62,19 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
         setInstanceId(id)
         const instances = await window.electronAPI.browserPane.list()
         setInstanceInfo(instances.find((instance) => instance.id === id) ?? null)
-        if (dockRequestId) await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
+        if (dockRequestId) {
+          completedDockRequest = true
+          await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
+        }
+        console.info('[browser-pane] dock browser created', { tabId, instanceId: id, dockRequestId })
         requestAnimationFrame(updateBounds)
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to start browser'
         setErrorMessage(message)
-        if (dockRequestId) await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, error: message })
+        if (dockRequestId && !completedDockRequest) {
+          completedDockRequest = true
+          await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, error: message })
+        }
       } finally {
         if (!cancelled) setStarting(false)
       }
@@ -73,6 +82,10 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
     void start()
     return () => {
       cancelled = true
+      if (dockRequestId && !completedDockRequest) {
+        completedDockRequest = true
+        void window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, error: 'Dock browser tab was closed before it finished opening.' })
+      }
       const id = instanceIdRef.current
       instanceIdRef.current = null
       if (id) void window.electronAPI.browserPane.destroy(id)

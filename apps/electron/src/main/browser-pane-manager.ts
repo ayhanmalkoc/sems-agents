@@ -926,9 +926,17 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       throw new Error('[browser-pane] Dock browser requires an active app window')
     }
 
+    mainLog.info('[browser-pane] dock open requested', {
+      requestId,
+      sessionId,
+      workspaceId,
+      hostWebContentsId: hostWindow.webContents.id,
+    })
+
     return await new Promise<string>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingDockOpenRequests.delete(requestId)
+        mainLog.warn('[browser-pane] dock open timed out', { requestId, sessionId, workspaceId })
         reject(new Error('Timed out opening browser dock tab'))
       }, 10_000)
       this.pendingDockOpenRequests.set(requestId, { resolve, reject, timeout })
@@ -942,9 +950,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     this.pendingDockOpenRequests.delete(result.requestId)
     clearTimeout(pending.timeout)
     if (result.error || !result.instanceId) {
+      mainLog.warn('[browser-pane] dock open failed', { requestId: result.requestId, error: result.error })
       pending.reject(new Error(result.error || 'Failed to open browser dock tab'))
       return
     }
+    mainLog.info('[browser-pane] dock open completed', { requestId: result.requestId, instanceId: result.instanceId })
     pending.resolve(result.instanceId)
   }
 
