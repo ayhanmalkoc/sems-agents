@@ -208,6 +208,7 @@ const EXPECTED_CHANNELS: string[] = [
   'resources:import',
   'right-dock:complete',
   'right-dock:request',
+  'right-dock:show-add-tool-menu',
   'rtk:getEnabled',
   'rtk:getGain',
   'rtk:getStatus',

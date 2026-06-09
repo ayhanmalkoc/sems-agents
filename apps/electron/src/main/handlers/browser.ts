@@ -2,6 +2,7 @@ import { RPC_CHANNELS, type BrowserPaneCreateOptions, type BrowserEmptyStateLaun
 import type { BrowserScreenshotOptions } from '../browser-pane-manager'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from './handler-deps'
+import { Menu, type BrowserWindow } from 'electron'
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.CREATE,
@@ -16,6 +17,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS,
   RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN,
   RPC_CHANNELS.rightDock.COMPLETE,
+  RPC_CHANNELS.rightDock.SHOW_ADD_TOOL_MENU,
   RPC_CHANNELS.browserPane.LAUNCH,
   RPC_CHANNELS.browserPane.SNAPSHOT,
   RPC_CHANNELS.browserPane.CLICK,
@@ -116,6 +118,33 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
 
   server.handle(RPC_CHANNELS.rightDock.COMPLETE, (_ctx, result) => {
     browserPaneManager.completeRightDock(result)
+  })
+
+  server.handle(RPC_CHANNELS.rightDock.SHOW_ADD_TOOL_MENU, async (ctx) => {
+    const ownerWindow = ctx.webContentsId != null ? deps.windowManager?.getWindowByWebContentsId(ctx.webContentsId) as BrowserWindow | null : null
+    const items: Array<{ label: string; type: 'chat' | 'files' | 'browser' | 'inspect' | 'terminal' }> = [
+      { label: 'Chat', type: 'chat' },
+      { label: 'Files', type: 'files' },
+      { label: 'Browser', type: 'browser' },
+      { label: 'Inspect', type: 'inspect' },
+      { label: 'Terminal', type: 'terminal' },
+    ]
+    return await new Promise<string | null>((resolve) => {
+      let resolved = false
+      const menu = Menu.buildFromTemplate(items.map((item) => ({
+        label: item.label,
+        click: () => {
+          resolved = true
+          resolve(item.type)
+        },
+      })))
+      menu.popup({
+        window: ownerWindow ?? undefined,
+        callback: () => {
+          if (!resolved) resolve(null)
+        },
+      })
+    })
   })
 
   server.handle(RPC_CHANNELS.browserPane.LAUNCH, async (ctx, payload: BrowserEmptyStateLaunchPayload) => {

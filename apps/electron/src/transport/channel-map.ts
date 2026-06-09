@@ -379,6 +379,7 @@ export const CHANNEL_MAP = {
   // Right workspace dock
   'rightDock.complete': invoke(RPC_CHANNELS.rightDock.COMPLETE),
   'rightDock.onRequested': listener(RPC_CHANNELS.rightDock.REQUEST),
+  'rightDock.showAddToolMenu': invoke(RPC_CHANNELS.rightDock.SHOW_ADD_TOOL_MENU),
 
   // LLM Connections
   listLlmConnections: invoke(RPC_CHANNELS.llmConnections.LIST),

@@ -385,6 +385,7 @@ export const RPC_CHANNELS = {
   rightDock: {
     REQUEST: 'right-dock:request',
     COMPLETE: 'right-dock:complete',
+    SHOW_ADD_TOOL_MENU: 'right-dock:show-add-tool-menu',
   },
   automations: {
     GET: 'automations:get',

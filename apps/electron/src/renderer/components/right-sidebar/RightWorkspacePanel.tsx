@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent, StyledDropdownMenuItem } from '@/components/ui/styled-dropdown'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
@@ -95,6 +94,10 @@ export function RightWorkspacePanel({
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
+  const handleAddTool = React.useCallback(async () => {
+    const selected = await window.electronAPI.rightDock.showAddToolMenu()
+    if (selected) onAddTab(selected)
+  }, [onAddTab])
 
   return (
     <aside
@@ -140,22 +143,9 @@ export function RightWorkspacePanel({
           })}
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <TopBarButton aria-label={t('menu.tools')} className="h-7 w-7 rounded-lg">
-              <Plus className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
-            </TopBarButton>
-          </DropdownMenuTrigger>
-          <StyledDropdownMenuContent align="end" minWidth="min-w-48">
-            {TOOL_CONFIGS.map((tool) => (
-              <StyledDropdownMenuItem key={tool.type} onClick={() => onAddTab(tool.type)}>
-                {tool.icon}
-                <span className="flex-1">{tool.label}</span>
-                {tool.shortcut && <span className="text-xs text-muted-foreground">{tool.shortcut}</span>}
-              </StyledDropdownMenuItem>
-            ))}
-          </StyledDropdownMenuContent>
-        </DropdownMenu>
+        <TopBarButton aria-label={t('menu.tools')} onClick={() => void handleAddTool()} className="h-7 w-7 rounded-lg">
+          <Plus className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
+        </TopBarButton>
 
         <TopBarButton aria-label="Close right panel" onClick={onClosePanel} className="h-7 w-7 rounded-lg">
           <X className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
