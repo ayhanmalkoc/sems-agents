@@ -24,6 +24,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   const [instanceInfo, setInstanceInfo] = React.useState<BrowserInstanceInfo | null>(null)
   const [starting, setStarting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const updateBoundsRef = React.useRef<() => void>(() => {})
 
   const updateBounds = React.useCallback(() => {
     const id = instanceIdRef.current
@@ -38,6 +39,10 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       visible: isActive && rect.width > 0 && rect.height > 0,
     })
   }, [isActive])
+
+  React.useEffect(() => {
+    updateBoundsRef.current = updateBounds
+  }, [updateBounds])
 
   React.useEffect(() => {
     let cancelled = false
@@ -67,7 +72,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
           await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
         }
         console.info('[browser-pane] dock browser created', { tabId, instanceId: id, dockRequestId })
-        requestAnimationFrame(updateBounds)
+        requestAnimationFrame(() => updateBoundsRef.current())
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to start browser'
         setErrorMessage(message)
@@ -90,7 +95,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       instanceIdRef.current = null
       if (id) void window.electronAPI.browserPane.destroy(id)
     }
-  }, [activeWorkspaceId, dockRequestId, sessionId, tabId, updateBounds, workspaceId])
+  }, [activeWorkspaceId, dockRequestId, sessionId, tabId, workspaceId])
 
   React.useEffect(() => {
     const offState = window.electronAPI.browserPane.onStateChanged((info) => {
