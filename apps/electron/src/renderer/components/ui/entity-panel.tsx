@@ -30,6 +30,8 @@ export interface EntityPanelProps<T> {
   selectedId?: string | null
   emptyState?: React.ReactNode
   className?: string
+  /** Render list without internal ScrollArea; parent owns scrolling. */
+  disableScroll?: boolean
   /** Extra data/aria attributes merged onto the inner list container.
    *  Use to set `data-list-role` so compact-mode CSS can target the right list. */
   containerProps?: Record<string, string>
@@ -44,6 +46,7 @@ export function EntityPanel<T>({
   selectedId,
   emptyState,
   className,
+  disableScroll,
   containerProps,
 }: EntityPanelProps<T>) {
   const selectionStore = selection.useSelectionStore()
@@ -75,6 +78,7 @@ export function EntityPanel<T>({
       containerRef={interactions.listProps.containerRef}
       containerProps={mergedContainerProps}
       className={className}
+      disableScroll={disableScroll}
       emptyState={emptyState}
       renderItem={(item, index, isFirst) => {
         const mapped = mapItem(item)

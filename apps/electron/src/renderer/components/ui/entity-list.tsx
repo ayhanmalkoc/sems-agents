@@ -64,6 +64,8 @@ export interface EntityListProps<T> {
   /** Additional ScrollArea class */
   scrollAreaClassName?: string
   className?: string
+  /** Render list without an internal ScrollArea; parent owns scrolling. */
+  disableScroll?: boolean
   /** Set of collapsed group keys (for collapsible groups) */
   collapsedGroups?: Set<string>
   /** Called when a collapsible group header is clicked */
@@ -156,6 +158,7 @@ export function EntityList<T>({
   viewportRef,
   scrollAreaClassName,
   className,
+  disableScroll = false,
   collapsedGroups,
   onToggleCollapse,
   onCollapseAll,
@@ -169,59 +172,65 @@ export function EntityList<T>({
   // Empty state — rendered outside everything for proper centering
   if (isEmpty && emptyState) {
     return (
-      <div className={cn('flex flex-col flex-1', className)}>
+      <div className={cn(disableScroll ? 'flex flex-col' : 'flex flex-col flex-1', className)}>
         {header}
         {emptyState}
       </div>
     )
   }
 
-  return (
-    <div className={cn('flex flex-col flex-1 min-h-0', className)}>
-      {header}
-      <ScrollArea className={cn('flex-1', scrollAreaClassName)} viewportRef={viewportRef}>
-        <div
-          ref={containerRef}
-          className="flex flex-col pb-2"
-          {...containerProps}
-        >
-          <div className="pt-1">
-            {hasGroups
-              ? groups!.map((group) => {
-                  const isCollapsed = group.collapsible && collapsedGroups?.has(group.key)
+  const listContent = (
+    <div
+      ref={containerRef}
+      className="flex flex-col pb-2"
+      {...containerProps}
+    >
+      <div className="pt-1">
+        {hasGroups
+          ? groups!.map((group) => {
+              const isCollapsed = group.collapsible && collapsedGroups?.has(group.key)
 
-                  return (
-                    <div key={group.key}>
-                      {group.collapsible && onToggleCollapse ? (
-                        <CollapsibleGroupHeader
-                          label={group.label}
-                          isCollapsed={!!isCollapsed}
-                          itemCount={isCollapsed ? (group.collapsedCount ?? 0) : group.items.length}
-                          onToggle={() => onToggleCollapse(group.key)}
-                          onCollapseAll={onCollapseAll}
-                          onExpandAll={onExpandAll}
-                        />
-                      ) : (
-                        <SectionHeader label={group.label} />
-                      )}
-                      {group.items.map((item, indexInGroup) =>
-                        <React.Fragment key={getKey(item)}>
-                          {renderItem(item, indexInGroup, indexInGroup === 0)}
-                        </React.Fragment>
-                      )}
-                    </div>
-                  )
-                })
-              : items?.map((item, index) =>
-                  <React.Fragment key={getKey(item)}>
-                    {renderItem(item, index, index === 0)}
-                  </React.Fragment>
-                )
-            }
-          </div>
-          {footer}
-        </div>
-      </ScrollArea>
+              return (
+                <div key={group.key}>
+                  {group.collapsible && onToggleCollapse ? (
+                    <CollapsibleGroupHeader
+                      label={group.label}
+                      isCollapsed={!!isCollapsed}
+                      itemCount={isCollapsed ? (group.collapsedCount ?? 0) : group.items.length}
+                      onToggle={() => onToggleCollapse(group.key)}
+                      onCollapseAll={onCollapseAll}
+                      onExpandAll={onExpandAll}
+                    />
+                  ) : (
+                    <SectionHeader label={group.label} />
+                  )}
+                  {group.items.map((item, indexInGroup) =>
+                    <React.Fragment key={getKey(item)}>
+                      {renderItem(item, indexInGroup, indexInGroup === 0)}
+                    </React.Fragment>
+                  )}
+                </div>
+              )
+            })
+          : items?.map((item, index) =>
+              <React.Fragment key={getKey(item)}>
+                {renderItem(item, index, index === 0)}
+              </React.Fragment>
+            )
+        }
+      </div>
+      {footer}
+    </div>
+  )
+
+  return (
+    <div className={cn(disableScroll ? 'flex flex-col' : 'flex flex-col flex-1 min-h-0', className)}>
+      {header}
+      {disableScroll ? listContent : (
+        <ScrollArea className={cn('flex-1', scrollAreaClassName)} viewportRef={viewportRef}>
+          {listContent}
+        </ScrollArea>
+      )}
     </div>
   )
 }

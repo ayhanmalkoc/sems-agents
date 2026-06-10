@@ -404,7 +404,12 @@ export function UserMessageBubble({
     // (this preserves positions for earlier removals)
     const sortedBadges = [...editRequestBadges].sort((a, b) => b.start - a.start)
     for (const badge of sortedBadges) {
-      displayContent = displayContent.slice(0, badge.start) + displayContent.slice(badge.end)
+      const rangedText = displayContent.slice(badge.start, badge.end)
+      if (rangedText === badge.rawText) {
+        displayContent = displayContent.slice(0, badge.start) + displayContent.slice(badge.end)
+      } else if (badge.rawText) {
+        displayContent = displayContent.replace(badge.rawText, '')
+      }
     }
     displayContent = displayContent.trim()
   }

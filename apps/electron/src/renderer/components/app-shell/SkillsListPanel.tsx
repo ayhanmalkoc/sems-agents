@@ -4,6 +4,7 @@ import { Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { SkillAvatar } from '@/components/ui/skill-avatar'
 import { EntityPanel } from '@/components/ui/entity-panel'
+import { EntityListBadge } from '@/components/ui/entity-list-badge'
 import { EntityListEmptyScreen } from '@/components/ui/entity-list-empty'
 import { skillSelection } from '@/hooks/useEntitySelection'
 import { SkillMenu } from './SkillMenu'
@@ -21,6 +22,7 @@ export interface SkillsListPanelProps {
   workspaceId?: string
   workspaceRootPath?: string
   className?: string
+  disableScroll?: boolean
 }
 
 export function SkillsListPanel({
@@ -31,6 +33,7 @@ export function SkillsListPanel({
   workspaceId,
   workspaceRootPath,
   className,
+  disableScroll,
 }: SkillsListPanelProps) {
   const { t } = useTranslation()
   const activeWorkspace = useActiveWorkspace()
@@ -52,6 +55,7 @@ export function SkillsListPanel({
       selectedId={selectedSkillSlug}
       onItemClick={onSkillClick}
       className={className}
+      disableScroll={disableScroll}
       containerProps={{ 'data-list-role': 'skills' }}
       emptyState={
         <EntityListEmptyScreen
@@ -77,14 +81,15 @@ export function SkillsListPanel({
         icon: <SkillAvatar skill={skill} size="sm" workspaceId={workspaceId} />,
         title: skill.metadata.name,
         badges: (
-          <span className="flex items-center gap-1.5 min-w-0">
+          <>
+            <EntityListBadge colorClass="bg-info/10 text-info">Skill</EntityListBadge>
             {skill.source === 'project' && (
-              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-foreground/5 text-muted-foreground">
+              <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">
                 {t('skillsList.projectBadge')}
-              </span>
+              </EntityListBadge>
             )}
             <span className="truncate">{skill.metadata.description}</span>
-          </span>
+          </>
         ),
         menu: (
           <SkillMenu

@@ -42,6 +42,7 @@ export interface SourcesListPanelProps {
   selectedSourceSlug?: string | null
   localMcpEnabled?: boolean
   className?: string
+  disableScroll?: boolean
 }
 
 export function SourcesListPanel({
@@ -53,6 +54,7 @@ export function SourcesListPanel({
   selectedSourceSlug,
   localMcpEnabled = true,
   className,
+  disableScroll,
 }: SourcesListPanelProps) {
   const { t } = useTranslation()
   const { workspaces, activeWorkspaceId } = useAppShellContext()
@@ -86,6 +88,7 @@ export function SourcesListPanel({
       selectedId={selectedSourceSlug}
       onItemClick={onSourceClick}
       className={className}
+      disableScroll={disableScroll}
       containerProps={{ 'data-list-role': 'sources' }}
       emptyState={
         <EntityListEmptyScreen
