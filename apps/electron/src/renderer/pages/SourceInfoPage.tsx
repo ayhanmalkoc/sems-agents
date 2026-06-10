@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, PlugZap } from 'lucide-react'
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, PlugZap, TestTube2 } from 'lucide-react'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -196,30 +196,40 @@ function getSourceAuthKind(source: LoadedSource): 'oauth' | 'credential' | null 
   return null
 }
 
-function getConnectionStatus(source: LoadedSource): { label: string; className: string } {
+function getConnectionStatus(source: LoadedSource, t: (key: string) => string): { label: string; className: string } {
   switch (source.config.connectionStatus) {
     case 'connected':
-      return { label: 'Connected', className: 'bg-success/10 text-success' }
+      return { label: t('sourceInfo.statusConnected'), className: 'bg-success/10 text-success' }
     case 'needs_auth':
-      return { label: 'Auth required', className: 'bg-warning/10 text-warning' }
+      return { label: t('sourceInfo.statusAuthRequired'), className: 'bg-warning/10 text-warning' }
     case 'failed':
-      return { label: 'Failed', className: 'bg-destructive/10 text-destructive' }
+      return { label: t('sourceInfo.statusFailed'), className: 'bg-destructive/10 text-destructive' }
     case 'untested':
-      return { label: 'Untested', className: 'bg-foreground/10 text-foreground/50' }
+      return { label: t('sourceInfo.statusUntested'), className: 'bg-foreground/10 text-foreground/50' }
     case 'local_disabled':
-      return { label: 'Disabled', className: 'bg-foreground/10 text-foreground/50' }
+      return { label: t('sourceInfo.statusDisabled'), className: 'bg-foreground/10 text-foreground/50' }
     default:
-      return { label: 'Unknown', className: 'bg-foreground/10 text-foreground/50' }
+      return { label: t('sourceInfo.statusUnknown'), className: 'bg-foreground/10 text-foreground/50' }
   }
 }
 
-function getCredentialLabel(source: LoadedSource): string {
+function getCredentialLabel(source: LoadedSource, t: (key: string) => string): string {
   const authType = source.config.api?.authType ?? source.config.mcp?.authType
-  if (authType === 'basic') return 'Username and password'
-  if (authType === 'bearer') return 'Bearer token'
-  if (authType === 'header') return 'API key'
-  if (authType === 'query') return 'API key'
-  return 'Credential'
+  if (authType === 'basic') return t('sourceInfo.credentialUsernamePassword')
+  if (authType === 'bearer') return t('sourceInfo.credentialBearerToken')
+  if (authType === 'header') return t('sourceInfo.credentialApiKey')
+  if (authType === 'query') return t('sourceInfo.credentialApiKey')
+  return t('sourceInfo.credential')
+}
+
+function getCredentialHeaderNames(source: LoadedSource): string[] {
+  return source.config.api?.headerNames ?? source.config.mcp?.headerNames ?? []
+}
+
+function getCredentialMode(source: LoadedSource): 'basic' | 'multi-header' | 'single' {
+  if (getCredentialHeaderNames(source).length > 0) return 'multi-header'
+  if (source.config.api?.authType === 'basic') return 'basic'
+  return 'single'
 }
 
 export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: SourceInfoPageProps) {
@@ -236,8 +246,14 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
   const [credentialDialogOpen, setCredentialDialogOpen] = useState(false)
   const [credentialValue, setCredentialValue] = useState('')
+  const [credentialUsername, setCredentialUsername] = useState('')
+  const [credentialPassword, setCredentialPassword] = useState('')
+  const [credentialHeaders, setCredentialHeaders] = useState<Record<string, string>>({})
   const [credentialSaving, setCredentialSaving] = useState(false)
   const [oauthRunning, setOauthRunning] = useState(false)
+  const [testRunning, setTestRunning] = useState(false)
+  const [testResultOpen, setTestResultOpen] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; warning: boolean; output: string } | null>(null)
 
 
   // Load source data
@@ -420,7 +436,22 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     [workspaceId, workspaces],
   )
   const authKind = source ? getSourceAuthKind(source) : null
-  const connectionStatus = source ? getConnectionStatus(source) : null
+  const connectionStatus = source ? getConnectionStatus(source, t) : null
+  const credentialMode = source ? getCredentialMode(source) : 'single'
+  const credentialHeaderNames = source ? getCredentialHeaderNames(source) : []
+  const canSaveCredential = credentialMode === 'basic'
+    ? credentialUsername.trim().length > 0 && credentialPassword.trim().length > 0
+    : credentialMode === 'multi-header'
+    ? credentialHeaderNames.every(name => credentialHeaders[name]?.trim().length > 0)
+    : credentialValue.trim().length > 0
+
+  useEffect(() => {
+    if (!credentialDialogOpen || !source) return
+    setCredentialValue('')
+    setCredentialUsername('')
+    setCredentialPassword('')
+    setCredentialHeaders(Object.fromEntries(getCredentialHeaderNames(source).map(name => [name, ''])))
+  }, [credentialDialogOpen, source])
 
   const reloadSource = useCallback(async () => {
     const sources = await window.electronAPI.getSources(workspaceId)
@@ -434,33 +465,67 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     try {
       const result = await window.electronAPI.performOAuth({ sourceSlug: source.config.slug })
       if (result.success) {
-        toast.success('Source connected')
+        toast.success(t('sourceInfo.sourceConnected'))
         await reloadSource()
       } else {
-        toast.error('Failed to connect source', { description: result.error })
+        toast.error(t('sourceInfo.failedToConnect'), { description: result.error })
       }
     } catch (err) {
-      toast.error('Failed to connect source', { description: err instanceof Error ? err.message : String(err) })
+      toast.error(t('sourceInfo.failedToConnect'), { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setOauthRunning(false)
     }
-  }, [reloadSource, source])
+  }, [reloadSource, source, t])
 
   const handleSaveCredential = useCallback(async () => {
-    if (!source || !credentialValue.trim()) return
+    if (!source || !canSaveCredential) return
     setCredentialSaving(true)
     try {
-      await window.electronAPI.saveSourceCredentials(workspaceId, source.config.slug, credentialValue.trim())
-      toast.success('Credential saved')
+      const credential = credentialMode === 'basic'
+        ? { username: credentialUsername.trim(), password: credentialPassword.trim() }
+        : credentialMode === 'multi-header'
+        ? { headers: Object.fromEntries(credentialHeaderNames.map(name => [name, credentialHeaders[name]?.trim() ?? ''])) }
+        : { value: credentialValue.trim() }
+      await window.electronAPI.saveSourceCredentials(workspaceId, source.config.slug, credential)
+      toast.success(t('sourceInfo.credentialSaved'))
       setCredentialValue('')
+      setCredentialUsername('')
+      setCredentialPassword('')
+      setCredentialHeaders({})
       setCredentialDialogOpen(false)
       await reloadSource()
     } catch (err) {
-      toast.error('Failed to save credential', { description: err instanceof Error ? err.message : String(err) })
+      toast.error(t('sourceInfo.failedToSaveCredential'), { description: err instanceof Error ? err.message : String(err) })
     } finally {
       setCredentialSaving(false)
     }
-  }, [credentialValue, reloadSource, source, workspaceId])
+  }, [canSaveCredential, credentialHeaderNames, credentialHeaders, credentialMode, credentialPassword, credentialUsername, credentialValue, reloadSource, source, t, workspaceId])
+
+
+  const handleTestSource = useCallback(async () => {
+    if (!source) return
+    setTestRunning(true)
+    try {
+      const result = await window.electronAPI.testSource(workspaceId, source.config.slug)
+      setTestResult({ success: result.success, warning: result.warning, output: result.output })
+      setTestResultOpen(true)
+      if (result.source) setSource(result.source)
+      if (result.success && !result.warning) {
+        toast.success(t('sourceInfo.testPassed'))
+      } else if (result.success && result.warning) {
+        toast.warning(t('sourceInfo.testPassedWithWarnings'))
+      } else {
+        toast.error(t('sourceInfo.testFailed'))
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setTestResult({ success: false, warning: false, output: message })
+      setTestResultOpen(true)
+      toast.error(t('sourceInfo.testFailed'), { description: message })
+    } finally {
+      setTestRunning(false)
+    }
+  }, [source, t, workspaceId])
 
   return (
     <>
@@ -512,15 +577,19 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
                 {authKind === 'oauth' && (
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={handleOAuth} disabled={oauthRunning}>
                     {oauthRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
-                    {source.config.connectionStatus === 'connected' ? 'Reconnect' : 'Connect'}
+                    {source.config.connectionStatus === 'connected' ? t('sourceInfo.reconnect') : t('sourceInfo.connect')}
                   </Button>
                 )}
                 {authKind === 'credential' && (
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => setCredentialDialogOpen(true)}>
                     <KeyRound className="h-3.5 w-3.5" />
-                    {source.config.connectionStatus === 'connected' ? 'Update credential' : 'Add credential'}
+                    {source.config.connectionStatus === 'connected' ? t('sourceInfo.updateCredential') : t('sourceInfo.addCredential')}
                   </Button>
                 )}
+                <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={handleTestSource} disabled={testRunning}>
+                  {testRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TestTube2 className="h-3.5 w-3.5" />}
+                  {t('sourceInfo.test')}
+                </Button>
                 <EditPopover
                   trigger={<EditButton />}
                   {...getEditConfig('source-config', source.folderPath)}
@@ -550,7 +619,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
                   </span>
                 </Info_Table.Row>
               )}
-              {authKind && <Info_Table.Row label="Authentication" value={authKind === 'oauth' ? 'OAuth' : getCredentialLabel(source)} />}
+              {authKind && <Info_Table.Row label={t('sourceInfo.authentication')} value={authKind === 'oauth' ? 'OAuth' : getCredentialLabel(source, t)} />}
               {sourceUrl && (
                 <Info_Table.Row label={t('common.url')}>
                   <button
@@ -657,32 +726,95 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
         </Info_Page.Content>
       )}
     </Info_Page>
+    <Dialog open={testResultOpen} onOpenChange={setTestResultOpen}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('sourceInfo.connectionTest')}</DialogTitle>
+          <DialogDescription>
+            {testResult?.success ? (testResult.warning ? t('sourceInfo.testPassedWithWarningsDescription') : t('sourceInfo.testPassedDescription')) : t('sourceInfo.testFailedDescription')}
+          </DialogDescription>
+        </DialogHeader>
+        <pre className="max-h-[420px] overflow-auto rounded-[8px] border border-border/50 bg-foreground/[0.03] p-3 text-xs leading-5 text-foreground/80 whitespace-pre-wrap">
+          {testResult?.output || ''}
+        </pre>
+        <DialogFooter>
+          <Button size="sm" onClick={() => setTestResultOpen(false)}>{t('common.close')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     {source && authKind === 'credential' && (
       <Dialog open={credentialDialogOpen} onOpenChange={setCredentialDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{source.config.connectionStatus === 'connected' ? 'Update credential' : 'Add credential'}</DialogTitle>
+            <DialogTitle>{source.config.connectionStatus === 'connected' ? t('sourceInfo.updateCredential') : t('sourceInfo.addCredential')}</DialogTitle>
             <DialogDescription>
-              Save a {getCredentialLabel(source).toLowerCase()} for {source.config.name}. Secrets are stored in the secure credential store, not in config.json.
+              {t('sourceInfo.credentialDialogDescription', { credential: getCredentialLabel(source, t).toLowerCase(), name: source.config.name })}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Input
-              type="password"
-              autoFocus
-              value={credentialValue}
-              onChange={(event) => setCredentialValue(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void handleSaveCredential()
-              }}
-              placeholder={getCredentialLabel(source)}
-            />
-          </div>
+          {credentialMode === 'basic' ? (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground/70">{t('sourceInfo.username')}</label>
+                <Input
+                  autoFocus
+                  value={credentialUsername}
+                  onChange={(event) => setCredentialUsername(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void handleSaveCredential()
+                  }}
+                  placeholder={t('sourceInfo.username')}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground/70">{t('sourceInfo.password')}</label>
+                <Input
+                  type="password"
+                  value={credentialPassword}
+                  onChange={(event) => setCredentialPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void handleSaveCredential()
+                  }}
+                  placeholder={t('sourceInfo.password')}
+                />
+              </div>
+            </div>
+          ) : credentialMode === 'multi-header' ? (
+            <div className="space-y-3">
+              {credentialHeaderNames.map((headerName, index) => (
+                <div key={headerName} className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground/70">{headerName}</label>
+                  <Input
+                    type="password"
+                    autoFocus={index === 0}
+                    value={credentialHeaders[headerName] ?? ''}
+                    onChange={(event) => setCredentialHeaders(prev => ({ ...prev, [headerName]: event.target.value }))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') void handleSaveCredential()
+                    }}
+                    placeholder={headerName}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Input
+                type="password"
+                autoFocus
+                value={credentialValue}
+                onChange={(event) => setCredentialValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void handleSaveCredential()
+                }}
+                placeholder={getCredentialLabel(source, t)}
+              />
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="ghost" size="sm" onClick={() => setCredentialDialogOpen(false)} disabled={credentialSaving}>Cancel</Button>
-            <Button size="sm" onClick={handleSaveCredential} disabled={!credentialValue.trim() || credentialSaving}>
+            <Button variant="ghost" size="sm" onClick={() => setCredentialDialogOpen(false)} disabled={credentialSaving}>{t('common.cancel')}</Button>
+            <Button size="sm" onClick={handleSaveCredential} disabled={!canSaveCredential || credentialSaving}>
               {credentialSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-              Save credential
+              {t('sourceInfo.saveCredential')}
             </Button>
           </DialogFooter>
         </DialogContent>

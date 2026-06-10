@@ -13,6 +13,8 @@ import { Check, X, Minus } from 'lucide-react'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import { toast } from 'sonner'
 import { SkillMenu } from '@/components/app-shell/SkillMenu'
+import { CreateResourceDropdown } from '@/components/app-shell/CreateResourceDropdown'
+import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
 import { SkillAvatar } from '@/components/ui/skill-avatar'
 import { routes, navigate } from '@/lib/navigate'
 import { useActiveWorkspace } from '@/context/AppShellContext'
@@ -151,6 +153,8 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
     >
       <Info_Page.Header
         title={skillName}
+        titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.resources')} middleLabel={t('sidebar.skills')} currentLabel={skillName} onRootClick={() => navigate(routes.view.skills())} />}
+        actions={activeWorkspace?.rootPath ? <CreateResourceDropdown workspaceRootPath={activeWorkspace.rootPath} /> : undefined}
         titleMenu={
           <SkillMenu
             skillSlug={skillSlug}
