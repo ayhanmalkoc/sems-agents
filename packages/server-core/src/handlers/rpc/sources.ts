@@ -76,7 +76,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   server.handle(RPC_CHANNELS.sources.SAVE_CREDENTIALS, async (_ctx, workspaceId: string, sourceSlug: string, credential: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
-    const { loadSource, getSourceCredentialManager } = await import('@craft-agent/shared/sources')
+    const { loadSource, getSourceCredentialManager, markSourceAuthenticated } = await import('@craft-agent/shared/sources')
 
     const source = loadSource(workspace.rootPath, sourceSlug)
     if (!source) {
@@ -86,8 +86,9 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
     // SourceCredentialManager handles credential type resolution
     const credManager = getSourceCredentialManager()
     await credManager.save(source, { value: credential })
+    markSourceAuthenticated(workspace.rootPath, sourceSlug)
 
-    log.info(`Saved credentials for source: ${sourceSlug}`)
+    log.info(`Saved credentials and marked source authenticated: ${sourceSlug}`)
   })
 
   // Get permissions config for a source (raw format for UI display)

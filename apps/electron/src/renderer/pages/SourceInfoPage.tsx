@@ -8,13 +8,26 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, PlugZap } from 'lucide-react'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { SourceMenu } from '@/components/app-shell/SourceMenu'
+import { CreateResourceDropdown } from '@/components/app-shell/CreateResourceDropdown'
+import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
 import { cn } from '@/lib/utils'
 import { routes, navigate } from '@/lib/navigate'
 import { useNavigation } from '@/contexts/NavigationContext'
+import { useAppShellContext } from '@/context/AppShellContext'
 import { toast } from 'sonner'
 import {
   Info_Page,
@@ -168,8 +181,50 @@ function getPermissionsDescription(source: LoadedSource, t: (key: string) => str
   return t('sourceInfo.accessRules')
 }
 
+function getSourceAuthKind(source: LoadedSource): 'oauth' | 'credential' | null {
+  const { type, mcp, api } = source.config
+  if (type === 'mcp') {
+    if (mcp?.authType === 'oauth') return 'oauth'
+    if (mcp?.authType === 'bearer') return 'credential'
+    return null
+  }
+  if (type === 'api') {
+    if (!api?.authType || api.authType === 'none') return null
+    if (api.authType === 'oauth') return 'oauth'
+    return 'credential'
+  }
+  return null
+}
+
+function getConnectionStatus(source: LoadedSource): { label: string; className: string } {
+  switch (source.config.connectionStatus) {
+    case 'connected':
+      return { label: 'Connected', className: 'bg-success/10 text-success' }
+    case 'needs_auth':
+      return { label: 'Auth required', className: 'bg-warning/10 text-warning' }
+    case 'failed':
+      return { label: 'Failed', className: 'bg-destructive/10 text-destructive' }
+    case 'untested':
+      return { label: 'Untested', className: 'bg-foreground/10 text-foreground/50' }
+    case 'local_disabled':
+      return { label: 'Disabled', className: 'bg-foreground/10 text-foreground/50' }
+    default:
+      return { label: 'Unknown', className: 'bg-foreground/10 text-foreground/50' }
+  }
+}
+
+function getCredentialLabel(source: LoadedSource): string {
+  const authType = source.config.api?.authType ?? source.config.mcp?.authType
+  if (authType === 'basic') return 'Username and password'
+  if (authType === 'bearer') return 'Bearer token'
+  if (authType === 'header') return 'API key'
+  if (authType === 'query') return 'API key'
+  return 'Credential'
+}
+
 export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: SourceInfoPageProps) {
   const { t } = useTranslation()
+  const { workspaces } = useAppShellContext()
   const { navigateToSource } = useNavigation()
   const [source, setSource] = useState<LoadedSource | null>(null)
   const [loading, setLoading] = useState(true)
@@ -179,6 +234,10 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
   const [mcpToolsLoading, setMcpToolsLoading] = useState(false)
   const [mcpToolsError, setMcpToolsError] = useState<string | null>(null)
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
+  const [credentialDialogOpen, setCredentialDialogOpen] = useState(false)
+  const [credentialValue, setCredentialValue] = useState('')
+  const [credentialSaving, setCredentialSaving] = useState(false)
+  const [oauthRunning, setOauthRunning] = useState(false)
 
 
   // Load source data
@@ -356,8 +415,55 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
 
   // Get source name for header
   const sourceName = source?.config.name || sourceSlug
+  const workspaceRootPath = useMemo(
+    () => workspaces.find((workspace) => workspace.id === workspaceId)?.rootPath,
+    [workspaceId, workspaces],
+  )
+  const authKind = source ? getSourceAuthKind(source) : null
+  const connectionStatus = source ? getConnectionStatus(source) : null
+
+  const reloadSource = useCallback(async () => {
+    const sources = await window.electronAPI.getSources(workspaceId)
+    const found = sources.find(s => s.config.slug === sourceSlug)
+    if (found) setSource(found)
+  }, [sourceSlug, workspaceId])
+
+  const handleOAuth = useCallback(async () => {
+    if (!source) return
+    setOauthRunning(true)
+    try {
+      const result = await window.electronAPI.performOAuth({ sourceSlug: source.config.slug })
+      if (result.success) {
+        toast.success('Source connected')
+        await reloadSource()
+      } else {
+        toast.error('Failed to connect source', { description: result.error })
+      }
+    } catch (err) {
+      toast.error('Failed to connect source', { description: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setOauthRunning(false)
+    }
+  }, [reloadSource, source])
+
+  const handleSaveCredential = useCallback(async () => {
+    if (!source || !credentialValue.trim()) return
+    setCredentialSaving(true)
+    try {
+      await window.electronAPI.saveSourceCredentials(workspaceId, source.config.slug, credentialValue.trim())
+      toast.success('Credential saved')
+      setCredentialValue('')
+      setCredentialDialogOpen(false)
+      await reloadSource()
+    } catch (err) {
+      toast.error('Failed to save credential', { description: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setCredentialSaving(false)
+    }
+  }, [credentialValue, reloadSource, source, workspaceId])
 
   return (
+    <>
     <Info_Page
       loading={loading}
       error={error ?? undefined}
@@ -365,6 +471,8 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     >
       <Info_Page.Header
         title={sourceName}
+        titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.resources')} currentLabel={sourceName} onRootClick={() => navigateToSource()} />}
+        actions={workspaceRootPath ? <CreateResourceDropdown workspaceRootPath={workspaceRootPath} /> : undefined}
         titleMenu={
           <SourceMenu
             sourceSlug={sourceSlug}
@@ -400,15 +508,28 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
             title={t('sourceInfo.connection')}
             description={getConnectionDescription(source, t)}
             actions={
-              // EditPopover for AI-assisted config.json editing with "Edit File" as secondary action
-              <EditPopover
-                trigger={<EditButton />}
-                {...getEditConfig('source-config', source.folderPath)}
-                secondaryAction={{
-                  label: t('common.editFile'),
-                  filePath: `${source.folderPath}/config.json`,
-                }}
-              />
+              <div className="flex items-center gap-2">
+                {authKind === 'oauth' && (
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={handleOAuth} disabled={oauthRunning}>
+                    {oauthRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlugZap className="h-3.5 w-3.5" />}
+                    {source.config.connectionStatus === 'connected' ? 'Reconnect' : 'Connect'}
+                  </Button>
+                )}
+                {authKind === 'credential' && (
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => setCredentialDialogOpen(true)}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                    {source.config.connectionStatus === 'connected' ? 'Update credential' : 'Add credential'}
+                  </Button>
+                )}
+                <EditPopover
+                  trigger={<EditButton />}
+                  {...getEditConfig('source-config', source.folderPath)}
+                  secondaryAction={{
+                    label: t('common.editFile'),
+                    filePath: `${source.folderPath}/config.json`,
+                  }}
+                />
+              </div>
             }
           >
             <Info_Table
@@ -422,6 +543,14 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
               )}
             >
               <Info_Table.Row label={t('common.type')} value={source.config.type.toUpperCase()} />
+              {connectionStatus && (
+                <Info_Table.Row label="Status">
+                  <span className={cn('inline-flex h-[18px] items-center rounded px-1.5 text-[10px] font-medium', connectionStatus.className)}>
+                    {connectionStatus.label}
+                  </span>
+                </Info_Table.Row>
+              )}
+              {authKind && <Info_Table.Row label="Authentication" value={authKind === 'oauth' ? 'OAuth' : getCredentialLabel(source)} />}
               {sourceUrl && (
                 <Info_Table.Row label={t('common.url')}>
                   <button
@@ -528,5 +657,37 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
         </Info_Page.Content>
       )}
     </Info_Page>
+    {source && authKind === 'credential' && (
+      <Dialog open={credentialDialogOpen} onOpenChange={setCredentialDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{source.config.connectionStatus === 'connected' ? 'Update credential' : 'Add credential'}</DialogTitle>
+            <DialogDescription>
+              Save a {getCredentialLabel(source).toLowerCase()} for {source.config.name}. Secrets are stored in the secure credential store, not in config.json.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="password"
+              autoFocus
+              value={credentialValue}
+              onChange={(event) => setCredentialValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void handleSaveCredential()
+              }}
+              placeholder={getCredentialLabel(source)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setCredentialDialogOpen(false)} disabled={credentialSaving}>Cancel</Button>
+            <Button size="sm" onClick={handleSaveCredential} disabled={!credentialValue.trim() || credentialSaving}>
+              {credentialSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              Save credential
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   )
 }

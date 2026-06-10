@@ -48,12 +48,10 @@ export async function handleCredentialPrompt(
   const effectiveMode = detectCredentialMode(source, mode, headerNames);
   const effectiveHeaderNames = getEffectiveHeaderNames(source, headerNames);
 
-  // Validate that passwordRequired only applies to basic auth
-  if (passwordRequired !== undefined && effectiveMode !== 'basic') {
-    return errorResponse(
-      `passwordRequired parameter only applies to basic auth mode. You specified mode="${mode}" with passwordRequired=${passwordRequired}.`
-    );
-  }
+  const sanitizedLabels = labels
+    ? Object.fromEntries(Object.entries(labels).filter(([, value]) => value && value.trim())) as CredentialPromptArgs['labels']
+    : undefined;
+  const effectivePasswordRequired = effectiveMode === 'basic' ? passwordRequired : undefined;
 
   // Build auth request
   const authRequest: CredentialAuthRequest = {
@@ -63,14 +61,14 @@ export async function handleCredentialPrompt(
     sourceSlug,
     sourceName: source.name,
     mode: effectiveMode,
-    labels,
+    labels: sanitizedLabels,
     description,
     hint,
     headerName: source.api?.headerName,
     headerNames: effectiveHeaderNames,
     // Pass source URL so password managers can match stored credentials
     sourceUrl: source.api?.baseUrl || source.mcp?.url,
-    passwordRequired,
+    passwordRequired: effectivePasswordRequired,
   };
 
   // Trigger auth request (will cause forceAbort)
