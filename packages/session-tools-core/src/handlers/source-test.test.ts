@@ -386,7 +386,7 @@ describe('source_test API connection branches', () => {
     expect(persisted.connectionStatus).toBe('connected');
   });
 
-  it('500 → disconnected, NOT auto-enabled, activation NOT called', async () => {
+  it('500 → failed, NOT auto-enabled, activation NOT called', async () => {
     writeApiSource(tempDir, 'flaky-api');
     ({ restore: restoreFetch } = installFetchStub(() => new Response(null, { status: 500 })));
 
@@ -415,10 +415,10 @@ describe('source_test API connection branches', () => {
     ) as SourceConfig;
     // The enabled flag must not be flipped on a failed probe.
     expect(persisted.enabled).toBe(false);
-    expect(persisted.connectionStatus).toBe('disconnected');
+    expect(persisted.connectionStatus).toBe('failed');
   });
 
-  it('404 → disconnected, NOT auto-enabled, activation NOT called', async () => {
+  it('404 → failed, NOT auto-enabled, activation NOT called', async () => {
     writeApiSource(tempDir, 'wrong-path-api');
     ({ restore: restoreFetch } = installFetchStub(() => new Response(null, { status: 404 })));
 

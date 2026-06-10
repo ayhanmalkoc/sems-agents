@@ -120,6 +120,9 @@ export const UserPreferencesSchema = z.object({
   timezone: z.string().optional(),  // TODO: Could validate against IANA timezone list
   location: LocationSchema.optional(),
   notes: z.string().optional(),
+  openTarget: z.object({
+    defaultTargetId: z.string().optional(),
+  }).optional(),
   // Internal: mirrors Appearance → Language. Not user-editable.
   // Validated against the registry-derived supported set.
   uiLanguage: z.enum([...SUPPORTED_LANGUAGE_CODES] as [LanguageCode, ...LanguageCode[]]).optional(),
@@ -455,6 +458,8 @@ const SourceBrandSchema = z.object({
   color: EntityColorSchema.optional(),
 });
 
+const SourceConnectionStatusSchema = z.enum(['connected', 'needs_auth', 'failed', 'untested', 'local_disabled']);
+
 export const FolderSourceConfigSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -467,6 +472,8 @@ export const FolderSourceConfigSchema = z.object({
   local: LocalSourceConfigSchema.optional(),
   brand: SourceBrandSchema.optional(),
   isAuthenticated: z.boolean().optional(),
+  connectionStatus: SourceConnectionStatusSchema.optional(),
+  connectionError: z.string().optional(),
   lastTestedAt: z.number().int().min(0).optional(),
   // Timestamps are optional - manually created configs may not have them
   // Storage functions add these automatically when saving

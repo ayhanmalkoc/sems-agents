@@ -198,6 +198,10 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   RPC_CHANNELS.gitbash.BROWSE,
   RPC_CHANNELS.gitbash.SET_PATH,
 
+  // open targets — local installed app detection/launch
+  RPC_CHANNELS.openTargets.LIST,
+  RPC_CHANNELS.openTargets.LAUNCH,
+
   // debug â€” local debug logging
   RPC_CHANNELS.debug.LOG,
 
@@ -349,6 +353,7 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.sources.DELETE,
   RPC_CHANNELS.sources.START_OAUTH,
   RPC_CHANNELS.sources.SAVE_CREDENTIALS,
+  RPC_CHANNELS.sources.TEST,
   RPC_CHANNELS.sources.CHANGED,
   RPC_CHANNELS.sources.GET_PERMISSIONS,
   RPC_CHANNELS.sources.GET_MCP_TOOLS,

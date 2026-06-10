@@ -65,7 +65,7 @@ export async function handleSourceTest(
   const lines: string[] = [];
   let hasErrors = false;
   let hasWarnings = false;
-  let connectionStatus: ConnectionStatus = 'unknown';
+  let connectionStatus: ConnectionStatus = 'untested';
   let connectionError: string | undefined;
 
   // 1. Check source exists
@@ -122,7 +122,7 @@ export async function handleSourceTest(
   lines.push(...connectionResult.lines);
   if (connectionResult.hasError) {
     hasErrors = true;
-    connectionStatus = 'error';
+    connectionStatus = 'failed';
     connectionError = connectionResult.error;
   } else if (connectionResult.success) {
     connectionStatus = 'connected';
@@ -130,7 +130,7 @@ export async function handleSourceTest(
     // Soft failure (4xx ≠ 401/403, 5xx, etc): the probe reached the endpoint but
     // got a status we can't interpret as healthy. Demote validation to warnings
     // and refuse auto-activation — see #683 for what happens otherwise.
-    connectionStatus = 'disconnected';
+    connectionStatus = 'failed';
     hasWarnings = true;
   }
 

@@ -299,7 +299,7 @@ export interface LocalSourceConfig {
 /**
  * Connection status for sources
  */
-export type ConnectionStatus = 'connected' | 'disconnected' | 'error' | 'unknown';
+export type ConnectionStatus = 'connected' | 'needs_auth' | 'failed' | 'untested' | 'local_disabled';
 
 /**
  * Full source configuration (simplified version for core package)

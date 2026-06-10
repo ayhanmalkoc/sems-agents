@@ -12,6 +12,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.sources.DELETE,
   RPC_CHANNELS.sources.START_OAUTH,
   RPC_CHANNELS.sources.SAVE_CREDENTIALS,
+  RPC_CHANNELS.sources.TEST,
   RPC_CHANNELS.sources.GET_PERMISSIONS,
   RPC_CHANNELS.workspace.GET_PERMISSIONS,
   RPC_CHANNELS.permissions.GET_DEFAULTS,
@@ -72,8 +73,8 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
     }
   })
 
-  // Save credentials for a source (bearer token or API key)
-  server.handle(RPC_CHANNELS.sources.SAVE_CREDENTIALS, async (_ctx, workspaceId: string, sourceSlug: string, credential: string) => {
+  // Save credentials for a source using the same secure-store value shape as chat auth cards.
+  server.handle(RPC_CHANNELS.sources.SAVE_CREDENTIALS, async (_ctx, workspaceId: string, sourceSlug: string, credential: string | { value?: string; username?: string; password?: string; headers?: Record<string, string> }) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
     const { loadSource, getSourceCredentialManager, markSourceAuthenticated } = await import('@craft-agent/shared/sources')
@@ -83,12 +84,66 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       throw new Error(`Source not found: ${sourceSlug}`)
     }
 
+    const credentialValue = typeof credential === 'string'
+      ? credential
+      : credential.headers
+      ? JSON.stringify(credential.headers)
+      : credential.username !== undefined || credential.password !== undefined
+      ? JSON.stringify({ username: credential.username ?? '', password: credential.password ?? '' })
+      : credential.value ?? ''
+
+    if (!credentialValue.trim()) {
+      throw new Error('Credential is required')
+    }
+
     // SourceCredentialManager handles credential type resolution
     const credManager = getSourceCredentialManager()
-    await credManager.save(source, { value: credential })
+    await credManager.save(source, { value: credentialValue })
     markSourceAuthenticated(workspace.rootPath, sourceSlug)
 
     log.info(`Saved credentials and marked source authenticated: ${sourceSlug}`)
+  })
+
+  // Test a source using the same core logic exposed to agents via source_test.
+  server.handle(RPC_CHANNELS.sources.TEST, async (_ctx, workspaceId: string, sourceSlug: string) => {
+    const workspace = getWorkspaceByNameOrId(workspaceId)
+    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+
+    const { handleSourceTest, createNodeFileSystem } = await import('@craft-agent/session-tools-core')
+    type SessionSourceConfig = import('@craft-agent/session-tools-core').SourceConfig
+    const { loadSourceConfig, saveSourceConfig, loadWorkspaceSources, getSourceCredentialManager } = await import('@craft-agent/shared/sources')
+    const { validateMcpConnection, validateStdioMcpConnection } = await import('@craft-agent/shared/mcp')
+    const { join } = await import('path')
+
+    const result = await handleSourceTest({
+      sessionId: `ui-source-test-${Date.now()}`,
+      workspacePath: workspace.rootPath,
+      sourcesPath: join(workspace.rootPath, 'sources'),
+      skillsPath: join(workspace.rootPath, 'skills'),
+      plansFolderPath: join(workspace.rootPath, 'plans'),
+      callbacks: {
+        onPlanSubmitted: () => {},
+        onAuthRequest: () => {},
+      },
+      fs: createNodeFileSystem(),
+      loadSourceConfig: (slug: string) => loadSourceConfig(workspace.rootPath, slug),
+      saveSourceConfig: (source: SessionSourceConfig) => saveSourceConfig(workspace.rootPath, source as never),
+      credentialManager: getSourceCredentialManager(),
+      validateMcpConnection,
+      validateStdioMcpConnection,
+    } as never, { sourceSlug, autoEnable: false })
+
+    const output = result.content
+      .map((part: { text?: unknown }) => typeof part.text === 'string' ? part.text : '')
+      .join('\n')
+    const sources = await loadWorkspaceSources(workspace.rootPath)
+    const source = sources.find(s => s.config.slug === sourceSlug)
+    return {
+      success: !result.isError && !output.includes('**Result: ✗'),
+      warning: output.includes('**Result: ⚠'),
+      output,
+      source,
+    }
   })
 
   // Get permissions config for a source (raw format for UI display)

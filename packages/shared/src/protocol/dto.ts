@@ -605,6 +605,30 @@ export interface TerminalExitEvent {
   exitCode?: number
   signal?: number
 }
+
+export type OpenTargetId =
+  | 'vscode'
+  | 'antigravity'
+  | 'github-desktop'
+  | 'file-explorer'
+  | 'terminal'
+  | 'git-bash'
+  | 'android-studio'
+
+export interface OpenTargetInfo {
+  id: OpenTargetId
+  label: string
+  available: boolean
+  reason?: string
+  supports: Array<'file' | 'folder'>
+  path?: string | null
+}
+
+export interface OpenTargetLaunchPayload {
+  targetId: OpenTargetId
+  path: string
+}
+
 // ---------------------------------------------------------------------------
 // Window types
 // ---------------------------------------------------------------------------

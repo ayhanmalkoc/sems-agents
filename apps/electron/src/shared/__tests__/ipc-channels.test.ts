@@ -192,6 +192,8 @@ const EXPECTED_CHANNELS: string[] = [
   'onboarding:startClaudeOAuth',
   'onboarding:startMcpOAuth',
   'onboarding:validateMcp',
+  'openTargets:launch',
+  'openTargets:list',
   'permissions:defaultsChanged',
   'permissions:getDefaults',
   'pi:getApiKeyProviders',

@@ -60,6 +60,19 @@ export type { CredentialHealthStatus, CredentialHealthIssue, CredentialHealthIss
 import type { LoadedSource, FolderSourceConfig, SourceConnectionStatus } from '@craft-agent/shared/sources/types';
 export type { LoadedSource, FolderSourceConfig, SourceConnectionStatus };
 
+export interface SourceTestResult {
+  success: boolean
+  warning: boolean
+  output: string
+  source?: LoadedSource
+}
+
+export type SourceCredentialInput =
+  | string
+  | { value: string }
+  | { username: string; password: string }
+  | { headers: Record<string, string> }
+
 // Skill types
 import type { LoadedSkill, SkillMetadata } from '@craft-agent/shared/skills/types';
 import type { AgentProfile, CreateAgentProfileInput, UpdateAgentProfileInput } from '@craft-agent/shared/agent-profiles';
@@ -219,6 +232,8 @@ import type {
   TerminalCreateResult,
   TerminalDataEvent,
   TerminalExitEvent,
+  OpenTargetInfo,
+  OpenTargetLaunchPayload,
   RemoteSessionTransferPayload,
   ImportRemoteSessionTransferResult,
 } from '@craft-agent/shared/protocol'
@@ -378,6 +393,8 @@ export interface ElectronAPI {
   openUrl(url: string): Promise<void>
   openFile(path: string): Promise<void>
   showInFolder(path: string): Promise<void>
+  listOpenTargets(): Promise<OpenTargetInfo[]>
+  launchOpenTarget(payload: OpenTargetLaunchPayload): Promise<void>
   createTerminal(payload: TerminalCreatePayload): Promise<TerminalCreateResult>
   terminalInput(id: string, data: string): Promise<void>
   terminalResize(id: string, cols: number, rows: number): Promise<void>
@@ -471,7 +488,8 @@ export interface ElectronAPI {
   createSource(workspaceId: string, config: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
   deleteSource(workspaceId: string, sourceSlug: string): Promise<void>
   startSourceOAuth(workspaceId: string, sourceSlug: string): Promise<{ success: boolean; error?: string }>
-  saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: string): Promise<void>
+  saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: SourceCredentialInput): Promise<void>
+  testSource(workspaceId: string, sourceSlug: string): Promise<SourceTestResult>
   getSourcePermissionsConfig(workspaceId: string, sourceSlug: string): Promise<import('@craft-agent/shared/agent').PermissionsConfigFile | null>
   getWorkspacePermissionsConfig(workspaceId: string): Promise<import('@craft-agent/shared/agent').PermissionsConfigFile | null>
   getDefaultPermissionsConfig(): Promise<{ config: import('@craft-agent/shared/agent').PermissionsConfigFile | null; path: string }>

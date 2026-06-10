@@ -132,6 +132,10 @@ export const RPC_CHANNELS = {
     OPEN_FILE: 'shell:openFile',
     SHOW_IN_FOLDER: 'shell:showInFolder',
   },
+  openTargets: {
+    LIST: 'openTargets:list',
+    LAUNCH: 'openTargets:launch',
+  },
   terminal: {
     CREATE: 'terminal:create',
     INPUT: 'terminal:input',
@@ -244,6 +248,7 @@ export const RPC_CHANNELS = {
     DELETE: 'sources:delete',
     START_OAUTH: 'sources:startOAuth',
     SAVE_CREDENTIALS: 'sources:saveCredentials',
+    TEST: 'sources:test',
     CHANGED: 'sources:changed',
     GET_PERMISSIONS: 'sources:getPermissions',
     GET_MCP_TOOLS: 'sources:getMcpTools',
