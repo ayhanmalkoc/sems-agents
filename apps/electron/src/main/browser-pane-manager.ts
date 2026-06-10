@@ -835,6 +835,20 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const win = instance.window
     if (win.isDestroyed()) return
 
+    if (instance.mode === 'dock') {
+      const hostWindow = instance.dockHostWindow
+      if (hostWindow && !hostWindow.isDestroyed()) {
+        if (hostWindow.isMinimized()) hostWindow.restore()
+        hostWindow.focus()
+      }
+      if (!instance.pageView.webContents.isDestroyed()) {
+        instance.pageView.webContents.focus()
+      }
+      instance.isVisible = !!instance.dockBounds?.visible
+      this.emitStateChange(instance)
+      return
+    }
+
     // If toolbar hasn't painted yet, defer showing until markToolbarReady runs.
     // Token guard prevents stale deferred focus from showing after hide/destroy.
     if (!instance.toolbarReady) {

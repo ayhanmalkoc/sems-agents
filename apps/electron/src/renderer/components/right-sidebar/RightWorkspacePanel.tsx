@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
+import { FolderOpen, Globe, GitCompare, Maximize2, MessageSquare, Minimize2, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
@@ -39,6 +39,7 @@ const TOOL_BY_TYPE = new Map(TOOL_CONFIGS.map((tool) => [tool.type, tool]))
 
 export interface RightWorkspacePanelProps {
   width: number
+  isMaximized?: boolean
   isOpen?: boolean
   tabs: RightDockTab[]
   activeTabId: string | null
@@ -49,6 +50,7 @@ export interface RightWorkspacePanelProps {
   onCloseTab: (id: string) => void
   onUpdateTabTitle?: (id: string, title: string) => void
   onClosePanel: () => void
+  onToggleMaximized?: () => void
   onResizeStart: (event: React.MouseEvent<HTMLDivElement>) => void
 }
 
@@ -81,6 +83,7 @@ function BrowserTool({ tab, isActive, onUpdateTabTitle }: { tab: RightDockTab; i
 export function RightWorkspacePanel({
   width,
   isOpen = true,
+  isMaximized = false,
   tabs,
   activeTabId,
   activeSessionId,
@@ -90,6 +93,7 @@ export function RightWorkspacePanel({
   onCloseTab,
   onUpdateTabTitle,
   onClosePanel,
+  onToggleMaximized,
   onResizeStart,
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
@@ -101,14 +105,16 @@ export function RightWorkspacePanel({
 
   return (
     <aside
-      className={cn("relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] border border-foreground/10 bg-background/70 shadow-minimal backdrop-blur", !isOpen && "hidden")}
-      style={{ width }}
+      className={cn("relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle", isMaximized && "flex-1", !isOpen && "hidden")}
+      style={isMaximized ? undefined : { width }}
     >
-      <div
-        onMouseDown={onResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize"
-        aria-hidden="true"
-      />
+      {!isMaximized && (
+        <div
+          onMouseDown={onResizeStart}
+          className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize"
+          aria-hidden="true"
+        />
+      )}
 
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -142,6 +148,10 @@ export function RightWorkspacePanel({
             )
           })}
         </div>
+
+        <TopBarButton aria-label={isMaximized ? 'Restore right panel' : 'Expand right panel'} onClick={onToggleMaximized} className="h-7 w-7 rounded-lg">
+          {isMaximized ? <Minimize2 className="h-4 w-4 text-foreground/50" strokeWidth={1.5} /> : <Maximize2 className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />}
+        </TopBarButton>
 
         <TopBarButton aria-label={t('menu.tools')} onClick={() => void handleAddTool()} className="h-7 w-7 rounded-lg">
           <Plus className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />

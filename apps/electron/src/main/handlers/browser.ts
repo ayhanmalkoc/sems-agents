@@ -2,7 +2,7 @@ import { RPC_CHANNELS, type BrowserPaneCreateOptions, type BrowserEmptyStateLaun
 import type { BrowserScreenshotOptions } from '../browser-pane-manager'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from './handler-deps'
-import { Menu, type BrowserWindow } from 'electron'
+import { Menu, nativeImage, type BrowserWindow } from 'electron'
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.CREATE,
@@ -31,6 +31,18 @@ export const HANDLED_CHANNELS = [
 export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): void {
   const { browserPaneManager, platform } = deps
   if (!browserPaneManager) return
+
+  const createMenuIcon = (path: string) => nativeImage.createFromDataURL(`data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
+  `)}`)
+
+  const menuIcons = {
+    chat: createMenuIcon('<path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>'),
+    files: createMenuIcon('<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
+    browser: createMenuIcon('<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/>'),
+    inspect: createMenuIcon('<path d="M18 18 6 6"/><path d="m8 6-2 2 10 10 2-2"/><path d="M14 6h6v6"/><path d="M10 18H4v-6"/>'),
+    terminal: createMenuIcon('<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>'),
+  } as const
 
   server.handle(RPC_CHANNELS.browserPane.CREATE, (ctx, input?: string | BrowserPaneCreateOptions) => {
     // Stamp the window with the requester's workspace so manual UI-opened
@@ -122,17 +134,19 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
 
   server.handle(RPC_CHANNELS.rightDock.SHOW_ADD_TOOL_MENU, async (ctx) => {
     const ownerWindow = ctx.webContentsId != null ? deps.windowManager?.getWindowByWebContentsId(ctx.webContentsId) as BrowserWindow | null : null
-    const items: Array<{ label: string; type: 'chat' | 'files' | 'browser' | 'inspect' | 'terminal' }> = [
+    const items: Array<{ label: string; type: 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'; accelerator?: string }> = [
       { label: 'Chat', type: 'chat' },
-      { label: 'Files', type: 'files' },
-      { label: 'Browser', type: 'browser' },
-      { label: 'Inspect', type: 'inspect' },
-      { label: 'Terminal', type: 'terminal' },
+      { label: 'Files', type: 'files', accelerator: 'CommandOrControl+P' },
+      { label: 'Browser', type: 'browser', accelerator: 'CommandOrControl+T' },
+      { label: 'Inspect', type: 'inspect', accelerator: 'CommandOrControl+Shift+G' },
+      { label: 'Terminal', type: 'terminal', accelerator: 'CommandOrControl+`' },
     ]
     return await new Promise<string | null>((resolve) => {
       let resolved = false
       const menu = Menu.buildFromTemplate(items.map((item) => ({
         label: item.label,
+        icon: menuIcons[item.type],
+        accelerator: item.accelerator,
         click: () => {
           resolved = true
           resolve(item.type)

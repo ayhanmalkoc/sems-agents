@@ -282,7 +282,7 @@ export function WorkspaceFilesPanel({ className, onTitleChange }: WorkspaceFiles
             <StyledDropdownMenuItem disabled={previewKind !== 'markdown'} onClick={() => setRichPreview((value) => !value)}><Code2 className="h-3.5 w-3.5" />{richPreview ? 'Disable rich preview' : 'Enable rich preview'}</StyledDropdownMenuItem>
           </StyledDropdownMenuContent>
         </DropdownMenu>
-        <OpenWithMenuButton path={rootPath} />
+        <OpenWithMenuButton path={rootPath} iconOnly />
         <TopBarButton aria-label="Toggle file tree" onClick={() => setTreeOpen((value) => !value)} isActive={treeOpen} className="h-7 w-7 rounded-lg">
           {treeOpen ? <PanelRightClose className="h-4 w-4 text-foreground/60" /> : <PanelRightOpen className="h-4 w-4 text-foreground/60" />}
         </TopBarButton>

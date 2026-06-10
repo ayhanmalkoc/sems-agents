@@ -627,7 +627,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
 
   const headerActions = (
     <div className="flex items-center gap-1.5">
-      {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} />}
+      {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} iconOnly />}
       {isCompactMode ? compactInfoButton : shareButton}
       {!isCompactMode && !isRightDockOpen && onToggleRightDock && (
         <PanelHeaderCenterButton
