@@ -72,3 +72,14 @@ credentials.enc
 # act (local GitHub Actions runner)
 .secrets
 .actrc
+
+# Local Electron/Craft dev runtime artifacts
+electron-dev*.log
+events.jsonl
+qa-*.png
+/config.json
+/views.json
+/labels/
+/sessions/
+/statuses/
+/.claude-plugin/
