@@ -66,6 +66,8 @@ function compactTitleInset(controlCount: number): number {
 export interface PanelHeaderProps {
   /** Header title (undefined hides with animation) */
   title?: string
+  /** Optional custom title node. Keeps header/menu layout while allowing breadcrumbs. */
+  titleNode?: React.ReactNode
   /** Optional badge element (e.g., agent badge) */
   badge?: React.ReactNode
   /** Optional dropdown menu content for interactive title (renders chevron when provided) */
@@ -105,6 +107,7 @@ export function PanelHeader({
   title,
   badge,
   titleMenu,
+  titleNode: customTitleNode,
   compactTitleMenu,
   leadingAction: explicitLeadingAction,
   centerButton,
@@ -143,15 +146,19 @@ export function PanelHeader({
   const titleContent = (
     <motion.div
       initial={false}
-      animate={{ opacity: title ? 1 : 0 }}
+      animate={{ opacity: title || customTitleNode ? 1 : 0 }}
       transition={{ duration: 0.15 }}
       className="flex items-center gap-1"
     >
-      <h1 className={cn(
-        "text-sm font-semibold truncate font-sans leading-tight",
-        isRegeneratingTitle && "animate-shimmer-text"
-      )}>{title}</h1>
-      {badge}
+      {customTitleNode ?? (
+        <>
+          <h1 className={cn(
+            "text-sm font-semibold truncate font-sans leading-tight",
+            isRegeneratingTitle && "animate-shimmer-text"
+          )}>{title}</h1>
+          {badge}
+        </>
+      )}
     </motion.div>
   )
 

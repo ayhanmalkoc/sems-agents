@@ -53,6 +53,7 @@ interface PanelStackContainerProps {
   navigatorWidth: number
   isSidebarAndNavigatorHidden: boolean
   isRightSidebarVisible?: boolean
+  isContentHidden?: boolean
   /** Compact mode: single-panel, list/content toggle (mobile or narrow window) */
   isCompact?: boolean
   isResizing?: boolean
@@ -65,6 +66,7 @@ export function PanelStackContainer({
   navigatorWidth,
   isSidebarAndNavigatorHidden,
   isRightSidebarVisible,
+  isContentHidden,
   isCompact = false,
   isResizing,
 }: PanelStackContainerProps) {
@@ -176,6 +178,29 @@ export function PanelStackContainer({
   }
 
   // === DESKTOP BRANCH ===
+  if (isContentHidden) {
+    return (
+      <div
+        data-mobile-menu-root="true"
+        className="shrink-0 flex relative z-panel panel-scroll @container/shell"
+        style={{ width: hasSidebar ? sidebarWidth : 0 }}
+      >
+        <motion.div
+          data-panel-role="sidebar"
+          initial={false}
+          animate={{ width: hasSidebar ? sidebarWidth : 0, opacity: hasSidebar ? 1 : 0 }}
+          transition={transition}
+          className="h-full relative shrink-0"
+          style={{ overflowX: 'clip', overflowY: 'visible' }}
+        >
+          <div className="h-full" style={{ width: sidebarWidth }}>
+            {sidebarSlot}
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
   // Same flex-row layout as before; behavior is unchanged.
   return (
     <div

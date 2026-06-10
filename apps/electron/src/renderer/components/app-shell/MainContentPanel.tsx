@@ -39,6 +39,7 @@ import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
 import { SourceInfoPage, ChatPage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
+import ResourcesHomePage from '@/pages/ResourcesHomePage'
 import AgentInfoPage from '@/pages/AgentInfoPage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
@@ -338,12 +339,9 @@ export function MainContentPanel({
         </Panel>
       )
     }
-    // No source selected - empty state
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("sourcesList.noSourcesConfigured")}</p>
-        </div>
+        <ResourcesHomePage />
       </Panel>
     )
   }
@@ -373,12 +371,9 @@ export function MainContentPanel({
         </Panel>
       )
     }
-    // No skill selected - empty state
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("skillsList.noSkillsConfigured")}</p>
-        </div>
+        <ResourcesHomePage />
       </Panel>
     )
   }

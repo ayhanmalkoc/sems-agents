@@ -56,6 +56,8 @@ export interface AppShellContextType {
   hydrateDraftAttachments: (sessionId: string) => Promise<FileAttachment[]>
   /** All enabled sources for this workspace - provided by AppShell component */
   enabledSources?: LoadedSource[]
+  /** Whether local MCP servers are enabled for this workspace. */
+  localMcpEnabled?: boolean
   /** All skills for this workspace - provided by AppShell component (for @mentions) */
   skills?: LoadedSkill[]
   /** Workspace-scoped agent profiles. */

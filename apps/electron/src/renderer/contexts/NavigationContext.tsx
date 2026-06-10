@@ -72,8 +72,6 @@ import {
   DEFAULT_NAVIGATION_STATE,
 } from '../../shared/types'
 import { sessionMetaMapAtom, updateSessionMetaAtom, type SessionMeta } from '@/atoms/sessions'
-import { sourcesAtom } from '@/atoms/sources'
-import { skillsAtom } from '@/atoms/skills'
 import {
   panelStackAtom,
   pushPanelAtom,
@@ -175,10 +173,8 @@ export function NavigationProvider({
   const store = useStore()
 
   // Read sources from atom (populated by AppShell)
-  const sources = useAtomValue(sourcesAtom)
 
   // Read skills from atom (populated by AppShell)
-  const skills = useAtomValue(skillsAtom)
 
   // =========================================================================
   // DERIVED NAVIGATION STATE (from focused panel + right sidebar)
@@ -587,24 +583,6 @@ export function NavigationProvider({
     [workspaceId, filterSessionsByFilter]
   )
 
-  const getFirstSourceSlug = useCallback(
-    (filter?: SourceFilter | null): string | null => {
-      if (!filter) {
-        return sources[0]?.config.slug ?? null
-      }
-      const filtered = sources.filter(s => s.config.type === filter.sourceType)
-      return filtered[0]?.config.slug ?? null
-    },
-    [sources]
-  )
-
-  const getFirstSkillSlug = useCallback(
-    (): string | null => {
-      return skills[0]?.slug ?? null
-    },
-    [skills]
-  )
-
   // =========================================================================
   // AUTO-SELECTION (pure computation, no side effects)
   // =========================================================================
@@ -640,27 +618,10 @@ export function NavigationProvider({
         return nextState
       }
 
-      // Sources: auto-select first source
-      if (isSourcesNavigation(nextState) && !nextState.details && !options?.skipAutoSelect) {
-        const firstSourceSlug = getFirstSourceSlug(nextState.filter)
-        if (firstSourceSlug) {
-          return { ...nextState, details: { type: 'source', sourceSlug: firstSourceSlug } }
-        }
-        return nextState
-      }
-
-      // Skills: auto-select first skill
-      if (isSkillsNavigation(nextState) && !nextState.details && !options?.skipAutoSelect) {
-        const firstSkillSlug = getFirstSkillSlug()
-        if (firstSkillSlug) {
-          return { ...nextState, details: { type: 'skill', skillSlug: firstSkillSlug } }
-        }
-        return nextState
-      }
 
       return nextState
     },
-    [store, workspaceId, remoteWorkspaceId, getLastSelectedSessionId, getFirstSessionId, getFirstSourceSlug, getFirstSkillSlug]
+    [store, workspaceId, remoteWorkspaceId, getLastSelectedSessionId, getFirstSessionId]
   )
 
   // Ref keeps resolveAutoSelection fresh for reconcileFromUrlParams (defined earlier in the file)

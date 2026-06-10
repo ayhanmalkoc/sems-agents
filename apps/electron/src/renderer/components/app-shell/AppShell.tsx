@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils"
 import { isMac } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton } from "@/components/ui/HeaderIconButton"
+import { TopBarButton } from "@/components/ui/TopBarButton"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent, DocumentFormattedMarkdownOverlay } from "@craft-agent/ui"
 import {
@@ -116,8 +117,6 @@ import {
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
 import { AgentsListPanel } from "./AgentsListPanel"
-import { SourcesListPanel } from "./SourcesListPanel"
-import { SkillsListPanel } from "./SkillsListPanel"
 import { AutomationsListPanel } from "../automations/AutomationsListPanel"
 import { APP_EVENTS, AGENT_EVENTS, type AutomationFilterKind, AUTOMATION_TYPE_TO_FILTER_KIND } from "../automations/types"
 import { useAutomations } from "@/hooks/useAutomations"
@@ -549,6 +548,7 @@ function AppShellContent({
   const [isRightDockOpen, setIsRightDockOpen] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelOpen, false)
   })
+  const [isRightDockMaximized, setIsRightDockMaximized] = React.useState(false)
   const [rightDockWidth, setRightDockWidth] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelWidth, 360)
   })
@@ -1328,6 +1328,11 @@ function AppShellContent({
     setIsSidebarVisible(v => !v)
   }, [isSidebarAndNavigatorHidden])
 
+  const handleRestoreSidebar = useCallback(() => {
+    setIsSidebarAndNavigatorHidden(false)
+    setIsSidebarVisible(true)
+  }, [])
+
   // Sidebar toggle (CMD+B)
   useAction('view.toggleSidebar', handleToggleSidebar)
 
@@ -1649,18 +1654,6 @@ function AppShellContent({
     return counts
   }, [activeSessionMetas, effectiveSessionStatuses])
 
-  // Count sources by type for the Sources dropdown subcategories
-  const sourceTypeCounts = useMemo(() => {
-    const counts = { api: 0, mcp: 0, local: 0 }
-    for (const source of sources) {
-      const t = source.config.type
-      if (t === 'api' || t === 'mcp' || t === 'local') {
-        counts[t]++
-      }
-    }
-    return counts
-  }, [sources])
-
   // Count automations by type for the Automations dropdown subcategories
   const automationTypeCounts = useMemo(() => {
     const counts = { scheduled: 0, event: 0, agentic: 0 }
@@ -1813,6 +1806,7 @@ function AppShellContent({
     ...contextValue,
     onDeleteSession: handleDeleteSession,
     enabledSources: sources,
+    localMcpEnabled,
     skills,
     agentProfiles,
     activeSessionWorkingDirectory,
@@ -1836,7 +1830,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isRightDockOpen, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isRightDockOpen, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -1923,19 +1917,6 @@ function AppShellContent({
   // Handler for sources view (all sources)
   const handleSourcesClick = useCallback(() => {
     navigate(routes.view.sources())
-  }, [])
-
-  // Handlers for source type filter views (subcategories in Sources dropdown)
-  const handleSourcesApiClick = useCallback(() => {
-    navigate(routes.view.sourcesApi())
-  }, [])
-
-  const handleSourcesMcpClick = useCallback(() => {
-    navigate(routes.view.sourcesMcp())
-  }, [])
-
-  const handleSourcesLocalClick = useCallback(() => {
-    navigate(routes.view.sourcesLocal())
   }, [])
 
   // Handler for skills view
@@ -2248,30 +2229,6 @@ function AppShellContent({
     openRightDockTool('files')
   }, [openRightDockTool])
 
-  // Delete Source - simplified since agents system is removed
-  const handleDeleteSource = useCallback(async (sourceSlug: string) => {
-    if (!activeWorkspace) return
-    try {
-      await window.electronAPI.deleteSource(activeWorkspace.id, sourceSlug)
-      toast.success(t('toast.deletedSource'))
-    } catch (error) {
-      console.error('[Chat] Failed to delete source:', error)
-      toast.error(t('toast.failedToDeleteSource'))
-    }
-  }, [activeWorkspace])
-
-  // Delete Skill
-  const handleDeleteSkill = useCallback(async (skillSlug: string) => {
-    if (!activeWorkspace) return
-    try {
-      await window.electronAPI.deleteSkill(activeWorkspace.id, skillSlug)
-      toast.success(t('toast.deletedSkill', { slug: skillSlug }))
-    } catch (error) {
-      console.error('[Chat] Failed to delete skill:', error)
-      toast.error(t('toast.failedToDeleteSkill'))
-    }
-  }, [activeWorkspace])
-
   // Respond to menu bar "New Chat" trigger
   const menuTriggerRef = useRef(menuNewChatTrigger)
   useEffect(() => {
@@ -2552,6 +2509,7 @@ function AppShellContent({
         className="flex items-stretch relative"
         style={{
           height: '100%',
+          paddingTop: isAutoCompact ? 0 : PANEL_EDGE_INSET,
           paddingRight: isAutoCompact ? 0 : PANEL_EDGE_INSET,
           paddingBottom: isAutoCompact ? 0 : PANEL_EDGE_INSET,
           paddingLeft: 0,
@@ -2672,72 +2630,6 @@ function AppShellContent({
                       onCreateAgent={handleCreateAgent}
                       selectedAgentId={navState.details ? navState.details.agentId : null}
                     />
-                  </SidebarSectionPanel>
-                ) : (isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? (
-                  <SidebarSectionPanel
-                    title={t("sidebar.resources")}
-                    action={activeWorkspace ? (
-                        isSkillsNavigation(navState) ? (
-                          <EditPopover
-                            trigger={
-                              <HeaderIconButton
-                                icon={<Plus className="h-4 w-4" />}
-                                tooltip={t("sidebarMenu.addSkill")}
-                                data-tutorial="add-skill-button"
-                              />
-                            }
-                            {...getEditConfig('add-skill', activeWorkspace.rootPath)}
-                          />
-                        ) : (
-                          <EditPopover
-                            trigger={
-                              <HeaderIconButton
-                                icon={<Plus className="h-4 w-4" />}
-                                tooltip={t("sidebarMenu.addSource")}
-                                data-tutorial="add-source-button"
-                              />
-                            }
-                            {...getEditConfig(
-                              sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source',
-                              activeWorkspace.rootPath
-                            )}
-                          />
-                        )
-                      ) : undefined}
-                    filters={
-                      <SidebarFilterPills
-                        items={[
-                          { key: 'sources', label: t("sidebar.sources"), count: sources.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: handleSourcesClick },
-                          { key: 'api', label: t("sidebar.apis"), count: sourceTypeCounts.api, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'api', onClick: handleSourcesApiClick },
-                          { key: 'mcp', label: t("sidebar.mcps"), count: sourceTypeCounts.mcp, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'mcp', onClick: handleSourcesMcpClick },
-                          { key: 'local', label: 'Local', count: sourceTypeCounts.local, active: sourceFilter?.kind === 'type' && sourceFilter.sourceType === 'local', onClick: handleSourcesLocalClick },
-                          { key: 'skills', label: t("sidebar.skills"), count: skills.length, active: isSkillsNavigation(navState), onClick: handleSkillsClick },
-                        ]}
-                      />
-                    }
-                  >
-                    <div className="min-h-0 flex-1 border-t border-foreground/5 pt-1">
-                      {isSourcesNavigation(navState) ? (
-                        <SourcesListPanel
-                          sources={sources}
-                          sourceFilter={sourceFilter}
-                          workspaceRootPath={activeWorkspace?.rootPath}
-                          onDeleteSource={handleDeleteSource}
-                          onSourceClick={handleSourceSelect}
-                          selectedSourceSlug={navState.details ? navState.details.sourceSlug : null}
-                          localMcpEnabled={localMcpEnabled}
-                        />
-                      ) : activeWorkspaceId ? (
-                        <SkillsListPanel
-                          skills={skills}
-                          workspaceId={activeWorkspaceId}
-                          workspaceRootPath={activeWorkspace?.rootPath}
-                          onSkillClick={handleSkillSelect}
-                          onDeleteSkill={handleDeleteSkill}
-                          selectedSkillSlug={navState.details?.type === 'skill' ? navState.details.skillSlug : null}
-                        />
-                      ) : null}
-                    </div>
                   </SidebarSectionPanel>
                 ) : isAutomationsNavigation(navState) ? (
                   <SidebarSectionPanel
@@ -3499,23 +3391,24 @@ function AppShellContent({
           navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={isRightDockOpen && !isAutoCompact}
+          isContentHidden={isRightDockOpen && isRightDockMaximized && !isAutoCompact}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
         />
-        {!effectiveSidebarAndNavigatorHidden && !isSidebarVisible && (
-          <button
-            type="button"
+        {!isAutoCompact && (!isSidebarVisible || isSidebarAndNavigatorHidden) && (
+          <TopBarButton
             aria-label={t("menu.toggleSidebar")}
-            onClick={handleToggleSidebar}
-            className="absolute left-2 top-2 z-panel grid h-8 w-8 place-items-center rounded-lg border border-foreground/10 bg-background/85 text-foreground/70 shadow-minimal backdrop-blur transition-colors hover:bg-foreground/5 hover:text-foreground"
+            onClick={handleRestoreSidebar}
+            className="absolute left-2 top-2 z-panel"
           >
-            <PanelLeftRounded className="h-[18px] w-[18px]" />
-          </button>
+            <PanelLeftRounded className="h-[18px] w-[18px] text-foreground/70" />
+          </TopBarButton>
         )}
 
         {isRightDockOpen && !isAutoCompact && (
           <RightWorkspacePanel
             width={rightDockWidth}
+            isMaximized={isRightDockMaximized}
             tabs={rightDockTabs}
             activeTabId={activeRightDockTabId}
             activeSessionId={effectiveSessionId}
@@ -3525,6 +3418,7 @@ function AppShellContent({
             onCloseTab={closeRightDockTab}
             onUpdateTabTitle={updateRightDockTabTitle}
             onClosePanel={() => setIsRightDockOpen(false)}
+            onToggleMaximized={() => setIsRightDockMaximized((prev) => !prev)}
             onResizeStart={handleRightDockResizeStart}
           />
         )}
