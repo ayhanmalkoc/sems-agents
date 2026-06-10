@@ -1,10 +1,10 @@
 import { resolve } from 'path'
 import { join } from 'path'
 import { homedir } from 'os'
-import { execSync } from 'child_process'
+import { execSync, spawn } from 'child_process'
 import { existsSync } from 'fs'
 import { randomUUID } from 'crypto'
-import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
+import { RPC_CHANNELS, type OpenTargetId, type OpenTargetInfo, type OpenTargetLaunchPayload } from '@craft-agent/shared/protocol'
 import { getGitBashPath, setGitBashPath, clearGitBashPath } from '@craft-agent/shared/config'
 import { classifyExternalUrl, formatBlockedUrlError } from '@craft-agent/shared/utils/url-safety'
 import { isUsableGitBashPath, validateGitBashPath } from '@craft-agent/server-core/services'
@@ -27,6 +27,148 @@ type TerminalProcess = {
 }
 
 const terminalProcesses = new Map<string, TerminalProcess>()
+
+
+function findCommand(command: string): string | null {
+  try {
+    const lookup = process.platform === 'win32' ? `where ${command}` : `command -v ${command}`
+    const result = execSync(lookup, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }).trim()
+    return result.split(/\r?\n/)[0]?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+function firstExisting(paths: Array<string | undefined | null>): string | null {
+  for (const candidate of paths) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+function detectOpenTargets(): OpenTargetInfo[] {
+  const platform = process.platform
+  const localAppData = process.env.LOCALAPPDATA || ''
+  const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files'
+  const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)'
+  const home = homedir()
+
+  const vscodePath = firstExisting([
+    join(localAppData, 'Programs', 'Microsoft VS Code', 'Code.exe'),
+    join(programFiles, 'Microsoft VS Code', 'Code.exe'),
+    findCommand('code'),
+  ])
+  const antigravityPath = firstExisting([
+    findCommand('antigravity'),
+    join(localAppData, 'Programs', 'Antigravity', 'Antigravity.exe'),
+    join(programFiles, 'Antigravity', 'Antigravity.exe'),
+  ])
+  const githubDesktopPath = firstExisting([
+    findCommand('github'),
+    join(localAppData, 'GitHubDesktop', 'bin', 'github.bat'),
+    join(localAppData, 'GitHubDesktop', 'GitHubDesktop.exe'),
+  ])
+  const gitBashPath = platform === 'win32'
+    ? firstExisting([
+        getGitBashPath(),
+        'C:\\Program Files\\Git\\bin\\bash.exe',
+        'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+        join(localAppData, 'Programs', 'Git', 'bin', 'bash.exe'),
+      ])
+    : findCommand('bash')
+  const terminalPath = platform === 'win32' ? (findCommand('wt') || findCommand('powershell')) : (process.env.TERM_PROGRAM || findCommand('x-terminal-emulator') || findCommand('open') || findCommand('gnome-terminal'))
+  const androidStudioPath = firstExisting([
+    findCommand('studio'),
+    join(programFiles, 'Android', 'Android Studio', 'bin', 'studio64.exe'),
+    join(programFilesX86, 'Android', 'Android Studio', 'bin', 'studio64.exe'),
+    join(home, 'AppData', 'Local', 'Programs', 'Android Studio', 'bin', 'studio64.exe'),
+  ])
+
+  const maybe = (id: OpenTargetId, label: string, path: string | null, supports: Array<'file' | 'folder'>): OpenTargetInfo => ({
+    id,
+    label,
+    available: Boolean(path),
+    reason: path ? undefined : 'Not installed',
+    supports,
+    path,
+  })
+
+  return [
+    maybe('vscode', 'VS Code', vscodePath, ['file', 'folder']),
+    maybe('antigravity', 'Antigravity', antigravityPath, ['file', 'folder']),
+    maybe('github-desktop', 'GitHub Desktop', githubDesktopPath, ['folder']),
+    { id: 'file-explorer', label: platform === 'darwin' ? 'Finder' : platform === 'win32' ? 'File Explorer' : 'File Manager', available: true, supports: ['file', 'folder'], path: null },
+    maybe('terminal', 'Terminal', terminalPath, ['folder']),
+    maybe('git-bash', 'Git Bash', gitBashPath, ['folder']),
+    maybe('android-studio', 'Android Studio', androidStudioPath, ['folder']),
+  ]
+}
+
+function needsShell(command: string): boolean {
+  return /\.(cmd|bat)$/i.test(command)
+}
+
+function spawnDetached(command: string, args: string[], options: { cwd?: string; shell?: boolean } = {}): void {
+  const child = spawn(command, args, {
+    cwd: options.cwd,
+    detached: true,
+    stdio: 'ignore',
+    shell: options.shell,
+    windowsHide: false,
+  })
+  child.unref()
+}
+
+async function launchOpenTarget(targetId: OpenTargetId, safePath: string): Promise<void> {
+  const targets = detectOpenTargets()
+  const target = targets.find((item) => item.id === targetId)
+  if (!target) throw new Error(`Unknown open target: ${targetId}`)
+  if (!target.available) throw new Error(`${target.label} is not available`)
+
+  const pathArg = safePath
+  const isWindows = process.platform === 'win32'
+  if (targetId === 'file-explorer') {
+    if (isWindows) spawnDetached('explorer.exe', [pathArg])
+    else if (process.platform === 'darwin') spawnDetached('open', [pathArg])
+    else spawnDetached('xdg-open', [pathArg])
+    return
+  }
+  if (targetId === 'terminal') {
+    if (isWindows) {
+      const wt = findCommand('wt')
+      if (wt) spawnDetached(wt, ['-d', pathArg], { shell: wt.endsWith('.cmd') })
+      else spawnDetached('cmd.exe', ['/c', 'start', '', 'powershell.exe', '-NoExit', '-Command', `Set-Location -LiteralPath '${pathArg.replace(/'/g, "''")}'`])
+    } else if (process.platform === 'darwin') {
+      spawnDetached('open', ['-a', 'Terminal', pathArg])
+    } else {
+      const terminal = findCommand('x-terminal-emulator') || findCommand('gnome-terminal') || findCommand('konsole')
+      if (!terminal) throw new Error('Terminal is not available')
+      spawnDetached(terminal, [], { cwd: pathArg })
+    }
+    return
+  }
+  if (targetId === 'git-bash') {
+    const bash = target.path
+    if (!bash) throw new Error('Git Bash is not available')
+    if (isWindows) spawnDetached('cmd.exe', ['/c', 'start', '', '/D', pathArg, bash, '--login', '-i'])
+    else spawnDetached(bash, ['--login', '-i'], { cwd: pathArg })
+    return
+  }
+
+  if (!target.path) throw new Error(`${target.label} path is not available`)
+  if (targetId === 'vscode') {
+    spawnDetached(target.path, [pathArg], { shell: needsShell(target.path) })
+    return
+  }
+  if (targetId === 'github-desktop') {
+    spawnDetached(target.path, [pathArg], { shell: needsShell(target.path) })
+    return
+  }
+  if (targetId === 'antigravity' || targetId === 'android-studio') {
+    spawnDetached(target.path, [pathArg], { shell: needsShell(target.path) })
+    return
+  }
+}
 
 function buildTerminalEnv(): Record<string, string> {
   const env: Record<string, string> = { TERM: 'xterm-256color' }
@@ -94,6 +236,8 @@ export const GUI_HANDLED_CHANNELS = [
   RPC_CHANNELS.menu.COPY,
   RPC_CHANNELS.menu.PASTE,
   RPC_CHANNELS.menu.SELECT_ALL,
+  RPC_CHANNELS.openTargets.LIST,
+  RPC_CHANNELS.openTargets.LAUNCH,
   RPC_CHANNELS.terminal.CREATE,
   RPC_CHANNELS.terminal.INPUT,
   RPC_CHANNELS.terminal.RESIZE,
@@ -236,6 +380,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     return { success: true }
   })
 
+
   // Debug logging from renderer -> main log file (fire-and-forget, no response)
   server.handle(RPC_CHANNELS.debug.LOG, async (_ctx, ...args: unknown[]) => {
     deps.platform.logger.info('[renderer]', ...args)
@@ -307,6 +452,23 @@ export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps):
   const { sessionManager } = deps
   const windowManager = deps.windowManager
 
+  server.handle(RPC_CHANNELS.openTargets.LIST, async () => {
+    return detectOpenTargets()
+  })
+
+  server.handle(RPC_CHANNELS.openTargets.LAUNCH, async (ctx, payload: OpenTargetLaunchPayload) => {
+    try {
+      const expanded = payload.path.startsWith('~') ? payload.path.replace(/^~/, homedir()) : payload.path
+      const absolutePath = resolve(expanded)
+      const safePath = await validateFilePath(absolutePath, getWorkspaceAllowedDirs(ctx.workspaceId))
+      await launchOpenTarget(payload.targetId, safePath)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      deps.platform.logger.error('openTargets:launch error:', message)
+      throw new Error(`Failed to launch open target: ${message}`)
+    }
+  })
+
   server.handle(RPC_CHANNELS.terminal.CREATE, async (ctx, payload: { workspaceId?: string; cwd?: string; cols?: number; rows?: number }) => {
     try {
       const workspaceId = payload?.workspaceId ?? ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
@@ -357,7 +519,8 @@ export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps):
     if (!terminal || terminal.clientId !== ctx.clientId) return
     terminalProcesses.delete(id)
     terminal.pty.kill()
-  })
+  })
+
 
   // Auto-update handlers
   server.handle(RPC_CHANNELS.update.CHECK, async () => {

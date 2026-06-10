@@ -33,6 +33,9 @@ export interface UserPreferences {
   diffViewer?: DiffViewerPreferences;
   // Whether to include Co-Authored-By trailer on git commits (default: true)
   includeCoAuthoredBy?: boolean;
+  openTarget?: {
+    defaultTargetId?: string;
+  };
   /**
    * Internal: persisted UI language code (mirrors Appearance → Language).
    * Maintained only by the main-process `i18n:changeLanguage` IPC handler.

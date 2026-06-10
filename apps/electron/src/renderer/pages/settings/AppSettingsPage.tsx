@@ -21,7 +21,7 @@ import { HeaderMenu } from '@/components/ui/HeaderMenu'
 import { routes } from '@/lib/navigate'
 import { Spinner } from '@craft-agent/ui'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
-import type { NetworkProxySettings } from '../../../shared/types'
+import type { NetworkProxySettings, OpenTargetInfo } from '../../../shared/types'
 
 import {
   SettingsSection,
@@ -30,6 +30,7 @@ import {
   SettingsRow,
   SettingsToggle,
   SettingsInput,
+  SettingsMenuSelectRow,
 } from '@/components/settings'
 import { useUpdateChecker } from '@/hooks/useUpdateChecker'
 
@@ -103,6 +104,9 @@ export default function AppSettingsPage() {
 
   // Tools state
   const [browserToolEnabled, setBrowserToolEnabled] = useState(true)
+  const [openTargets, setOpenTargets] = useState<OpenTargetInfo[]>([])
+  const [defaultOpenTargetId, setDefaultOpenTargetId] = useState('')
+  const [basePreferences, setBasePreferences] = useState<Record<string, unknown>>({})
 
   // Proxy state
   const [proxyForm, setProxyForm] = useState<ProxyFormState>(EMPTY_PROXY_FORM)
@@ -128,15 +132,28 @@ export default function AppSettingsPage() {
   const loadSettings = useCallback(async () => {
     if (!window.electronAPI) return
     try {
-      const [notificationsOn, keepAwakeOn, browserToolOn, proxySettings] = await Promise.all([
+      const [notificationsOn, keepAwakeOn, browserToolOn, proxySettings, targets, preferences] = await Promise.all([
         window.electronAPI.getNotificationsEnabled(),
         window.electronAPI.getKeepAwakeWhileRunning(),
         window.electronAPI.getBrowserToolEnabled(),
         window.electronAPI.getNetworkProxySettings(),
+        window.electronAPI.listOpenTargets(),
+        window.electronAPI.readPreferences(),
       ])
       setNotificationsEnabled(notificationsOn)
       setKeepAwakeEnabled(keepAwakeOn)
       setBrowserToolEnabled(browserToolOn)
+      const availableTargets = targets.filter((target) => target.available)
+      setOpenTargets(targets)
+      try {
+        const parsed = JSON.parse(preferences.content || '{}')
+        const savedTargetId = parsed.openTarget?.defaultTargetId
+        setBasePreferences(parsed)
+        setDefaultOpenTargetId(availableTargets.some((target) => target.id === savedTargetId) ? savedTargetId : (availableTargets[0]?.id ?? ''))
+      } catch {
+        setBasePreferences({})
+        setDefaultOpenTargetId(availableTargets[0]?.id ?? '')
+      }
       const form = toProxyFormState(proxySettings)
       setProxyForm(form)
       setSavedProxyForm(form)
@@ -163,6 +180,21 @@ export default function AppSettingsPage() {
     setBrowserToolEnabled(enabled)
     await window.electronAPI.setBrowserToolEnabled(enabled)
   }, [])
+
+
+  const handleDefaultOpenTargetChange = useCallback(async (targetId: string) => {
+    setDefaultOpenTargetId(targetId)
+    const nextPreferences = {
+      ...basePreferences,
+      openTarget: { ...((basePreferences.openTarget as Record<string, unknown> | undefined) ?? {}), defaultTargetId: targetId },
+      updatedAt: Date.now(),
+    }
+    setBasePreferences(nextPreferences)
+    const result = await window.electronAPI.writePreferences(JSON.stringify(nextPreferences, null, 2))
+    if (result.success) {
+      window.dispatchEvent(new CustomEvent('craft:preferences-updated'))
+    }
+  }, [basePreferences])
 
   // Proxy handlers
   const isProxyDirty = useMemo(() => {
@@ -233,6 +265,19 @@ export default function AppSettingsPage() {
               {/* Tools */}
               <SettingsSection title={t("settings.tools.title")}>
                 <SettingsCard>
+
+                  <SettingsMenuSelectRow
+                    label="Default open target"
+                    description="Default target used to open files and folders from Open menus."
+                    value={defaultOpenTargetId}
+                    onValueChange={handleDefaultOpenTargetChange}
+                    options={openTargets.filter((target) => target.available).map((target) => ({
+                      value: target.id,
+                      label: target.label,
+                    }))}
+                    placeholder="Select target..."
+                    inCard
+                  />
                   <SettingsToggle
                     label={t("settings.tools.builtInBrowser")}
                     description={t("settings.tools.builtInBrowserDesc")}

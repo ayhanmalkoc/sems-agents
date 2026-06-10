@@ -63,20 +63,25 @@ function parsePreferences(json: string): PreferencesFormState {
 }
 
 // Serialize form state to JSON
-function serializePreferences(state: PreferencesFormState): string {
-  const prefs: Record<string, unknown> = {}
+function serializePreferences(state: PreferencesFormState, base: Record<string, unknown> = {}): string {
+  const prefs: Record<string, unknown> = { ...base }
 
   if (state.name) prefs.name = state.name
+  else delete prefs.name
   if (state.timezone) prefs.timezone = state.timezone
+  else delete prefs.timezone
 
   if (state.city || state.country) {
     const location: Record<string, string> = {}
     if (state.city) location.city = state.city
     if (state.country) location.country = state.country
     prefs.location = location
+  } else {
+    delete prefs.location
   }
 
   if (state.notes) prefs.notes = state.notes
+  else delete prefs.notes
   prefs.updatedAt = Date.now()
 
   return JSON.stringify(prefs, null, 2)
@@ -88,6 +93,7 @@ export default function PreferencesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [preferencesPath, setPreferencesPath] = useState<string | null>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const basePreferencesRef = useRef<Record<string, unknown>>({})
   const isInitialLoadRef = useRef(true)
   const formStateRef = useRef(formState)
   const lastSavedRef = useRef<string | null>(null)
@@ -102,10 +108,15 @@ export default function PreferencesPage() {
     const load = async () => {
       try {
         const result = await window.electronAPI.readPreferences()
+        try {
+          basePreferencesRef.current = JSON.parse(result.content || '{}')
+        } catch {
+          basePreferencesRef.current = {}
+        }
         const parsed = parsePreferences(result.content)
         setFormState(parsed)
         setPreferencesPath(result.path)
-        lastSavedRef.current = serializePreferences(parsed)
+        lastSavedRef.current = serializePreferences(parsed, basePreferencesRef.current)
       } catch (err) {
         console.error('Failed to load stored user preferences:', err)
         setFormState(emptyFormState)
@@ -133,10 +144,11 @@ export default function PreferencesPage() {
     // Debounce save by 500ms
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        const json = serializePreferences(formState)
+        const json = serializePreferences(formState, basePreferencesRef.current)
         const result = await window.electronAPI.writePreferences(json)
         if (result.success) {
           lastSavedRef.current = json
+          window.dispatchEvent(new CustomEvent('craft:preferences-updated'))
         } else {
           console.error('Failed to save preferences:', result.error)
         }
@@ -161,7 +173,7 @@ export default function PreferencesPage() {
       }
 
       // Check if there are unsaved changes and save immediately
-      const currentJson = serializePreferences(formStateRef.current)
+      const currentJson = serializePreferences(formStateRef.current, basePreferencesRef.current)
       if (lastSavedRef.current !== currentJson && !isInitialLoadRef.current) {
         // Fire and forget - we can't await in cleanup
         window.electronAPI.writePreferences(currentJson).catch((err) => {
