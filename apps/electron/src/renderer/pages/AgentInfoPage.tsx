@@ -13,10 +13,10 @@ import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
-const permissionLabels: Record<PermissionMode, string> = {
-  safe: 'Explore',
-  ask: 'Ask',
-  'allow-all': 'Execute',
+const permissionLabelKeys: Record<PermissionMode, string> = {
+  safe: 'agents.permissionExplore',
+  ask: 'agents.permissionAsk',
+  'allow-all': 'agents.permissionExecute',
 }
 
 type ThinkingValue = 'low' | 'medium' | 'high' | 'max'
@@ -145,7 +145,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
   const canEdit = kind === 'user'
   const runtimeSummary = [
     profile.model || t('agents.workspaceDefaultModel'),
-    profile.permissionMode ? permissionLabels[profile.permissionMode] : t('agents.defaultPermission'),
+    profile.permissionMode ? t(permissionLabelKeys[profile.permissionMode]) : t('agents.defaultPermission'),
     profile.thinkingLevel ? t('agents.thinkLevel', { level: profile.thinkingLevel }) : t('agents.defaultThinking'),
   ].join(' · ')
   const updateDraft = <K extends keyof DraftState>(key: K, value: DraftState[K]) => setDraft(prev => prev ? { ...prev, [key]: value } : prev)
@@ -201,7 +201,6 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
             onOpenInNewWindow={() => window.electronAPI.openUrl(`craftagents://agents/agent/${profile.id}?window=focused`)}
             onDuplicate={() => onDuplicateAgent?.(profile)}
             onDelete={canEdit ? () => onDeleteAgent?.(profile) : undefined}
-            onImprove={canEdit ? () => undefined : undefined}
           />
         }
       />
@@ -231,7 +230,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             <Field label={t('agents.model')}><input className={inputClass(!canEdit)} value={draft.model} readOnly={!canEdit} onChange={e => updateDraft('model', e.target.value)} placeholder={t('agents.workspaceDefault')} /></Field>
             <Field label={t('agents.connection')}><select className={inputClass(!canEdit)} value={draft.llmConnection} disabled={!canEdit} onChange={e => updateDraft('llmConnection', e.target.value)}><option value="">{t('agents.workspaceDefault')}</option>{llmConnections.map(c => <option key={c.slug} value={c.slug}>{c.name || c.slug}</option>)}</select></Field>
-            <Field label={t('agents.permission')}><select className={inputClass(!canEdit)} value={draft.permissionMode} disabled={!canEdit} onChange={e => updateDraft('permissionMode', e.target.value as PermissionMode | '')}><option value="">{t('agents.workspaceDefault')}</option><option value="safe">{permissionLabels.safe}</option><option value="ask">{permissionLabels.ask}</option><option value="allow-all">{permissionLabels['allow-all']}</option></select></Field>
+            <Field label={t('agents.permission')}><select className={inputClass(!canEdit)} value={draft.permissionMode} disabled={!canEdit} onChange={e => updateDraft('permissionMode', e.target.value as PermissionMode | '')}><option value="">{t('agents.workspaceDefault')}</option><option value="safe">{t('agents.permissionExplore')}</option><option value="ask">{t('agents.permissionAsk')}</option><option value="allow-all">{t('agents.permissionExecute')}</option></select></Field>
             <Field label={t('agents.thinking')}><select className={inputClass(!canEdit)} value={draft.thinkingLevel} disabled={!canEdit} onChange={e => updateDraft('thinkingLevel', e.target.value as ThinkingValue)}><option value="low">{t('agents.thinkingLow')}</option><option value="medium">{t('agents.thinkingMedium')}</option><option value="high">{t('agents.thinkingHigh')}</option><option value="max">{t('agents.thinkingMax')}</option></select></Field>
           </div>
         </Info_Section>

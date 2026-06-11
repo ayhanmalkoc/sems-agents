@@ -17,10 +17,10 @@ import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 type AgentKind = 'system' | 'template' | 'user'
 
-const permissionLabels: Record<PermissionMode, string> = {
-  safe: 'Explore',
-  ask: 'Ask',
-  'allow-all': 'Execute',
+const permissionLabelKeys: Record<PermissionMode, string> = {
+  safe: 'agents.permissionExplore',
+  ask: 'agents.permissionAsk',
+  'allow-all': 'agents.permissionExecute',
 }
 
 function profileKind(profile: AgentProfile): AgentKind {
@@ -108,7 +108,7 @@ export default function AgentsHomePage() {
     const kind = profileKind(agent)
     const summary = [
       agent.model,
-      agent.permissionMode ? permissionLabels[agent.permissionMode] : undefined,
+      agent.permissionMode ? t(permissionLabelKeys[agent.permissionMode]) : undefined,
       agent.thinkingLevel ? t('agents.thinkLevel', { level: agent.thinkingLevel }) : undefined,
     ].filter(Boolean).join(' · ')
     const subtitle = agent.description || summary || t('agents.workspaceDefaults')
