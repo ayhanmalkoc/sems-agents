@@ -188,12 +188,10 @@ export default function AgentsHomePage() {
                 <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">{t('agents.workspaceAgentsDescription')}</p>
               </div>
             </div>
+            <SidebarFilterPills items={filterItems} className="mt-5 px-0 pb-0" />
           </div>
 
           <div className="flex min-w-0 flex-col border-t border-foreground/5 pt-4 pb-6">
-            <div className="mb-4">
-              <SidebarFilterPills items={filterItems} />
-            </div>
             {filteredAgents.length === 0 ? (
               <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
                 {t('agents.noAgentsConfigured')}
