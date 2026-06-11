@@ -66,7 +66,7 @@ export default function AgentsHomePage() {
   }), [visibleAgents])
 
   const filterItems = [
-    { key: 'all', label: t('common.all', 'All'), count: visibleAgents.length, active: activeKindFilter === 'all', onClick: () => { setActiveKindFilter('all'); setExpanded(false) } },
+    { key: 'all', label: t('common.all'), count: visibleAgents.length, active: activeKindFilter === 'all', onClick: () => { setActiveKindFilter('all'); setExpanded(false) } },
     { key: 'user', label: t('agents.filterUser'), count: kindCounts.user, active: activeKindFilter === 'user', onClick: () => { setActiveKindFilter('user'); setExpanded(false) } },
     { key: 'template', label: t('agents.filterTemplates'), count: kindCounts.template, active: activeKindFilter === 'template', onClick: () => { setActiveKindFilter('template'); setExpanded(false) } },
     { key: 'system', label: t('agents.filterSystem'), count: kindCounts.system, active: activeKindFilter === 'system', onClick: () => { setActiveKindFilter('system'); setExpanded(false) } },

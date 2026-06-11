@@ -112,7 +112,7 @@ export default function ResourcesHomePage() {
   }, [activeWorkspaceId, selectedSkillSlug, t])
 
   const filterItems = [
-    { key: 'all', label: t('common.all', 'All'), count: enabledSources.length + skills.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: () => navigate(routes.view.sources()) },
+    { key: 'all', label: t('common.all'), count: enabledSources.length + skills.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: () => navigate(routes.view.sources()) },
     { key: 'api', label: t('sidebar.apis'), count: sourceTypeCounts.api, active: activeSourceType === 'api', onClick: () => navigate(routes.view.sourcesApi()) },
     { key: 'mcp', label: t('sidebar.mcps'), count: sourceTypeCounts.mcp, active: activeSourceType === 'mcp', onClick: () => navigate(routes.view.sourcesMcp()) },
     { key: 'local', label: t('resources.typeLocal'), count: sourceTypeCounts.local, active: activeSourceType === 'local', onClick: () => navigate(routes.view.sourcesLocal()) },
