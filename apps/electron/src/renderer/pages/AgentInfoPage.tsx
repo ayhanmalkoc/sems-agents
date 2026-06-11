@@ -11,7 +11,7 @@ import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle
 import { Info_Page, Info_Section, Info_Table } from '@/components/info'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
-import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles'
+import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles/types'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 const permissionLabelKeys: Record<PermissionMode, string> = {

@@ -14,7 +14,7 @@ import { useAppShellContext } from '@/context/AppShellContext'
 import { CHAT_LAYOUT } from '@/config/layout'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
-import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles'
+import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles/types'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 type AgentKind = 'system' | 'template' | 'user'
