@@ -154,7 +154,7 @@ export default function ResourcesHomePage() {
           }
         }}
         className={cn(
-          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left shadow-minimal transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
           selected && 'border-accent/35 bg-accent/[0.035]'
         )}
       >
@@ -211,7 +211,7 @@ export default function ResourcesHomePage() {
           }
         }}
         className={cn(
-          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left shadow-minimal transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
           selected && 'border-accent/35 bg-accent/[0.035]'
         )}
       >
