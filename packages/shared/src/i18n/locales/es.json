@@ -9,6 +9,7 @@
   "agents.context": "Context",
   "agents.copyName": "{{name}} Copy",
   "agents.create": "Create",
+  "agents.createAgent": "Create Agent",
   "agents.createWithAI": "Create with AI",
   "agents.defaultPermission": "Default permission",
   "agents.defaultThinking": "Default thinking",

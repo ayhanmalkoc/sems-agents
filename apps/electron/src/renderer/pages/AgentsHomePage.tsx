@@ -1,11 +1,11 @@
 import * as React from 'react'
-import { Bot, DatabaseZap, MoreHorizontal, Plus, Sparkles } from 'lucide-react'
+import { Bot, DatabaseZap, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
+import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
 import { EntityListBadge } from '@/components/ui/entity-list-badge'
-import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
 import { DropdownMenuProvider } from '@/components/ui/menu-context'
@@ -59,22 +59,6 @@ export default function AgentsHomePage() {
     [agentProfiles],
   )
 
-  const handleCreateAgent = React.useCallback(async () => {
-    if (!activeWorkspaceId) return
-    try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        name: t('agents.newAgentName'),
-        description: t('agents.newAgentDescription'),
-        kind: 'user',
-        visibility: 'user-selectable',
-        delegationMode: 'disabled',
-      })
-      toast.success(t('agents.agentCreated'))
-      navigate(routes.view.agents(created.id))
-    } catch (err) {
-      toast.error(t('agents.failedToCreate'), { description: err instanceof Error ? err.message : String(err) })
-    }
-  }, [activeWorkspaceId, t])
 
   const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
     if (!activeWorkspaceId) return
@@ -170,23 +154,7 @@ export default function AgentsHomePage() {
     <div className="flex h-full min-h-0 flex-col">
       <PanelHeader
         title={t('sidebar.agents')}
-        actions={activeWorkspace ? (
-          <div className="flex items-center gap-2">
-            <EditPopover
-              trigger={
-                <button type="button" className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {t('agents.createWithAI')}
-                </button>
-              }
-              {...getEditConfig('add-agent', activeWorkspace.rootPath)}
-            />
-            <button type="button" onClick={handleCreateAgent} className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              <Plus className="h-3.5 w-3.5" />
-              {t('agents.create')}
-            </button>
-          </div>
-        ) : undefined}
+        actions={activeWorkspace ? <CreateAgentButton workspaceRootPath={activeWorkspace.rootPath} /> : undefined}
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">

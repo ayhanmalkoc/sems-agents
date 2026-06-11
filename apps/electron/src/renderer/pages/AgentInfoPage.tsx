@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
+import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
 import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
 import { EntityListBadge } from '@/components/ui/entity-list-badge'
 import { Info_Page, Info_Section, Info_Table } from '@/components/info'
@@ -113,22 +114,6 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
     setDraft(profile ? draftFromProfile(profile) : null)
   }, [profile])
 
-  const handleCreateAgent = React.useCallback(async () => {
-    if (!activeWorkspaceId) return
-    try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        name: t('agents.newAgentName'),
-        description: t('agents.newAgentDescription'),
-        kind: 'user',
-        visibility: 'user-selectable',
-        delegationMode: 'disabled',
-      })
-      toast.success(t('agents.agentCreated'))
-      navigate(routes.view.agents(created.id))
-    } catch (err) {
-      toast.error(t('agents.failedToCreate'), { description: err instanceof Error ? err.message : String(err) })
-    }
-  }, [activeWorkspaceId, t])
 
   if (!profile || !draft) {
     return (
@@ -179,22 +164,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
       <Info_Page.Header
         title={profile.name}
         titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.agents')} currentLabel={profile.name} onRootClick={() => navigate(routes.view.agents())} />}
-        actions={activeWorkspace ? (
-          <div className="flex items-center gap-2">
-            <EditPopover
-              trigger={
-                <button type="button" className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {t('agents.createWithAI')}
-                </button>
-              }
-              {...getEditConfig('add-agent', activeWorkspace.rootPath)}
-            />
-            <button type="button" onClick={handleCreateAgent} className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              {t('agents.create')}
-            </button>
-          </div>
-        ) : undefined}
+        actions={activeWorkspace ? <CreateAgentButton workspaceRootPath={activeWorkspace.rootPath} /> : undefined}
         titleMenu={
           <AgentMenu
             agent={profile}
@@ -211,7 +181,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
         <Info_Section
           title={t('agents.overview')}
           description={!canEdit ? t('agents.readOnlyDuplicateToEdit') : undefined}
-          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicateToEdit')}</Button> : undefined}
+          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicateToEdit')}</Button> : activeWorkspace ? <EditPopover trigger={<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs"><Sparkles className="h-3.5 w-3.5" />{t('agents.improveWithAI')}</Button>} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
         >
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             <Field label={t('common.name')}><input className={inputClass(!canEdit)} value={draft.name} readOnly={!canEdit} onChange={e => updateDraft('name', e.target.value)} /></Field>
@@ -266,7 +236,6 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
 
         {canEdit && (
           <div className="flex justify-end gap-2">
-            <EditPopover trigger={<Button variant="outline"><Sparkles className="mr-1.5 h-4 w-4" />{t('agents.improveWithAI')}</Button>} {...getEditConfig('edit-agent', activeWorkspace ? `${activeWorkspace.rootPath}::${profile.id}` : `::${profile.id}`)} />
             <Button onClick={saveAgent}><Save className="mr-1.5 h-4 w-4" />{t('agents.saveAgent')}</Button>
             <Button variant="destructive" onClick={() => onDeleteAgent?.(profile)}><Trash2 className="mr-1.5 h-4 w-4" />{t('agents.deleteAgent')}</Button>
           </div>
