@@ -115,7 +115,7 @@ export default function ResourcesHomePage() {
     { key: 'all', label: t('common.all', 'All'), count: enabledSources.length + skills.length, active: isSourcesNavigation(navState) && !sourceFilter, onClick: () => navigate(routes.view.sources()) },
     { key: 'api', label: t('sidebar.apis'), count: sourceTypeCounts.api, active: activeSourceType === 'api', onClick: () => navigate(routes.view.sourcesApi()) },
     { key: 'mcp', label: t('sidebar.mcps'), count: sourceTypeCounts.mcp, active: activeSourceType === 'mcp', onClick: () => navigate(routes.view.sourcesMcp()) },
-    { key: 'local', label: 'Local', count: sourceTypeCounts.local, active: activeSourceType === 'local', onClick: () => navigate(routes.view.sourcesLocal()) },
+    { key: 'local', label: t('resources.typeLocal'), count: sourceTypeCounts.local, active: activeSourceType === 'local', onClick: () => navigate(routes.view.sourcesLocal()) },
     { key: 'skills', label: t('sidebar.skills'), count: skills.length, active: isSkillsActive, onClick: () => navigate(routes.view.skills()) },
   ]
 
@@ -148,7 +148,7 @@ export default function ResourcesHomePage() {
       : connectionStatus === 'local_disabled'
       ? 'Disabled'
       : null
-    const subtitle = source.config.tagline || source.config.provider || 'Source'
+    const subtitle = source.config.tagline || source.config.provider || t('resources.typeSource')
     const selected = selectedSourceSlug === source.config.slug
 
     return (
@@ -206,7 +206,7 @@ export default function ResourcesHomePage() {
 
   const renderSkillCard = React.useCallback((skill: LoadedSkill) => {
     const selected = selectedSkillSlug === skill.slug
-    const subtitle = skill.metadata.description || 'Skill'
+    const subtitle = skill.metadata.description || t('resources.typeSkill')
 
     return (
       <div
@@ -231,7 +231,7 @@ export default function ResourcesHomePage() {
         <div className="min-w-0 flex-1 px-3">
           <div className="flex min-w-0 items-center gap-1.5">
             <div className="truncate text-sm font-medium text-foreground">{skill.metadata.name}</div>
-            <EntityListBadge colorClass="bg-info/10 text-info">Skill</EntityListBadge>
+            <EntityListBadge colorClass="bg-info/10 text-info">{t('resources.typeSkill')}</EntityListBadge>
             {skill.source === 'project' && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{t('skillsList.projectBadge')}</EntityListBadge>}
           </div>
           <div className="mt-1 truncate text-xs leading-5 text-muted-foreground">{subtitle}</div>
@@ -337,10 +337,10 @@ export default function ResourcesHomePage() {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold tracking-tight text-foreground">
-                  Workspace context
+                  {t('resources.workspaceContextTitle')}
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
-                  Let agents connect APIs, MCP servers, local context, and skills with credentials and permissions for this workspace.
+                  {t('resources.workspaceContextDescription')}
                 </p>
               </div>
             </div>

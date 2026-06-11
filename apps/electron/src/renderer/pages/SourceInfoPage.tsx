@@ -644,7 +644,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
             >
               <Info_Table.Row label={t('common.type')} value={source.config.type.toUpperCase()} />
               {connectionStatus && (
-                <Info_Table.Row label="Status">
+                <Info_Table.Row label={t('common.status')}>
                   <span className={cn('inline-flex h-[18px] items-center rounded px-1.5 text-[10px] font-medium', connectionStatus.className)}>
                     {connectionStatus.label}
                   </span>
@@ -652,7 +652,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
               )}
               <Info_Table.Row label={t('sourceInfo.authentication')} value={getAuthenticationLabel(source, t)} />
               {sourceUrl && (
-                <Info_Table.Row label={t('common.url')}>
+                <Info_Table.Row label={source.config.type === 'local' ? t('common.path') : t('common.url')}>
                   <button
                     onClick={handleOpenUrl}
                     className="truncate hover:underline text-foreground focus:outline-none focus-visible:underline text-left block w-full"
