@@ -238,7 +238,6 @@ export default function AutomationsHomePage() {
                   onDuplicate={onDuplicateAutomation ? () => { void handleDuplicateAutomationClick(automation) } : undefined}
                   onDelete={onDeleteAutomation ? () => onDeleteAutomation(automation.id) : undefined}
                   onSendToWorkspace={hasOtherWorkspaces ? () => openSendDialog(automation) : undefined}
-                  onEditJson={activeWorkspace ? () => undefined : undefined}
                 />
               </DropdownMenuProvider>
             </StyledDropdownMenuContent>

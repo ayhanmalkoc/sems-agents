@@ -17,6 +17,9 @@ import {
   Info_Markdown,
 } from '@/components/info'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
+import { AIAssistedButton } from '@/components/app-shell/AIAssistedButton'
+import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
+import { navigate, routes } from '@/lib/navigate'
 import { useActiveWorkspace } from '@/context/AppShellContext'
 import { AutomationAvatar } from './AutomationAvatar'
 import { AutomationMenu } from './AutomationMenu'
@@ -89,6 +92,13 @@ export function AutomationInfoPage({
     <Info_Page className={className}>
       <Info_Page.Header
         title={automation.name}
+        titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.automations')} currentLabel={automation.name} onRootClick={() => navigate(routes.view.automations())} />}
+        actions={workspace ? (
+          <EditPopover
+            trigger={<AIAssistedButton label={t('common.create')} data-tutorial="add-automation-button" />}
+            {...getEditConfig('automation-config', workspace.rootPath)}
+          />
+        ) : undefined}
         titleMenu={
           <AutomationMenu
             automationId={automation.id}
