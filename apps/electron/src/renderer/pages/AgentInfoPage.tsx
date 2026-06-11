@@ -8,7 +8,6 @@ import { useAppShellContext } from '@/context/AppShellContext'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
 import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
 import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
-import { EntityListBadge } from '@/components/ui/entity-list-badge'
 import { Info_Page, Info_Section, Info_Table } from '@/components/info'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -75,14 +74,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function inputClass(readOnly = false) {
-  return `h-8 w-full rounded-md border border-border bg-background px-2 text-sm ${readOnly ? 'opacity-70' : ''}`
-}
-
-function kindColor(kind: AgentKind): string {
-  if (kind === 'user') return 'bg-primary/10 text-primary'
-  if (kind === 'template') return 'bg-info/10 text-info'
-  return 'bg-foreground/10 text-foreground/50'
+function inputClass(_readOnly = false) {
+  return 'h-8 w-full rounded-md border border-border bg-background px-2 text-sm'
 }
 
 function AgentAvatar({ agent, fluid = false }: { agent: AgentProfile; fluid?: boolean }) {
@@ -192,7 +185,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
           </div>
           <Info_Table>
             <Info_Table.Row label={t('agents.kind')}>
-              <EntityListBadge colorClass={kindColor(kind)}>{t(`agents.kind.${kind}`)}</EntityListBadge>
+              <span className="text-sm text-foreground">{t(`agents.kind.${kind}`)}</span>
             </Info_Table.Row>
           </Info_Table>
         </Info_Section>
