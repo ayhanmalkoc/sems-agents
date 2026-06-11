@@ -167,7 +167,7 @@ export interface AutomationsListPanelProps {
   onDeleteAutomation?: (automationId: string) => void
   onToggleAutomation?: (automationId: string) => void
   onTestAutomation?: (automationId: string) => void
-  onDuplicateAutomation?: (automationId: string) => void
+  onDuplicateAutomation?: (automationId: string) => Promise<string | null>
   selectedAutomationId?: string | null
   workspaceRootPath?: string
   className?: string

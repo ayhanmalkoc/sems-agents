@@ -127,6 +127,14 @@ export function MainContentPanel({
     return () => { stale = true; cleanup() }
   }, [selectedAutomationId, getAutomationHistory])
 
+  const handleDuplicateSelectedAutomation = useCallback(async (automationId: string) => {
+    if (!onDuplicateAutomation || !isAutomationsNavigation(navState)) return
+    const duplicatedId = await onDuplicateAutomation(automationId)
+    if (!duplicatedId) return
+    const type = navState.filter?.kind === 'type' ? navState.filter.automationType : undefined
+    navigate(routes.view.automations({ automationId: duplicatedId, type }))
+  }, [navState, onDuplicateAutomation])
+
   // Source multi-select state
   const isAgentMultiSelectActive = agentSelection.useIsMultiSelectActive()
   const selectedAgentIds = agentSelection.useSelectedIds()
@@ -391,7 +399,7 @@ if (navState.details) {
               testResult={automationTestResults?.[automation.id]}
               onTest={onTestAutomation ? () => onTestAutomation(automation.id) : undefined}
               onToggleEnabled={onToggleAutomation ? () => onToggleAutomation(automation.id) : undefined}
-              onDuplicate={onDuplicateAutomation ? () => onDuplicateAutomation(automation.id) : undefined}
+              onDuplicate={onDuplicateAutomation ? () => { void handleDuplicateSelectedAutomation(automation.id) } : undefined}
               onDelete={onDeleteAutomation ? () => onDeleteAutomation(automation.id) : undefined}
               onReplay={onReplayAutomation}
             />

@@ -1447,6 +1447,7 @@
   "time.minutesAgo_other": "{{count}}分前",
   "toast.appWillRestart": "アプリは自動的に再起動します。",
   "toast.authenticationFailed": "認証に失敗しました — クリックして再接続",
+  "toast.automationDuplicated": "オートメーションを複製しました",
   "toast.cannotRemoveActiveWorkspace": "アクティブなWorkspaceは削除できません",
   "toast.cannotSendRightNow": "現在送信できません",
   "toast.copied": "クリップボードにコピーしました",

@@ -50,7 +50,7 @@ function AutomationsListPanelPlayground({
         ))
       }}
       onTestAutomation={(id) => console.log('[Playground] Test automation:', id)}
-      onDuplicateAutomation={(id) => console.log('[Playground] Duplicate automation:', id)}
+      onDuplicateAutomation={async (id) => { console.log('[Playground] Duplicate automation:', id); return id + '-copy' }}
     />
   )
 }

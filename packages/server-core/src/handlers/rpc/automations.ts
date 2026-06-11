@@ -23,11 +23,11 @@ function withConfigMutex<T>(workspaceRoot: string, fn: () => Promise<T>): Promis
 
 // Shared helper: resolve workspace, read automations.json, validate matcher, mutate, write back
 interface AutomationsConfigJson { automations?: Record<string, Record<string, unknown>[]>; [key: string]: unknown }
-async function withAutomationMatcher(workspaceId: string, eventName: string, matcherIndex: number, mutate: (matchers: Record<string, unknown>[], index: number, config: AutomationsConfigJson, genId: () => string) => void) {
+async function withAutomationMatcher<T = void>(workspaceId: string, eventName: string, matcherIndex: number, mutate: (matchers: Record<string, unknown>[], index: number, config: AutomationsConfigJson, genId: () => string) => T): Promise<T> {
   const workspace = getWorkspaceByNameOrId(workspaceId)
   if (!workspace) throw new Error('Workspace not found')
 
-  await withConfigMutex(workspace.rootPath, async () => {
+  return withConfigMutex(workspace.rootPath, async () => {
     const { resolveAutomationsConfigPath, generateShortId } = await import('@craft-agent/shared/automations/resolve-config-path')
     const configPath = resolveAutomationsConfigPath(workspace.rootPath)
 
@@ -40,7 +40,7 @@ async function withAutomationMatcher(workspaceId: string, eventName: string, mat
       throw new Error(`Invalid automation reference: ${eventName}[${matcherIndex}]`)
     }
 
-    mutate(matchers, matcherIndex, config, generateShortId)
+    const result = mutate(matchers, matcherIndex, config, generateShortId)
 
     // Backfill missing IDs on all matchers before writing
     for (const eventMatchers of Object.values(eventMap)) {
@@ -51,6 +51,7 @@ async function withAutomationMatcher(workspaceId: string, eventName: string, mat
     }
 
     await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8')
+    return result
   })
 }
 
@@ -207,11 +208,12 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
 
   // Duplicate an automation matcher
   server.handle(RPC_CHANNELS.automations.DUPLICATE, async (_ctx, workspaceId: string, eventName: string, matcherIndex: number) => {
-    await withAutomationMatcher(workspaceId, eventName, matcherIndex, (matchers, idx, _config, genId) => {
+    return withAutomationMatcher(workspaceId, eventName, matcherIndex, (matchers, idx, _config, genId) => {
       const clone = JSON.parse(JSON.stringify(matchers[idx]))
       clone.id = genId()
       clone.name = clone.name ? `${clone.name} Copy` : 'Untitled Copy'
       matchers.splice(idx + 1, 0, clone)
+      return String(clone.id)
     })
   })
 

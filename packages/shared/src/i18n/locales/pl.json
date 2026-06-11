@@ -1447,6 +1447,7 @@
   "time.minutesAgo_other": "{{count}} minut temu",
   "toast.appWillRestart": "Aplikacja uruchomi się ponownie automatycznie.",
   "toast.authenticationFailed": "Uwierzytelnienie nie powiodło się — kliknij, aby ponownie połączyć",
+  "toast.automationDuplicated": "Automatyzacja zduplikowana",
   "toast.cannotRemoveActiveWorkspace": "Nie można usunąć aktywnego Workspace",
   "toast.cannotSendRightNow": "Nie można teraz wysłać",
   "toast.copied": "Skopiowano do schowka",

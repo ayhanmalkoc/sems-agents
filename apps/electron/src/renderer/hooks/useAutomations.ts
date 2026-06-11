@@ -30,7 +30,7 @@ export interface UseAutomationsResult {
   setAutomationPendingDelete: (id: string | null) => void
   handleTestAutomation: (automationId: string) => void
   handleToggleAutomation: (automationId: string) => void
-  handleDuplicateAutomation: (automationId: string) => void
+  handleDuplicateAutomation: (automationId: string) => Promise<string | null>
   handleDeleteAutomation: (automationId: string) => void
   confirmDeleteAutomation: () => void
   getAutomationHistory: (automationId: string) => Promise<ExecutionEntry[]>
@@ -136,12 +136,18 @@ export function useAutomations(
     })
   }, [findAutomation, activeWorkspaceId])
 
-  const handleDuplicateAutomation = useCallback((automationId: string) => {
+  const handleDuplicateAutomation = useCallback(async (automationId: string) => {
     const automation = findAutomation(automationId)
-    if (!automation || !activeWorkspaceId) return
-    window.electronAPI.duplicateAutomation(activeWorkspaceId, automation.event, automation.matcherIndex)
-      .catch(() => toast.error(t('toast.failedToDuplicateAutomation')))
-  }, [findAutomation, activeWorkspaceId])
+    if (!automation || !activeWorkspaceId) return null
+    try {
+      const duplicatedId = await window.electronAPI.duplicateAutomation(activeWorkspaceId, automation.event, automation.matcherIndex)
+      toast.success(t('toast.automationDuplicated'))
+      return duplicatedId
+    } catch {
+      toast.error(t('toast.failedToDuplicateAutomation'))
+      return null
+    }
+  }, [findAutomation, activeWorkspaceId, t])
 
   // Delete: show confirmation dialog
   const handleDeleteAutomation = useCallback((automationId: string) => {

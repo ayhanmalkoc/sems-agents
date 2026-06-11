@@ -1447,6 +1447,7 @@
   "time.minutesAgo_other": "vor {{count}} Minuten",
   "toast.appWillRestart": "Die App wird automatisch neu gestartet.",
   "toast.authenticationFailed": "Authentifizierung fehlgeschlagen — zum Wiederverbinden klicken",
+  "toast.automationDuplicated": "Automatisierung dupliziert",
   "toast.cannotRemoveActiveWorkspace": "Aktiver Workspace kann nicht entfernt werden",
   "toast.cannotSendRightNow": "Senden derzeit nicht möglich",
   "toast.copied": "In die Zwischenablage kopiert",

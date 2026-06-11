@@ -172,6 +172,15 @@ export default function AutomationsHomePage() {
     setSendDialogOpen(true)
   }, [])
 
+  const handleDuplicateAutomationClick = React.useCallback(async (automation: AutomationListItem) => {
+    if (!onDuplicateAutomation) return
+    const duplicatedId = await onDuplicateAutomation(automation.id)
+    if (!duplicatedId) return
+    const type = routeFilter?.kind === 'type' ? routeFilter.automationType : undefined
+    selectAutomation(duplicatedId, filteredAutomations.findIndex(item => item.id === automation.id) + 1)
+    navigate(routes.view.automations({ automationId: duplicatedId, type }))
+  }, [filteredAutomations, onDuplicateAutomation, routeFilter, selectAutomation])
+
   const renderAutomationCard = React.useCallback((automation: AutomationListItem, index: number) => {
     const kind = automationKind(automation)
     const subtitle = actionSummary(automation, t) || automation.summary
@@ -226,7 +235,7 @@ export default function AutomationsHomePage() {
                   enabled={automation.enabled}
                   onToggleEnabled={onToggleAutomation ? () => onToggleAutomation(automation.id) : undefined}
                   onTest={onTestAutomation ? () => onTestAutomation(automation.id) : undefined}
-                  onDuplicate={onDuplicateAutomation ? () => onDuplicateAutomation(automation.id) : undefined}
+                  onDuplicate={onDuplicateAutomation ? () => { void handleDuplicateAutomationClick(automation) } : undefined}
                   onDelete={onDeleteAutomation ? () => onDeleteAutomation(automation.id) : undefined}
                   onSendToWorkspace={hasOtherWorkspaces ? () => openSendDialog(automation) : undefined}
                   onEditJson={activeWorkspace ? () => undefined : undefined}
@@ -237,7 +246,7 @@ export default function AutomationsHomePage() {
         </div>
       </div>
     )
-  }, [activeWorkspace, handleAutomationClick, hasOtherWorkspaces, isAutomationMultiSelectActive, onDeleteAutomation, onDuplicateAutomation, onTestAutomation, onToggleAutomation, openSendDialog, routeFilter, selectedAutomationId, selectedAutomationIds, t])
+  }, [activeWorkspace, handleAutomationClick, handleDuplicateAutomationClick, hasOtherWorkspaces, isAutomationMultiSelectActive, onDeleteAutomation, onDuplicateAutomation, onTestAutomation, onToggleAutomation, openSendDialog, routeFilter, selectedAutomationId, selectedAutomationIds, t])
 
   return (
     <div className="flex h-full min-h-0 flex-col">
