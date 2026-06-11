@@ -11,7 +11,7 @@ import * as React from 'react'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
-import { GripHorizontal, Pencil } from 'lucide-react'
+import { GripHorizontal, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react' // motion used for backdrop only
 import { Popover, PopoverTrigger, PopoverContent } from './popover'
 import { Button } from './button'
@@ -1157,7 +1157,7 @@ export const EditButton = React.forwardRef<
       className={cn("h-8 gap-1.5 text-xs", className)}
       {...props}
     >
-      <Pencil className="h-3.5 w-3.5" />
+      <Sparkles className="h-3.5 w-3.5" />
       {t("common.edit")}
     </Button>
   )

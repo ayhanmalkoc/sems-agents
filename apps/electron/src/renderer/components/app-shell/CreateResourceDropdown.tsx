@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Folder, Globe2, Plus, Server, Zap } from 'lucide-react'
+import { Folder, Globe2, Server, Zap } from 'lucide-react'
 import { EditPopover, getEditConfig, type EditContextKey } from '@/components/ui/EditPopover'
+import { AIAssistedButton } from '@/components/app-shell/AIAssistedButton'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,15 +28,7 @@ export function CreateResourceDropdown({ workspaceRootPath }: CreateResourceDrop
     <div className="relative">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 data-[state=open]:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-            data-tutorial="add-resource-button"
-          >
-            <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="leading-none">{t('resources.create')}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
+          <AIAssistedButton label={t('common.create')} showChevron data-tutorial="add-resource-button" />
         </DropdownMenuTrigger>
         <StyledDropdownMenuContent align="end" minWidth="min-w-40">
           <StyledDropdownMenuItem onClick={() => handleAddResource('add-source-api')}>
