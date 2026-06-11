@@ -1,9 +1,9 @@
 import * as React from 'react'
-import { Bot, Copy, Save, Sparkles, Trash2 } from 'lucide-react'
+import { Bot, Copy, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
+import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
 import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
@@ -181,7 +181,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
         <Info_Section
           title={t('agents.overview')}
           description={!canEdit ? t('agents.readOnlyDuplicateToEdit') : undefined}
-          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicateToEdit')}</Button> : activeWorkspace ? <EditPopover trigger={<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs"><Sparkles className="h-3.5 w-3.5" />{t('agents.improveWithAI')}</Button>} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
+          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicateToEdit')}</Button> : activeWorkspace ? <EditPopover trigger={<EditButton />} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
         >
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             <Field label={t('common.name')}><input className={inputClass(!canEdit)} value={draft.name} readOnly={!canEdit} onChange={e => updateDraft('name', e.target.value)} /></Field>
