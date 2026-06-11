@@ -42,6 +42,7 @@ import SkillInfoPage from '@/pages/SkillInfoPage'
 import ResourcesHomePage from '@/pages/ResourcesHomePage'
 import AgentInfoPage from '@/pages/AgentInfoPage'
 import AgentsHomePage from '@/pages/AgentsHomePage'
+import AutomationsHomePage from '@/pages/AutomationsHomePage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'
@@ -379,19 +380,7 @@ export function MainContentPanel({
 
   // Automations navigator - show automation info, multi-select panel, or empty state
   if (isAutomationsNavigation(navState)) {
-    if (isAutomationMultiSelectActive) {
-      return wrapWithStoplight(
-        <Panel variant="grow" className={className}>
-          <MultiSelectPanel
-            count={automationSelectionCount}
-            entityType="automation"
-            onSendToWorkspace={hasOtherWorkspaces ? () => openSendDialog('automation', selectedAutomationIds) : undefined}
-            onClearSelection={clearAutomationSelection}
-          />
-        </Panel>
-      )
-    }
-    if (navState.details) {
+if (navState.details) {
       const automation = automations.find(h => h.id === navState.details!.automationId)
       if (automation) {
         return wrapWithStoplight(
@@ -412,9 +401,7 @@ export function MainContentPanel({
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("automations.noAutomationsConfigured")}</p>
-        </div>
+        <AutomationsHomePage />
       </Panel>
     )
   }

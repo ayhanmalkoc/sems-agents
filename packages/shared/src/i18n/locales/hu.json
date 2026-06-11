@@ -172,6 +172,8 @@
   "automations.webhookResponse": "Válasz",
   "automations.webhookStatus": "Állapot",
   "automations.webhookUrl": "URL",
+  "automations.workspaceAutomationsDescription": "Az automatizálások eseményekre reagálva hajtanak végre műveleteket — parancsokat futtatnak ütemezés szerint, reagálnak címke-változásokra, vagy automatikusan indítanak el promptokat.",
+  "automations.workspaceAutomationsTitle": "Workspace automations",
   "browser.newWindow": "Új böngészőablak",
   "browser.readyDescription": "Kérj meg bármely munkamenetet, hogy használja ezt a böngészőt (vagy nyiss egy másikat) feladatokhoz, például kutatáshoz, űrlapkitöltéshez, minőségellenőrzéshez vagy adatkinyeréshez.",
   "browser.readyTitle": "Ez a böngésző készen áll az agentjeidre – és rád is ;)",

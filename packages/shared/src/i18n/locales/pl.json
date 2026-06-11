@@ -172,6 +172,8 @@
   "automations.webhookResponse": "Odpowiedź",
   "automations.webhookStatus": "Status",
   "automations.webhookUrl": "URL",
+  "automations.workspaceAutomationsDescription": "Automatyzacje uruchamiają akcje, gdy wystąpią zdarzenia — wykonują polecenia według harmonogramu, reagują na zmiany etykiet lub automatycznie wyzwalają prompty.",
+  "automations.workspaceAutomationsTitle": "Workspace automations",
   "browser.newWindow": "Nowe okno przeglądarki",
   "browser.readyDescription": "Poproś dowolną sesję, aby użyła tej przeglądarki (lub otwórz kolejną), by wykonywać zadania takie jak badania, wypełnianie formularzy, sprawdzanie QA czy ekstrakcja danych.",
   "browser.readyTitle": "Ta przeglądarka jest gotowa dla Craft Agents – i dla ciebie ;)",

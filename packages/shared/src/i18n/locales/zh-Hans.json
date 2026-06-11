@@ -172,6 +172,8 @@
   "automations.webhookResponse": "响应",
   "automations.webhookStatus": "状态",
   "automations.webhookUrl": "URL",
+  "automations.workspaceAutomationsDescription": "自动化在事件发生时执行操作——按计划运行命令、响应标签变更或自动触发提示。",
+  "automations.workspaceAutomationsTitle": "Workspace automations",
   "browser.newWindow": "新建浏览器窗口",
   "browser.readyDescription": "让任何会话使用此浏览器（或打开另一个）来完成研究、填写表单、质检或数据提取等任务。",
   "browser.readyTitle": "浏览器已准备就绪 ;)",

@@ -32,7 +32,6 @@ import { SourceAvatar } from "@/components/ui/source-avatar"
 import { TopBar } from "./TopBar"
 import { SidebarWorkspacesSection } from "./SidebarWorkspacesSection"
 import { SidebarFilterPills } from "./SidebarFilterPills"
-import { SidebarSectionPanel } from "./SidebarSectionPanel"
 import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { PanelLeftRounded } from "../icons/PanelLeftRounded"
@@ -116,8 +115,7 @@ import {
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
-import { AutomationsListPanel } from "../automations/AutomationsListPanel"
-import { APP_EVENTS, AGENT_EVENTS, type AutomationFilterKind, AUTOMATION_TYPE_TO_FILTER_KIND } from "../automations/types"
+import { APP_EVENTS, AGENT_EVENTS, type AutomationFilterKind } from "../automations/types"
 import { useAutomations } from "@/hooks/useAutomations"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { PanelHeader } from "./PanelHeader"
@@ -2540,45 +2538,7 @@ function AppShellContent({
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
-                {isAutomationsNavigation(navState) ? (
-                  <SidebarSectionPanel
-                    title={t("sidebar.automations")}
-                    action={activeWorkspace ? (
-                        <EditPopover
-                          trigger={
-                            <HeaderIconButton
-                              icon={<Plus className="h-4 w-4" />}
-                              tooltip={t("sidebarMenu.addAutomation")}
-                            />
-                          }
-                          {...getEditConfig('automation-config', activeWorkspace.rootPath)}
-                        />
-                      ) : undefined}
-                    filters={
-                      <SidebarFilterPills
-                        items={[
-                          { key: 'all', label: t("sidebar.allAutomations"), count: automations.length, active: !automationFilter, onClick: handleAutomationsClick },
-                          { key: 'scheduled', label: t("sidebar.scheduled"), count: automationTypeCounts.scheduled, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'scheduled', onClick: handleAutomationsScheduledClick },
-                          { key: 'event', label: t("sidebar.eventBased"), count: automationTypeCounts.event, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'event', onClick: handleAutomationsEventClick },
-                          { key: 'agentic', label: t("sidebar.agentic"), count: automationTypeCounts.agentic, active: automationFilter?.kind === 'type' && automationFilter.automationType === 'agentic', onClick: handleAutomationsAgenticClick },
-                        ]}
-                      />
-                    }
-                  >
-                    <AutomationsListPanel
-                      automations={automations}
-                      automationFilter={automationFilter ? { kind: AUTOMATION_TYPE_TO_FILTER_KIND[automationFilter.automationType] ?? 'all' } : undefined}
-                      onAutomationClick={handleAutomationSelect}
-                      onTestAutomation={handleTestAutomation}
-                      onToggleAutomation={handleToggleAutomation}
-                      onDuplicateAutomation={handleDuplicateAutomation}
-                      onDeleteAutomation={handleDeleteAutomation}
-                      selectedAutomationId={navState.details ? navState.details.automationId : null}
-                      workspaceRootPath={activeWorkspace?.rootPath}
-                    />
-                  </SidebarSectionPanel>
-                ) : (
-                  <SidebarWorkspacesSection
+                <SidebarWorkspacesSection
                     workspaces={workspaces}
                     activeWorkspaceId={activeWorkspaceId}
                     workspaceUnreadMap={workspaceUnreadMap}
@@ -2605,7 +2565,6 @@ function AppShellContent({
                     onSendToWorkspace={(ids) => setSendToWorkspaceIds(ids)}
                     onDeleteSession={(sessionId) => handleDeleteSession(sessionId)}
                   />
-                )}
               </div>
 
               <div className="shrink-0 border-t border-foreground/5 px-2 py-2">

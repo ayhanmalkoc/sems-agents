@@ -172,6 +172,8 @@
   "automations.webhookResponse": "Respuesta",
   "automations.webhookStatus": "Estado",
   "automations.webhookUrl": "URL",
+  "automations.workspaceAutomationsDescription": "Las automatizaciones ejecutan acciones cuando ocurren eventos: ejecutan comandos según horarios, reaccionan a cambios de etiquetas o lanzan prompts automáticamente.",
+  "automations.workspaceAutomationsTitle": "Workspace automations",
   "browser.newWindow": "Nueva ventana del navegador",
   "browser.readyDescription": "Pídele a cualquier sesión que use este navegador (o abre otro) para completar tareas como investigación, llenado de formularios, revisiones de QA o extracción de datos.",
   "browser.readyTitle": "Este navegador está listo para tus agentes... ¡y para ti también ;)",

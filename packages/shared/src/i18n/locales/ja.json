@@ -172,6 +172,8 @@
   "automations.webhookResponse": "レスポンス",
   "automations.webhookStatus": "ステータス",
   "automations.webhookUrl": "URL",
+  "automations.workspaceAutomationsDescription": "オートメーションはイベント発生時にアクションを実行します。スケジュールに従ってコマンドを実行したり、ラベル変更に反応したり、プロンプトを自動的にトリガーしたりすることができます。",
+  "automations.workspaceAutomationsTitle": "Workspace automations",
   "browser.newWindow": "新しいブラウザウィンドウ",
   "browser.readyDescription": "任意のセッションにこのブラウザ（または別のブラウザ）を使用させて、リサーチ、フォーム入力、QA チェック、データ抽出などのタスクを実行できます。",
   "browser.readyTitle": "このブラウザはエージェントにも、あなたにも準備万端です ;)",
