@@ -2540,9 +2540,7 @@ function AppShellContent({
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
-                {isAgentsNavigation(navState) ? (
-                  <div className="h-full" />
-                ) : isAutomationsNavigation(navState) ? (
+                {isAutomationsNavigation(navState) ? (
                   <SidebarSectionPanel
                     title={t("sidebar.automations")}
                     action={activeWorkspace ? (
