@@ -65,8 +65,12 @@ export function useAutomations(
         }
       } catch { /* history unavailable — timestamps stay undefined */ }
       setAutomations(items)
+      setAutomationsAtom(items)
+      return items
     } catch {
       setAutomations([])
+      setAutomationsAtom([])
+      return []
     }
   }, [activeWorkspaceId])
 
@@ -141,13 +145,14 @@ export function useAutomations(
     if (!automation || !activeWorkspaceId) return null
     try {
       const duplicatedId = await window.electronAPI.duplicateAutomation(activeWorkspaceId, automation.event, automation.matcherIndex)
+      await loadAndHydrate()
       toast.success(t('toast.automationDuplicated'))
       return duplicatedId
     } catch {
       toast.error(t('toast.failedToDuplicateAutomation'))
       return null
     }
-  }, [findAutomation, activeWorkspaceId, t])
+  }, [findAutomation, activeWorkspaceId, loadAndHydrate, t])
 
   // Delete: show confirmation dialog
   const handleDeleteAutomation = useCallback((automationId: string) => {
