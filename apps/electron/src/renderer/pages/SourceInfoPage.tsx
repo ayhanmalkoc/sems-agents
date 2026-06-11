@@ -222,6 +222,23 @@ function getCredentialLabel(source: LoadedSource, t: (key: string) => string): s
   return t('sourceInfo.credential')
 }
 
+function getAuthenticationLabel(source: LoadedSource, t: (key: string) => string): string {
+  const { type, mcp, api } = source.config
+  if (type === 'mcp') {
+    if (mcp?.authType === 'oauth') return 'OAuth'
+    if (mcp?.authType === 'bearer') return t('sourceInfo.credentialBearerToken')
+    if ((mcp?.headerNames?.length ?? 0) > 0) return t('sourceInfo.customHeaders')
+    if (hasAgentManagedMcpCredentials(source)) return t('sourceInfo.agentManagedEnv')
+    return t('common.none')
+  }
+  if (type === 'api') {
+    if (api?.authType === 'oauth') return 'OAuth'
+    if (!api?.authType || api.authType === 'none') return t('common.none')
+    return getCredentialLabel(source, t)
+  }
+  return t('common.none')
+}
+
 function getCredentialHeaderNames(source: LoadedSource): string[] {
   return source.config.api?.headerNames ?? source.config.mcp?.headerNames ?? []
 }
@@ -633,7 +650,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
                   </span>
                 </Info_Table.Row>
               )}
-              {authKind && <Info_Table.Row label={t('sourceInfo.authentication')} value={authKind === 'oauth' ? 'OAuth' : getCredentialLabel(source, t)} />}
+              <Info_Table.Row label={t('sourceInfo.authentication')} value={getAuthenticationLabel(source, t)} />
               {sourceUrl && (
                 <Info_Table.Row label={t('common.url')}>
                   <button
