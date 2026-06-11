@@ -27,7 +27,7 @@ const permissionLabelKeys: Record<PermissionMode, string> = {
 
 
 function kindColor(kind: AgentKind): string {
-  if (kind === 'user') return 'bg-primary/10 text-primary'
+  if (kind === 'user') return 'bg-success/10 text-success'
   if (kind === 'template') return 'bg-info/10 text-info'
   return 'bg-foreground/10 text-foreground/50'
 }
