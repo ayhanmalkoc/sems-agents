@@ -154,17 +154,22 @@ export default function ResourcesHomePage() {
           }
         }}
         className={cn(
-          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+          'group relative flex min-h-[76px] min-w-0 cursor-pointer items-center rounded-[14px] border border-foreground/6 bg-background/55 px-3 py-2.5 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
           selected && 'border-accent/35 bg-accent/[0.035]'
         )}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <SourceAvatar source={source} size="sm" />
-          <div className="min-w-0 flex-1">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-foreground/[0.04]">
+          <SourceAvatar source={source} size="xl" />
+        </div>
+        <div className="min-w-0 flex-1 px-3">
+          <div className="flex min-w-0 items-center gap-1.5">
             <div className="truncate text-sm font-medium text-foreground">{source.config.name}</div>
-            <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{subtitle}</div>
+            <EntityListBadge colorClass={typeClass}>{typeLabel}</EntityListBadge>
+            {statusLabel && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{statusLabel}</EntityListBadge>}
           </div>
-          <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          <div className="mt-1 truncate text-xs leading-5 text-muted-foreground">{subtitle}</div>
+        </div>
+        <div className="shrink-0 self-center" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button type="button" className="rounded-[6px] p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground">
@@ -185,11 +190,6 @@ export default function ResourcesHomePage() {
               </StyledDropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        <div className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5">
-          <EntityListBadge colorClass={typeClass}>{typeLabel}</EntityListBadge>
-          {statusLabel && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{statusLabel}</EntityListBadge>}
-        </div>
       </div>
     )
   }, [handleSourceClick, hasOtherWorkspaces, localMcpEnabled, handleDeleteSource, openSendDialog, selectedSourceSlug])
@@ -211,17 +211,22 @@ export default function ResourcesHomePage() {
           }
         }}
         className={cn(
-          'group relative flex min-h-[112px] min-w-0 cursor-pointer flex-col rounded-[14px] border border-foreground/6 bg-background/55 p-4 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+          'group relative flex min-h-[76px] min-w-0 cursor-pointer items-center rounded-[14px] border border-foreground/6 bg-background/55 px-3 py-2.5 text-left transition-colors hover:bg-foreground/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
           selected && 'border-accent/35 bg-accent/[0.035]'
         )}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <SkillAvatar skill={skill} size="sm" workspaceId={activeWorkspaceId ?? undefined} />
-          <div className="min-w-0 flex-1">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-foreground/[0.04]">
+          <SkillAvatar skill={skill} size="xl" workspaceId={activeWorkspaceId ?? undefined} />
+        </div>
+        <div className="min-w-0 flex-1 px-3">
+          <div className="flex min-w-0 items-center gap-1.5">
             <div className="truncate text-sm font-medium text-foreground">{skill.metadata.name}</div>
-            <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{subtitle}</div>
+            <EntityListBadge colorClass="bg-info/10 text-info">Skill</EntityListBadge>
+            {skill.source === 'project' && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{t('skillsList.projectBadge')}</EntityListBadge>}
           </div>
-          <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          <div className="mt-1 truncate text-xs leading-5 text-muted-foreground">{subtitle}</div>
+        </div>
+        <div className="shrink-0 self-center" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button type="button" className="rounded-[6px] p-1 text-muted-foreground hover:bg-foreground/10 hover:text-foreground">
@@ -245,11 +250,6 @@ export default function ResourcesHomePage() {
               </StyledDropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        <div className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5">
-          <EntityListBadge colorClass="bg-info/10 text-info">Skill</EntityListBadge>
-          {skill.source === 'project' && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{t('skillsList.projectBadge')}</EntityListBadge>}
-        </div>
       </div>
     )
   }, [activeWorkspace?.remoteServer, activeWorkspaceId, handleSkillClick, hasOtherWorkspaces, handleDeleteSkill, openSendDialog, selectedSkillSlug, t])
