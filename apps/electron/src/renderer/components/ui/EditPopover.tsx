@@ -432,10 +432,10 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         label: 'Edit Agent',
         filePath: `${workspaceRoot}/agent-profiles.json`,
         context:
-          `The user wants to improve the user agent profile with id "${agentId || 'selected'}". ` +
-          'Only edit that one user agent. Do not modify system or template agents. ' +
-          'If the selected agent is system/template/read-only, tell the user to duplicate it first. ' +
-          'Keep the profile schema valid and preserve unrelated profiles. Confirm clearly when done.',
+          `The user wants to improve the agent profile with id "${agentId || 'selected'}". ` +
+          'Only edit that one selected agent profile. User and template agents can be edited. ' +
+          'System agents are read-only; if the selected agent is a system agent, tell the user to duplicate it first. ' +
+          'Do not delete template or system agents. Keep the profile schema valid, preserve the existing kind, and preserve unrelated profiles. Confirm clearly when done.',
       },
       example: 'Make this agent better at code review',
       overridePlaceholder: 'How should I improve this agent?',
