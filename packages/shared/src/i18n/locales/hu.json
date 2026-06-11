@@ -22,6 +22,7 @@
   "agents.failedToCreate": "Failed to create agent",
   "agents.failedToDelete": "Failed to delete agent",
   "agents.failedToDuplicate": "Failed to duplicate agent",
+  "agents.failedToSave": "Failed to save agent",
   "agents.filterSystem": "System",
   "agents.filterTemplates": "Templates",
   "agents.filterUser": "User",

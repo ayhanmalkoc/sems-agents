@@ -148,9 +148,14 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
       delegationAllowedAgentIds: draft.delegationAllowedAgentIds.length ? draft.delegationAllowedAgentIds : undefined,
       visibility: 'user-selectable' as const,
     }
-    await window.electronAPI.updateAgentProfile(activeWorkspaceId, profile.id, payload)
-    toast.success(t('agents.agentSaved'))
-    onAgentChanged?.(profile.id)
+    try {
+      const updated = await window.electronAPI.updateAgentProfile(activeWorkspaceId, profile.id, payload)
+      setDraft(draftFromProfile(updated))
+      toast.success(t('agents.agentSaved'))
+      onAgentChanged?.(profile.id)
+    } catch (err) {
+      toast.error(t('agents.failedToSave'), { description: err instanceof Error ? err.message : String(err) })
+    }
   }
 
   return (
