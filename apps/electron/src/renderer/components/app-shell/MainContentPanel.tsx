@@ -41,6 +41,7 @@ import { SourceInfoPage, ChatPage } from '@/pages'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import ResourcesHomePage from '@/pages/ResourcesHomePage'
 import AgentInfoPage from '@/pages/AgentInfoPage'
+import AgentsHomePage from '@/pages/AgentsHomePage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'
@@ -309,9 +310,7 @@ export function MainContentPanel({
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">Select an agent</p>
-        </div>
+        <AgentsHomePage />
       </Panel>
     )
   }

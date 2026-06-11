@@ -85,7 +85,7 @@ import { useFocusZone } from "@/hooks/keyboard"
 import { useFocusContext } from "@/context/FocusContext"
 import { getSessionTitle } from "@/utils/session"
 import { useSetAtom } from "jotai"
-import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSource, LoadedSkill, AgentProfile, PermissionMode, SourceFilter, AutomationFilter } from "../../../shared/types"
+import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSource, LoadedSkill, PermissionMode, SourceFilter, AutomationFilter } from "../../../shared/types"
 import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
@@ -116,7 +116,6 @@ import {
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
-import { AgentsListPanel } from "./AgentsListPanel"
 import { AutomationsListPanel } from "../automations/AutomationsListPanel"
 import { APP_EVENTS, AGENT_EVENTS, type AutomationFilterKind, AUTOMATION_TYPE_TO_FILTER_KIND } from "../automations/types"
 import { useAutomations } from "@/hooks/useAutomations"
@@ -1200,63 +1199,6 @@ function AppShellContent({
   // Ensure session messages are loaded when selected
   const ensureMessagesLoaded = useSetAtom(ensureSessionMessagesLoadedAtom)
 
-
-  const handleAgentSelect = React.useCallback((agent: AgentProfile) => {
-    navigate(routes.view.agents(agent.id))
-  }, [])
-
-  const handleCreateAgent = React.useCallback(async () => {
-    if (!activeWorkspaceId) return
-    try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        kind: 'user',
-        name: 'New Agent',
-        description: 'Custom workspace agent',
-        icon: '🤖',
-        color: '#6366f1',
-        systemPrompt: 'You are New Agent. Follow this role carefully and stay focused on the user\'s request.',
-        thinkingLevel: 'medium',
-        delegationMode: 'disabled',
-        visibility: 'user-selectable',
-      })
-      toast.success('Agent created')
-      navigate(routes.view.agents(created.id))
-    } catch (err) {
-      toast.error('Failed to create agent', { description: err instanceof Error ? err.message : String(err) })
-    }
-  }, [activeWorkspaceId])
-
-  const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
-    if (!activeWorkspaceId) return
-    try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        ...agent,
-        id: undefined,
-        kind: 'user',
-        name: `${agent.name} Copy`,
-        visibility: 'user-selectable',
-      })
-      toast.success('Agent duplicated')
-      navigate(routes.view.agents(created.id))
-    } catch (err) {
-      toast.error('Failed to duplicate agent', { description: err instanceof Error ? err.message : String(err) })
-    }
-  }, [activeWorkspaceId])
-
-  const handleDeleteAgent = React.useCallback(async (agent: AgentProfile) => {
-    if (!activeWorkspaceId) return
-    try {
-      await window.electronAPI.deleteAgentProfile(activeWorkspaceId, agent.id)
-      toast.success('Agent deleted')
-      navigate(routes.view.agents())
-    } catch (err) {
-      toast.error('Failed to delete agent', { description: err instanceof Error ? err.message : String(err) })
-    }
-  }, [activeWorkspaceId])
-
-  const handleImproveAgent = React.useCallback((agent: AgentProfile) => {
-    navigate(routes.view.agents(agent.id))
-  }, [])
 
   // Handle selecting a source from the list (preserves current filter type)
   const handleSourceSelect = React.useCallback((source: LoadedSource) => {
@@ -2574,7 +2516,7 @@ function AppShellContent({
                   links={[
                     { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
-                    { id: "nav:agents", title: "Agents", label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
+                    { id: "nav:agents", title: t("sidebar.agents"), label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),
@@ -2599,38 +2541,7 @@ function AppShellContent({
 
               <div className="min-h-0 flex-1 overflow-y-auto mask-fade-bottom pb-3">
                 {isAgentsNavigation(navState) ? (
-                  <SidebarSectionPanel
-                    title="Agents"
-                    action={activeWorkspace ? (
-                        <div className="flex items-center gap-1">
-                          <EditPopover
-                            trigger={
-                              <HeaderIconButton
-                                icon={<Bot className="h-4 w-4" />}
-                                tooltip="Create Agent with AI"
-                              />
-                            }
-                            {...getEditConfig('add-agent', activeWorkspace.rootPath)}
-                          />
-                          <HeaderIconButton
-                            icon={<Plus className="h-4 w-4" />}
-                            tooltip="Add Agent"
-                            onClick={handleCreateAgent}
-                          />
-                        </div>
-                      ) : undefined}
-                  >
-                    <AgentsListPanel
-                      agents={agentProfiles}
-                      workspaceRootPath={activeWorkspace?.rootPath}
-                      onAgentClick={handleAgentSelect}
-                      onDuplicateAgent={handleDuplicateAgent}
-                      onDeleteAgent={handleDeleteAgent}
-                      onImproveAgent={handleImproveAgent}
-                      onCreateAgent={handleCreateAgent}
-                      selectedAgentId={navState.details ? navState.details.agentId : null}
-                    />
-                  </SidebarSectionPanel>
+                  <div className="h-full" />
                 ) : isAutomationsNavigation(navState) ? (
                   <SidebarSectionPanel
                     title={t("sidebar.automations")}
