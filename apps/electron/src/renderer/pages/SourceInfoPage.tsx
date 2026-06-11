@@ -228,7 +228,7 @@ function getAuthenticationLabel(source: LoadedSource, t: (key: string) => string
     if (mcp?.authType === 'oauth') return 'OAuth'
     if (mcp?.authType === 'bearer') return t('sourceInfo.credentialBearerToken')
     if ((mcp?.headerNames?.length ?? 0) > 0) return t('sourceInfo.customHeaders')
-    if (hasAgentManagedMcpCredentials(source)) return t('sourceInfo.agentManagedEnv')
+    if (hasAgentManagedMcpCredentials(source)) return t('sourceInfo.stdioEnv')
     return t('common.none')
   }
   if (type === 'api') {
