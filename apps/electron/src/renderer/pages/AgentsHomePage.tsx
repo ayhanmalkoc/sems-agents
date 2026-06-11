@@ -14,6 +14,7 @@ import { useAppShellContext } from '@/context/AppShellContext'
 import { CHAT_LAYOUT } from '@/config/layout'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
+import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 type AgentKind = 'system' | 'template' | 'user'
@@ -24,9 +25,6 @@ const permissionLabelKeys: Record<PermissionMode, string> = {
   'allow-all': 'agents.permissionExecute',
 }
 
-function profileKind(profile: AgentProfile): AgentKind {
-  return profile.kind || (profile.id === 'default' ? 'system' : (profile.id === 'code-reviewer' || profile.id === 'researcher') ? 'template' : 'user')
-}
 
 function kindColor(kind: AgentKind): string {
   if (kind === 'user') return 'bg-primary/10 text-primary'
@@ -62,9 +60,9 @@ export default function AgentsHomePage() {
   )
 
   const kindCounts = React.useMemo(() => ({
-    system: visibleAgents.filter(agent => profileKind(agent) === 'system').length,
-    template: visibleAgents.filter(agent => profileKind(agent) === 'template').length,
-    user: visibleAgents.filter(agent => profileKind(agent) === 'user').length,
+    system: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'system').length,
+    template: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'template').length,
+    user: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'user').length,
   }), [visibleAgents])
 
   const filterItems = [
@@ -75,7 +73,7 @@ export default function AgentsHomePage() {
   ]
 
   const filteredAgents = React.useMemo(() => (
-    activeKindFilter === 'all' ? visibleAgents : visibleAgents.filter(agent => profileKind(agent) === activeKindFilter)
+    activeKindFilter === 'all' ? visibleAgents : visibleAgents.filter(agent => getAgentProfileKind(agent) === activeKindFilter)
   ), [activeKindFilter, visibleAgents])
 
 
@@ -108,7 +106,7 @@ export default function AgentsHomePage() {
   }, [activeWorkspaceId, t])
 
   const renderAgentCard = React.useCallback((agent: AgentProfile) => {
-    const kind = profileKind(agent)
+    const kind = getAgentProfileKind(agent)
     const summary = [
       agent.model,
       agent.permissionMode ? t(permissionLabelKeys[agent.permissionMode]) : undefined,

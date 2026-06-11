@@ -3,6 +3,7 @@ import { join } from 'path'
 import {
   DEFAULT_AGENT_PROFILE_ID,
   createDefaultAgentProfile,
+  getAgentProfileKind,
   createSeedAgentProfiles,
   type AgentProfile,
   type CreateAgentProfileInput,
@@ -39,10 +40,7 @@ function uniqueId(existing: Set<string>, base: string): string {
 }
 
 function normalizeProfile(profile: AgentProfile): AgentProfile {
-  const kind = profile.kind
-    ?? (profile.id === DEFAULT_AGENT_PROFILE_ID
-      ? 'system'
-      : (profile.id === 'code-reviewer' || profile.id === 'researcher') ? 'template' : 'user')
+  const kind = getAgentProfileKind(profile)
   return {
     ...profile,
     kind,

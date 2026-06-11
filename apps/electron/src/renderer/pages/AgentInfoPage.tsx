@@ -11,6 +11,7 @@ import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle
 import { Info_Page, Info_Section, Info_Table } from '@/components/info'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
+import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 const permissionLabelKeys: Record<PermissionMode, string> = {
@@ -21,7 +22,6 @@ const permissionLabelKeys: Record<PermissionMode, string> = {
 
 type ThinkingValue = 'low' | 'medium' | 'high' | 'max'
 type DelegationValue = 'disabled' | 'ask' | 'auto'
-type AgentKind = 'system' | 'template' | 'user'
 
 interface DraftState {
   name: string
@@ -39,9 +39,6 @@ interface DraftState {
   delegationAllowedAgentIds: string[]
 }
 
-function profileKind(profile: AgentProfile): AgentKind {
-  return profile.kind || (profile.id === 'default' ? 'system' : (profile.id === 'code-reviewer' || profile.id === 'researcher') ? 'template' : 'user')
-}
 
 function draftFromProfile(profile: AgentProfile): DraftState {
   return {
@@ -119,7 +116,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
     )
   }
 
-  const kind = profileKind(profile)
+  const kind = getAgentProfileKind(profile)
   const canEdit = kind !== 'system'
   const canDelete = kind === 'user'
   const runtimeSummary = [
@@ -179,8 +176,8 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
 
         <Info_Section
           title={t('agents.overview')}
-          description={!canEdit ? t('agents.readOnlyDuplicateToEdit') : undefined}
-          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicateToEdit')}</Button> : activeWorkspace ? <EditPopover trigger={<EditButton />} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
+          description={!canEdit ? t('agents.readOnly') : undefined}
+          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicate')}</Button> : activeWorkspace ? <EditPopover trigger={<EditButton />} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
         >
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             <Field label={t('common.name')}><input className={inputClass(!canEdit)} value={draft.name} readOnly={!canEdit} onChange={e => updateDraft('name', e.target.value)} /></Field>

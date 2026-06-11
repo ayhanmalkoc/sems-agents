@@ -31,6 +31,13 @@ export type UpdateAgentProfileInput = Partial<Omit<AgentProfile, 'id' | 'created
 
 export const DEFAULT_AGENT_PROFILE_ID = 'default'
 
+export function getAgentProfileKind(profile: Pick<AgentProfile, 'id' | 'kind'>): AgentProfileKind {
+  return profile.kind
+    ?? (profile.id === DEFAULT_AGENT_PROFILE_ID
+      ? 'system'
+      : (profile.id === 'code-reviewer' || profile.id === 'researcher') ? 'template' : 'user')
+}
+
 export function createDefaultAgentProfile(now = Date.now()): AgentProfile {
   return {
     id: DEFAULT_AGENT_PROFILE_ID,

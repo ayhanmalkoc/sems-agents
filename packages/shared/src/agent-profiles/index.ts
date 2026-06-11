@@ -8,6 +8,7 @@ export type {
 export {
   DEFAULT_AGENT_PROFILE_ID,
   createDefaultAgentProfile,
+  getAgentProfileKind,
   createSeedAgentProfiles,
 } from './types.ts'
 export {
