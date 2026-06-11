@@ -10,6 +10,7 @@
  * - ~/.craft-agent/theme.json - App-level theme overrides
  * - ~/.craft-agent/themes/*.json - Preset theme files (app-level)
  * - ~/.craft-agent/workspaces/{slug}/ - Workspace directory (recursive)
+ *   - agent-profiles.json
  *   - sources/{slug}/config.json, guide.md, permissions.json
  *   - skills/{slug}/SKILL.md, icon.*
  *   - sessions/{id}/session.jsonl (header metadata only)
@@ -130,6 +131,10 @@ export interface ConfigWatcherCallbacks {
   onSkillChange?: (slug: string, skill: LoadedSkill | null) => void;
   /** Called when the skills list changes (add/remove folders) */
   onSkillsListChange?: (skills: LoadedSkill[]) => void;
+
+  // Agent profile callbacks
+  /** Called when workspace agent-profiles.json changes */
+  onAgentProfilesChange?: (workspaceId: string) => void;
 
   // Permissions callbacks
   /** Called when app-level default permissions change (~/.craft-agent/permissions/default.json) */
@@ -426,6 +431,13 @@ export class ConfigWatcher {
     if (relativePath === AUTOMATIONS_CONFIG_FILE) {
       debug('[ConfigWatcher] automations config change detected:', relativePath);
       this.debounce('automations-config', () => this.handleAutomationsConfigChange());
+      return;
+    }
+
+    // Workspace-level agent profiles config file
+    if (relativePath === 'agent-profiles.json') {
+      debug('[ConfigWatcher] agent profiles config change detected:', relativePath);
+      this.debounce('agent-profiles', () => this.handleAgentProfilesChange());
       return;
     }
 
@@ -944,6 +956,14 @@ export class ConfigWatcher {
   private handleAutomationsConfigChange(): void {
     debug('[ConfigWatcher] automations config changed:', this.workspaceId);
     this.callbacks.onAutomationsConfigChange?.(this.workspaceId);
+  }
+
+  /**
+   * Handle agent-profiles.json change.
+   */
+  private handleAgentProfilesChange(): void {
+    debug('[ConfigWatcher] agent profiles config changed:', this.workspaceId);
+    this.callbacks.onAgentProfilesChange?.(this.workspaceId);
   }
 
   // ============================================================

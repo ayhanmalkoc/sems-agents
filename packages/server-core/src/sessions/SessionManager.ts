@@ -1490,6 +1490,10 @@ export class SessionManager implements ISessionManager {
           })
         }
       },
+      onAgentProfilesChange: () => {
+        sessionLog.info(`Agent profiles changed in ${workspaceId}`)
+        this.broadcastAgentProfilesChanged(workspaceId)
+      },
       onAutomationsConfigChange: () => {
         sessionLog.info(`Automations config changed in ${workspaceId}`)
         // Reload automations config via AutomationSystem
@@ -1687,6 +1691,12 @@ export class SessionManager implements ISessionManager {
     if (!this.eventSink) return
     sessionLog.info(`Broadcasting automations changed for ${workspaceId}`)
     this.eventSink(RPC_CHANNELS.automations.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
+  }
+
+  private broadcastAgentProfilesChanged(workspaceId: string): void {
+    if (!this.eventSink) return
+    sessionLog.info(`Broadcasting agent profiles changed for ${workspaceId}`)
+    this.eventSink(RPC_CHANNELS.agentProfiles.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
   }
 
   private broadcastAppThemeChanged(theme: import('@craft-agent/shared/config').ThemeOverrides | null): void {
