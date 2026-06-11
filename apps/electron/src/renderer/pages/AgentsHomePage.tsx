@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
 import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
+import { SidebarFilterPills } from '@/components/app-shell/SidebarFilterPills'
 import { EntityListBadge } from '@/components/ui/entity-list-badge'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
@@ -53,11 +54,29 @@ export default function AgentsHomePage() {
     [activeWorkspaceId, workspaces],
   )
   const [expanded, setExpanded] = React.useState(false)
+  const [activeKindFilter, setActiveKindFilter] = React.useState<AgentKind | 'all'>('all')
 
   const visibleAgents = React.useMemo(
     () => agentProfiles.filter(agent => agent.visibility !== 'internal'),
     [agentProfiles],
   )
+
+  const kindCounts = React.useMemo(() => ({
+    system: visibleAgents.filter(agent => profileKind(agent) === 'system').length,
+    template: visibleAgents.filter(agent => profileKind(agent) === 'template').length,
+    user: visibleAgents.filter(agent => profileKind(agent) === 'user').length,
+  }), [visibleAgents])
+
+  const filterItems = [
+    { key: 'all', label: t('common.all', 'All'), count: visibleAgents.length, active: activeKindFilter === 'all', onClick: () => { setActiveKindFilter('all'); setExpanded(false) } },
+    { key: 'user', label: t('agents.filterUser'), count: kindCounts.user, active: activeKindFilter === 'user', onClick: () => { setActiveKindFilter('user'); setExpanded(false) } },
+    { key: 'template', label: t('agents.filterTemplates'), count: kindCounts.template, active: activeKindFilter === 'template', onClick: () => { setActiveKindFilter('template'); setExpanded(false) } },
+    { key: 'system', label: t('agents.filterSystem'), count: kindCounts.system, active: activeKindFilter === 'system', onClick: () => { setActiveKindFilter('system'); setExpanded(false) } },
+  ]
+
+  const filteredAgents = React.useMemo(() => (
+    activeKindFilter === 'all' ? visibleAgents : visibleAgents.filter(agent => profileKind(agent) === activeKindFilter)
+  ), [activeKindFilter, visibleAgents])
 
 
   const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
@@ -145,8 +164,8 @@ export default function AgentsHomePage() {
     )
   }, [handleDeleteAgent, handleDuplicateAgent, t])
 
-  const visibleItems = expanded ? visibleAgents : visibleAgents.slice(0, 6)
-  const hiddenItems = visibleAgents.slice(6)
+  const visibleItems = expanded ? filteredAgents : filteredAgents.slice(0, 6)
+  const hiddenItems = filteredAgents.slice(6)
   const previewItems = hiddenItems.slice(0, 2)
   const remainingCount = Math.max(hiddenItems.length - previewItems.length, 0)
 
@@ -172,7 +191,10 @@ export default function AgentsHomePage() {
           </div>
 
           <div className="flex min-w-0 flex-col border-t border-foreground/5 pt-4 pb-6">
-            {visibleAgents.length === 0 ? (
+            <div className="mb-4">
+              <SidebarFilterPills items={filterItems} />
+            </div>
+            {filteredAgents.length === 0 ? (
               <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
                 {t('agents.noAgentsConfigured')}
               </div>
