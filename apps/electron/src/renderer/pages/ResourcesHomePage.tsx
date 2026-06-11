@@ -56,7 +56,17 @@ export default function ResourcesHomePage() {
   const [sendResourceType, setSendResourceType] = React.useState<SendResourceType>('source')
   const [sendResourceSlug, setSendResourceSlug] = React.useState<string | null>(null)
   const [sendResourceLabel, setSendResourceLabel] = React.useState('')
+  const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(() => new Set())
   const hasOtherWorkspaces = workspaces.length > 1
+
+  const toggleExpandedGroup = React.useCallback((groupKey: string) => {
+    setExpandedGroups(previous => {
+      const next = new Set(previous)
+      if (next.has(groupKey)) next.delete(groupKey)
+      else next.add(groupKey)
+      return next
+    })
+  }, [])
 
   const sourceTypeCounts = React.useMemo(() => ({
     api: enabledSources.filter(source => source.config.type === 'api').length,
@@ -254,7 +264,20 @@ export default function ResourcesHomePage() {
     )
   }, [activeWorkspace?.remoteServer, activeWorkspaceId, handleSkillClick, hasOtherWorkspaces, handleDeleteSkill, openSendDialog, selectedSkillSlug, t])
 
-  const renderGrid = React.useCallback((items: React.ReactNode[], emptyLabel: string) => {
+  const renderPreviewLabel = React.useCallback((names: string[], remainingCount: number) => {
+    if (names.length === 1 && remainingCount === 0) return t('resources.showItem', { name: names[0] })
+    if (names.length === 2 && remainingCount === 0) return t('resources.showTwoItems', { first: names[0], second: names[1] })
+    return t('resources.showMoreItems', { names: names.join(', '), count: remainingCount })
+  }, [t])
+
+  const renderGrid = React.useCallback(<T,>(
+    items: T[],
+    renderCard: (item: T) => React.ReactNode,
+    emptyLabel: string,
+    groupKey: string,
+    getPreviewName: (item: T) => string,
+    renderPreviewAvatar: (item: T) => React.ReactNode,
+  ) => {
     if (items.length === 0) {
       return (
         <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
@@ -262,8 +285,46 @@ export default function ResourcesHomePage() {
         </div>
       )
     }
-    return <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">{items}</div>
-  }, [])
+
+    const limit = 6
+    const expanded = expandedGroups.has(groupKey)
+    const visibleItems = expanded ? items : items.slice(0, limit)
+    const hiddenItems = items.slice(limit)
+    const previewItems = hiddenItems.slice(0, 2)
+    const previewNames = previewItems.map(getPreviewName)
+    const remainingCount = Math.max(hiddenItems.length - previewItems.length, 0)
+
+    return (
+      <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
+        {visibleItems.map(renderCard)}
+        {hiddenItems.length > 0 && (
+          <button
+            type="button"
+            onClick={() => toggleExpandedGroup(groupKey)}
+            className="col-span-full flex min-w-0 items-center gap-2 rounded-[12px] px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            {expanded ? (
+              <span className="font-medium">{t('resources.showFewer')}</span>
+            ) : (
+              <>
+                <span className="flex min-w-0 items-center gap-2">
+                  {previewItems.map((item, index) => (
+                    <span key={`${groupKey}-preview-${index}`} className="flex min-w-0 items-center gap-1.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-foreground/[0.04]">
+                        {renderPreviewAvatar(item)}
+                      </span>
+                      <span className="max-w-[120px] truncate">{getPreviewName(item)}</span>
+                    </span>
+                  ))}
+                </span>
+                <span className="min-w-0 truncate">{renderPreviewLabel(previewNames, remainingCount)}</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    )
+  }, [expandedGroups, renderPreviewLabel, t, toggleExpandedGroup])
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -302,7 +363,14 @@ export default function ResourcesHomePage() {
                     </h3>
                     <span className="text-[10px] text-muted-foreground/70">{enabledSources.length}</span>
                   </div>
-                  {renderGrid(enabledSources.map(renderSourceCard), t('sourcesList.noSourcesConfigured'))}
+                  {renderGrid(
+                    enabledSources,
+                    renderSourceCard,
+                    t('sourcesList.noSourcesConfigured'),
+                    'sources-all',
+                    source => source.config.name,
+                    source => <SourceAvatar source={source} size="md" />,
+                  )}
                 </section>
                 <section className="min-w-0 rounded-[12px]">
                   <div className="flex items-center gap-2 px-1 pb-3">
@@ -312,13 +380,34 @@ export default function ResourcesHomePage() {
                     </h3>
                     <span className="text-[10px] text-muted-foreground/70">{skills.length}</span>
                   </div>
-                  {renderGrid(skills.map(renderSkillCard), t('skillsList.noSkillsConfigured'))}
+                  {renderGrid(
+                    skills,
+                    renderSkillCard,
+                    t('skillsList.noSkillsConfigured'),
+                    'skills-all',
+                    skill => skill.metadata.name,
+                    skill => <SkillAvatar skill={skill} size="md" workspaceId={activeWorkspaceId ?? undefined} />,
+                  )}
                 </section>
               </div>
             ) : isSkillsActive && activeWorkspaceId ? (
-              renderGrid(skills.map(renderSkillCard), t('skillsList.noSkillsConfigured'))
+              renderGrid(
+                skills,
+                renderSkillCard,
+                t('skillsList.noSkillsConfigured'),
+                'skills-filter',
+                skill => skill.metadata.name,
+                skill => <SkillAvatar skill={skill} size="md" workspaceId={activeWorkspaceId ?? undefined} />,
+              )
             ) : (
-              renderGrid(filteredSources.map(renderSourceCard), t('sourcesList.noSourcesConfigured'))
+              renderGrid(
+                filteredSources,
+                renderSourceCard,
+                t('sourcesList.noSourcesConfigured'),
+                `sources-${activeSourceType ?? 'all'}`,
+                source => source.config.name,
+                source => <SourceAvatar source={source} size="md" />,
+              )
             )}
           </div>
         </div>
