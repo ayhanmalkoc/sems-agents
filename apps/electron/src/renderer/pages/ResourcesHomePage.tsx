@@ -264,12 +264,6 @@ export default function ResourcesHomePage() {
     )
   }, [activeWorkspace?.remoteServer, activeWorkspaceId, handleSkillClick, hasOtherWorkspaces, handleDeleteSkill, openSendDialog, selectedSkillSlug, t])
 
-  const renderPreviewLabel = React.useCallback((names: string[], remainingCount: number) => {
-    if (names.length === 1 && remainingCount === 0) return t('resources.showItem', { name: names[0] })
-    if (names.length === 2 && remainingCount === 0) return t('resources.showTwoItems', { first: names[0], second: names[1] })
-    return t('resources.showMoreItems', { names: names.join(', '), count: remainingCount })
-  }, [t])
-
   const renderGrid = React.useCallback(<T,>(
     items: T[],
     renderCard: (item: T) => React.ReactNode,
@@ -291,7 +285,6 @@ export default function ResourcesHomePage() {
     const visibleItems = expanded ? items : items.slice(0, limit)
     const hiddenItems = items.slice(limit)
     const previewItems = hiddenItems.slice(0, 2)
-    const previewNames = previewItems.map(getPreviewName)
     const remainingCount = Math.max(hiddenItems.length - previewItems.length, 0)
 
     return (
@@ -317,14 +310,16 @@ export default function ResourcesHomePage() {
                     </span>
                   ))}
                 </span>
-                <span className="min-w-0 truncate">{renderPreviewLabel(previewNames, remainingCount)}</span>
+                {remainingCount > 0 && (
+                  <span className="min-w-0 truncate">{t('resources.andMore', { count: remainingCount })}</span>
+                )}
               </>
             )}
           </button>
         )}
       </div>
     )
-  }, [expandedGroups, renderPreviewLabel, t, toggleExpandedGroup])
+  }, [expandedGroups, t, toggleExpandedGroup])
 
   return (
     <div className="flex h-full min-h-0 flex-col">
