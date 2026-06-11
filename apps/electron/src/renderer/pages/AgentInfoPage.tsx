@@ -75,7 +75,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function inputClass(_readOnly = false) {
-  return 'h-8 w-full rounded-md border border-border bg-background px-2 text-sm'
+  return 'h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground'
 }
 
 function AgentAvatar({ agent, fluid = false }: { agent: AgentProfile; fluid?: boolean }) {
@@ -214,7 +214,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
 
         <Info_Section title={t('agents.instructions')}>
           <div className="p-4">
-            <textarea className="min-h-40 w-full rounded-md border border-border bg-background p-2 text-sm" value={draft.systemPrompt} readOnly={!canEdit} onChange={e => updateDraft('systemPrompt', e.target.value)} />
+            <textarea className="min-h-40 w-full rounded-md border border-border bg-background p-2 text-sm text-foreground" value={draft.systemPrompt} readOnly={!canEdit} onChange={e => updateDraft('systemPrompt', e.target.value)} />
           </div>
         </Info_Section>
 
