@@ -103,10 +103,10 @@ export function updateAgentProfile(workspaceRootPath: string, id: string, update
   const index = file.profiles.findIndex(profile => profile.id === id)
   if (index === -1) throw new Error(`Agent profile "${id}" not found`)
   const existing = normalizeProfile(file.profiles[index])
-  if (existing.kind !== 'user') {
-    throw new Error('Only user agents can be edited')
+  if (existing.kind === 'system') {
+    throw new Error('System agents cannot be edited')
   }
-  const profile = normalizeProfile({ ...existing, ...updates, kind: 'user', id, updatedAt: Date.now() })
+  const profile = normalizeProfile({ ...existing, ...updates, kind: existing.kind, id, updatedAt: Date.now() })
   file.profiles[index] = profile
   writeProfilesFile(workspaceRootPath, file)
   return profile

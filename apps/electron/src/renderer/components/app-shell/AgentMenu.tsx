@@ -29,7 +29,7 @@ export function AgentMenu({ agent, onOpenInNewWindow, onDuplicate, onDelete, onI
       )}
       <MenuItem onClick={onDuplicate}>
         <Copy className="h-3.5 w-3.5" />
-        <span className="flex-1">{agent.kind && agent.kind !== 'user' ? t('agents.duplicateToEdit') : t('agents.duplicate')}</span>
+        <span className="flex-1">{t('agents.duplicate')}</span>
       </MenuItem>
       {onDelete && (
         <>

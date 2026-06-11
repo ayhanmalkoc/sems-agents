@@ -154,7 +154,7 @@ export default function AgentsHomePage() {
                   onOpenInNewWindow={() => window.electronAPI.openUrl(`craftagents://agents/agent/${agent.id}?window=focused`)}
                   onDuplicate={() => handleDuplicateAgent(agent)}
                   onDelete={kind === 'user' ? () => handleDeleteAgent(agent) : undefined}
-                  onImprove={kind === 'user' ? () => navigate(routes.view.agents(agent.id)) : undefined}
+                  onImprove={kind !== 'system' ? () => navigate(routes.view.agents(agent.id)) : undefined}
                 />
               </DropdownMenuProvider>
             </StyledDropdownMenuContent>

@@ -127,7 +127,8 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
   }
 
   const kind = profileKind(profile)
-  const canEdit = kind === 'user'
+  const canEdit = kind !== 'system'
+  const canDelete = kind === 'user'
   const runtimeSummary = [
     profile.model || t('agents.workspaceDefaultModel'),
     profile.permissionMode ? t(permissionLabelKeys[profile.permissionMode]) : t('agents.defaultPermission'),
@@ -138,7 +139,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
   const saveAgent = async () => {
     if (!activeWorkspaceId || !canEdit || !draft.name.trim()) return
     const payload = {
-      kind: 'user' as const,
+      kind,
       name: draft.name.trim(),
       description: draft.description.trim() || undefined,
       icon: draft.icon.trim() || undefined,
@@ -170,7 +171,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
             agent={profile}
             onOpenInNewWindow={() => window.electronAPI.openUrl(`craftagents://agents/agent/${profile.id}?window=focused`)}
             onDuplicate={() => onDuplicateAgent?.(profile)}
-            onDelete={canEdit ? () => onDeleteAgent?.(profile) : undefined}
+            onDelete={canDelete ? () => onDeleteAgent?.(profile) : undefined}
           />
         }
       />
@@ -237,7 +238,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
         {canEdit && (
           <div className="flex justify-end gap-2">
             <Button onClick={saveAgent}><Save className="mr-1.5 h-4 w-4" />{t('agents.saveAgent')}</Button>
-            <Button variant="destructive" onClick={() => onDeleteAgent?.(profile)}><Trash2 className="mr-1.5 h-4 w-4" />{t('agents.deleteAgent')}</Button>
+            {canDelete && <Button variant="destructive" onClick={() => onDeleteAgent?.(profile)}><Trash2 className="mr-1.5 h-4 w-4" />{t('agents.deleteAgent')}</Button>}
           </div>
         )}
       </Info_Page.Content>
