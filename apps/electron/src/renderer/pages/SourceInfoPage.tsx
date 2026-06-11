@@ -185,7 +185,7 @@ function getSourceAuthKind(source: LoadedSource): 'oauth' | 'credential' | null 
   const { type, mcp, api } = source.config
   if (type === 'mcp') {
     if (mcp?.authType === 'oauth') return 'oauth'
-    if (mcp?.authType === 'bearer') return 'credential'
+    if (mcp?.authType === 'bearer' || (mcp?.headerNames?.length ?? 0) > 0) return 'credential'
     return null
   }
   if (type === 'api') {
@@ -230,6 +230,11 @@ function getCredentialMode(source: LoadedSource): 'basic' | 'multi-header' | 'si
   if (getCredentialHeaderNames(source).length > 0) return 'multi-header'
   if (source.config.api?.authType === 'basic') return 'basic'
   return 'single'
+}
+
+function hasAgentManagedMcpCredentials(source: LoadedSource): boolean {
+  const { type, mcp } = source.config
+  return type === 'mcp' && mcp?.transport === 'stdio' && !!mcp.env && Object.keys(mcp.env).length > 0
 }
 
 export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: SourceInfoPageProps) {
@@ -564,6 +569,15 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
               <Info_Alert.Title>{t('sourceInfo.sourceDisabled')}</Info_Alert.Title>
               <Info_Alert.Description>
                 {t('sourceInfo.localMcpDisabled')}
+              </Info_Alert.Description>
+            </Info_Alert>
+          )}
+
+          {authKind === null && hasAgentManagedMcpCredentials(source) && (
+            <Info_Alert variant="info" icon={<KeyRound className="h-4 w-4" />}>
+              <Info_Alert.Title>{t('sourceInfo.agentManagedCredentialsTitle')}</Info_Alert.Title>
+              <Info_Alert.Description>
+                {t('sourceInfo.agentManagedCredentialsDescription')}
               </Info_Alert.Description>
             </Info_Alert>
           )}

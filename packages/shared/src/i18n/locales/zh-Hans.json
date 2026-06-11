@@ -1218,6 +1218,8 @@
   "skillsList.projectBadge": "项目",
   "sourceInfo.accessRules": "探索模式的访问规则。",
   "sourceInfo.addCredential": "Add credential",
+  "sourceInfo.agentManagedCredentialsDescription": "This MCP source uses stdio environment credentials. Agents can request and update them through secure auth prompts in chat.",
+  "sourceInfo.agentManagedCredentialsTitle": "Agent-managed credentials",
   "sourceInfo.apiEndpointsAllowed": "探索模式允许的 API 端点。",
   "sourceInfo.authenticateToViewData": "认证此数据源以查看可用数据",
   "sourceInfo.authenticateToViewTools": "认证此数据源以查看可用工具",

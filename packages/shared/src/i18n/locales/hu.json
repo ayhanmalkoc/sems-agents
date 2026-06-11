@@ -1218,6 +1218,8 @@
   "skillsList.projectBadge": "projekt",
   "sourceInfo.accessRules": "Hozzáférési szabályok a Felfedező módhoz.",
   "sourceInfo.addCredential": "Add credential",
+  "sourceInfo.agentManagedCredentialsDescription": "This MCP source uses stdio environment credentials. Agents can request and update them through secure auth prompts in chat.",
+  "sourceInfo.agentManagedCredentialsTitle": "Agent-managed credentials",
   "sourceInfo.apiEndpointsAllowed": "A Felfedező módban engedélyezett API végpontok.",
   "sourceInfo.authenticateToViewData": "Hitelesítsd magad ezzel a forrással az elérhető adatok megtekintéséhez",
   "sourceInfo.authenticateToViewTools": "Hitelesítsd magad ezzel a forrással az elérhető eszközök megtekintéséhez",

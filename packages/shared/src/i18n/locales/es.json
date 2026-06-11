@@ -1218,6 +1218,8 @@
   "skillsList.projectBadge": "proyecto",
   "sourceInfo.accessRules": "Reglas de acceso para el modo Explorar.",
   "sourceInfo.addCredential": "Add credential",
+  "sourceInfo.agentManagedCredentialsDescription": "This MCP source uses stdio environment credentials. Agents can request and update them through secure auth prompts in chat.",
+  "sourceInfo.agentManagedCredentialsTitle": "Agent-managed credentials",
   "sourceInfo.apiEndpointsAllowed": "Endpoints de API permitidos en el modo Explorar.",
   "sourceInfo.authenticateToViewData": "Autentícate con esta fuente para ver los datos disponibles",
   "sourceInfo.authenticateToViewTools": "Autentícate con esta fuente para ver las herramientas disponibles",
