@@ -76,8 +76,8 @@ function TerminalTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; is
   return <WorkspaceTerminalPanel className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
-function BrowserTool({ tab, isActive, layoutVersion, onUpdateTabTitle }: { tab: RightDockTab; isActive: boolean; layoutVersion: string | number; onUpdateTabTitle?: (id: string, title: string) => void }) {
-  return <WorkspaceBrowserPanel tabId={tab.id} sessionId={tab.browserSessionId ?? null} workspaceId={tab.browserWorkspaceId ?? null} dockRequestId={tab.browserDockRequestId ?? null} className="h-full" isActive={isActive} layoutVersion={layoutVersion} onTitleChange={(title) => onUpdateTabTitle?.(tab.id, title)} />
+function BrowserTool({ tab, isActive, onUpdateTabTitle }: { tab: RightDockTab; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
+  return <WorkspaceBrowserPanel tabId={tab.id} sessionId={tab.browserSessionId ?? null} workspaceId={tab.browserWorkspaceId ?? null} dockRequestId={tab.browserDockRequestId ?? null} className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tab.id, title)} />
 }
 
 export function RightWorkspacePanel({
@@ -98,7 +98,6 @@ export function RightWorkspacePanel({
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
-  const layoutVersion = React.useMemo(() => `${width}:${isMaximized ? 1 : 0}:${isOpen ? 1 : 0}:${activeTabId ?? ''}`, [activeTabId, isMaximized, isOpen, width])
   const handleAddTool = React.useCallback(async () => {
     const selected = await window.electronAPI.rightDock.showAddToolMenu()
     if (selected) onAddTab(selected)
@@ -177,7 +176,7 @@ export function RightWorkspacePanel({
                 ) : tab.type === 'terminal' ? (
                   <TerminalTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : tab.type === 'browser' ? (
-                  <BrowserTool tab={tab} isActive={selected} layoutVersion={layoutVersion} onUpdateTabTitle={onUpdateTabTitle} />
+                  <BrowserTool tab={tab} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : (
                   <PlaceholderTool tool={TOOL_BY_TYPE.get(tab.type)!} />
                 )}
