@@ -72,7 +72,7 @@ import { useAppShellContext } from "@/context/AppShellContext"
 import { navigate, routes } from "@/lib/navigate"
 import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
-import { resolveBranchNewPanelOption } from "./branching"
+import { resolveBranchNewPanelForRole } from "./panel-role"
 import { handleErrorMessageAction } from "./error-message-actions"
 
 // ============================================================================
@@ -1748,9 +1748,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                               }
                             )
                             navigate(routes.view.allSessions(child.id), {
-                              newPanel: appShellContext.panelRole === 'secondary'
-                                ? false
-                                : resolveBranchNewPanelOption(options),
+                              newPanel: resolveBranchNewPanelForRole(appShellContext.panelRole, options),
                             })
                           } catch (error) {
                             const rawMessage = error instanceof Error ? error.message : 'Failed to create branch'

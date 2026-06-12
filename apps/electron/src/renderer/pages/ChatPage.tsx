@@ -18,6 +18,7 @@ import { RenameDialog } from '@/components/ui/rename-dialog'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { OpenWithMenuButton } from '@/components/ui/OpenWithMenuButton'
+import { shouldShowDockToggle, shouldShowOpenInNewPanel } from '@/components/app-shell/panel-role'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator } from '@/components/ui/styled-dropdown'
 import { useAppShellContext, usePendingPermission, usePendingCredential, useSessionOptionsFor, useSession as useSessionData } from '@/context/AppShellContext'
@@ -85,8 +86,8 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isFocusedPanel,
     agentProfiles,
   } = useAppShellContext()
-  const canOpenRightDock = panelRole === 'primary' && isOnlyPanel
-  const canOpenMainPanelFromMenu = panelRole === 'primary'
+  const canOpenRightDock = shouldShowDockToggle(panelRole, isOnlyPanel)
+  const canOpenMainPanelFromMenu = shouldShowOpenInNewPanel(panelRole)
 
   // Use the unified session options hook for clean access
   const {

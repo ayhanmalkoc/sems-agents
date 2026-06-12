@@ -23,6 +23,7 @@ import { closePanelAtom, focusedPanelIdAtom, type PanelStackEntry } from '@/atom
 import { useAppShellContext, AppShellProvider, type AppShellContextType } from '@/context/AppShellContext'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { MainContentPanel } from './MainContentPanel'
+import { shouldShowPanelClose } from './panel-role'
 import { PANEL_MIN_WIDTH, RADIUS_EDGE, RADIUS_INNER } from './panel-constants'
 
 interface PanelSlotProps {
@@ -95,7 +96,7 @@ export function PanelSlot({
   // back button (compact mode), and isFocusedPanel for input field appearance
   const contextOverride = useMemo(() => ({
     ...parentContext,
-    rightSidebarButton: panelRole === 'secondary' ? closeButton : undefined,
+    rightSidebarButton: shouldShowPanelClose(panelRole) ? closeButton : undefined,
     leadingAction: backButton,
     isFocusedPanel,
     panelRole,
