@@ -1902,9 +1902,9 @@ function AppShellContent({
 
   // Handler for settings view. With no arg → bare `settings` route (navigator-only
   // in compact mode, App fallback on desktop). With an arg → `settings/<subpage>`.
-  const handleSettingsClick = useCallback((subpage?: SettingsSubpage) => {
-    navigate(routes.view.settings(subpage))
-  }, [])
+  const handleSettingsClick = useCallback((subpage?: SettingsSubpage, options?: { replace?: boolean }) => {
+    navigate(routes.view.settings(subpage), options)
+  }, [navigate])
 
   // Handler for What's New overlay
   const handleWhatsNewClick = useCallback(async () => {
@@ -2527,7 +2527,7 @@ function AppShellContent({
             {isSettingsNavigation(navState) ? (
               <SettingsNavigator
                 selectedSubpage={navState.subpage}
-                onSelectSubpage={(subpage) => handleSettingsClick(subpage)}
+                onSelectSubpage={(subpage) => handleSettingsClick(subpage, { replace: true })}
               />
             ) : (
             <div className="flex h-full min-h-0 flex-col select-none">

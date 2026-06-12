@@ -31,6 +31,8 @@ export interface NavigateOptions {
    * can reuse the same API without introducing per-feature navigation flags.
    */
   targetLaneId?: 'main'
+  /** Replace the current history entry instead of pushing a new one */
+  replace?: boolean
   /** Skip auto-selecting first item when navigating to a list view (used when closing panels) */
   skipAutoSelect?: boolean
 }

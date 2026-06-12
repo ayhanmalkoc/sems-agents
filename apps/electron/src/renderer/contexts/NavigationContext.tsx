@@ -863,12 +863,24 @@ export function NavigationProvider({
           storage.set(storage.KEYS.lastSelectedSessionId, resolvedState.details.sessionId, workspaceId)
         }
 
-        // Update the focused panel's route (atom update is synchronous)
-        // The panelStack atom subscription detects the route change and calls syncUrl(true)
-        store.set(updateFocusedPanelRouteAtom, finalRoute)
+        // Update the focused panel's route (atom update is synchronous).
+        // By default the panelStack atom subscription pushes history. For
+        // replace navigations (settings subpage changes), suppress that push and
+        // replace the current URL entry instead.
+        if (options?.replace) {
+          suppressPushRef.current = true
+          store.set(updateFocusedPanelRouteAtom, finalRoute)
+          queueMicrotask(() => {
+            syncUrlRef.current(false)
+            lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+            suppressPushRef.current = false
+          })
+        } else {
+          store.set(updateFocusedPanelRouteAtom, finalRoute)
+        }
       }
     },
-    [isReady, handleActionNavigation, resolveAutoSelection, store, pushPanel, workspaceId]
+    [isReady, handleActionNavigation, resolveAutoSelection, store, pushPanel, workspaceId, getSemanticHistoryKey]
   )
 
   // =========================================================================
@@ -1097,10 +1109,10 @@ export function NavigationProvider({
 
   useEffect(() => {
     const handleNavigateEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<{ route: Route; newPanel?: boolean; targetLaneId?: 'main' }>
+      const customEvent = event as CustomEvent<{ route: Route } & NavigateOptions>
       if (customEvent.detail?.route) {
-        const { route: r, newPanel, targetLaneId } = customEvent.detail
-        navigate(r, newPanel ? { newPanel, targetLaneId } : undefined)
+        const { route: r, ...options } = customEvent.detail
+        navigate(r, Object.keys(options).length > 0 ? options : undefined)
       }
     }
 
