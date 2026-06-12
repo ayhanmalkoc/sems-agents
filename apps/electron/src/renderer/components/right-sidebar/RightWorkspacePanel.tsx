@@ -155,7 +155,7 @@ export function RightWorkspacePanel({
         </div>
 
         <TopBarButton aria-label={isMaximized ? 'Restore right panel' : 'Expand right panel'} onClick={onToggleMaximized} className="h-7 w-7 rounded-lg">
-          {isMaximized ? <Minimize2 className="h-4 w-4 text-foreground/50" strokeWidth={1.5} /> : <Maximize2 className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />}
+          {isMaximized ? <Minimize2 className="h-3.5 w-3.5 text-foreground/50" strokeWidth={1.5} /> : <Maximize2 className="h-3.5 w-3.5 text-foreground/50" strokeWidth={1.5} />}
         </TopBarButton>
 
         <TopBarButton aria-label="Close right panel" onClick={onClosePanel} className="h-7 w-7 rounded-lg">
