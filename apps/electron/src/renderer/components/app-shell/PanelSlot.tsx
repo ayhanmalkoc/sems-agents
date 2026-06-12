@@ -99,7 +99,8 @@ export function PanelSlot({
     leadingAction: backButton,
     isFocusedPanel,
     panelRole,
-  }), [parentContext, closeButton, backButton, isFocusedPanel, panelRole])
+    isOnlyPanel: isOnly,
+  }), [parentContext, closeButton, backButton, isFocusedPanel, panelRole, isOnly])
 
   const handlePointerDown = useCallback(() => {
     if (!isFocusedPanel) {

@@ -75,6 +75,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isRightDockOpen,
     onToggleRightDock,
     panelRole = 'primary',
+    isOnlyPanel = true,
     leadingAction,
     isCompactMode,
     sessionListSearchQuery,
@@ -84,7 +85,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isFocusedPanel,
     agentProfiles,
   } = useAppShellContext()
-  const canOpenRightDock = panelRole === 'primary'
+  const canOpenRightDock = panelRole === 'primary' && isOnlyPanel
   const canOpenMainPanelFromMenu = panelRole === 'primary'
 
   // Use the unified session options hook for clean access

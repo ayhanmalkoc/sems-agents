@@ -140,6 +140,7 @@ export interface AppShellContextType {
   // Right sidebar button (legacy page-header slot)
   rightSidebarButton?: React.ReactNode
   panelRole?: 'primary' | 'secondary' | 'dock'
+  isOnlyPanel?: boolean
   isRightDockOpen?: boolean
   onToggleRightDock?: () => void
 
