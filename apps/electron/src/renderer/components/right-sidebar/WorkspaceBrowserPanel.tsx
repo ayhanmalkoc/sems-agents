@@ -14,10 +14,9 @@ interface WorkspaceBrowserPanelProps {
   workspaceId?: string | null
   dockRequestId?: string | null
   onTitleChange?: (title: string) => void
-  layoutVersion?: string | number
 }
 
-export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange, layoutVersion = 0 }: WorkspaceBrowserPanelProps) {
+export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange }: WorkspaceBrowserPanelProps) {
   const { activeWorkspaceId } = useAppShellContext()
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const instanceIdRef = React.useRef<string | null>(null)
@@ -26,8 +25,6 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   const [starting, setStarting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const updateBoundsRef = React.useRef<() => void>(() => {})
-  const layoutSettleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [isLayoutSettling, setIsLayoutSettling] = React.useState(false)
 
   const updateBounds = React.useCallback(() => {
     const id = instanceIdRef.current
@@ -90,10 +87,6 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
     void start()
     return () => {
       cancelled = true
-      if (layoutSettleTimerRef.current) {
-        clearTimeout(layoutSettleTimerRef.current)
-        layoutSettleTimerRef.current = null
-      }
       if (dockRequestId && !completedDockRequest) {
         completedDockRequest = true
         void window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, error: 'Dock browser tab was closed before it finished opening.' })
@@ -136,29 +129,6 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
     if (isActive && instanceIdRef.current) void window.electronAPI.browserPane.focus(instanceIdRef.current)
   }, [isActive, updateBounds])
 
-
-  React.useEffect(() => {
-    if (!instanceIdRef.current) return
-    setIsLayoutSettling(true)
-    updateBoundsRef.current()
-    void window.electronAPI.browserPane.setDockBounds(instanceIdRef.current, {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      visible: false,
-    })
-    if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current)
-    layoutSettleTimerRef.current = setTimeout(() => {
-      layoutSettleTimerRef.current = null
-      updateBoundsRef.current()
-      requestAnimationFrame(() => {
-        updateBoundsRef.current()
-        setIsLayoutSettling(false)
-      })
-    }, 180)
-  }, [layoutVersion])
-
   const id = instanceId
   const navigate = React.useCallback((url: string) => { if (id) void window.electronAPI.browserPane.navigate(id, url) }, [id])
   const goBack = React.useCallback(() => { if (id) void window.electronAPI.browserPane.goBack(id) }, [id])
@@ -194,12 +164,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       ) : starting ? (
         <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">Starting browser...</div>
       ) : null}
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
-        {isLayoutSettling && (
-          <div className="absolute inset-0 z-10 bg-background" aria-hidden="true" />
-        )}
-        <div ref={hostRef} className={cn('h-full min-h-0 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
-      </div>
+      <div ref={hostRef} className={cn('min-h-0 flex-1 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
     </div>
   )
 }
