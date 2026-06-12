@@ -81,5 +81,7 @@ qa-*.png
 /views.json
 /labels/
 /sessions/
+/sources/
+/skills/
 /statuses/
 /.claude-plugin/
