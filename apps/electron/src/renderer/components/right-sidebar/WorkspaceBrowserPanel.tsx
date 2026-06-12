@@ -157,7 +157,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   }, [syncBoundsForFrames])
 
   React.useEffect(() => {
-    const cancel = syncBoundsForFrames(36)
+    const cancel = syncBoundsForFrames(8)
     if (isActive && instanceIdRef.current) void window.electronAPI.browserPane.focus(instanceIdRef.current)
     return cancel
   }, [isActive, layoutVersion, syncBoundsForFrames])
