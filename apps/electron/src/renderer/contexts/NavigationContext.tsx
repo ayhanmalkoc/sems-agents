@@ -118,6 +118,8 @@ interface NavigationContextValue {
   navigateToSource: (sourceSlug?: string) => void
   /** Navigate to a session, preserving the current filter type */
   navigateToSession: (sessionId: string) => void
+  /** Open a session in a new main content panel */
+  openSessionInPanel: (sessionId: string) => void
 }
 
 export const NavigationContext = createContext<NavigationContextValue | null>(null)
@@ -1177,6 +1179,16 @@ export function NavigationProvider({
     }
   }, [navigationState, navigate])
 
+  const openSessionInPanel = useCallback((sessionId: string) => {
+    const route = isSessionsNavigation(navigationState)
+      ? buildRouteFromNavigationState({
+          ...navigationState,
+          details: { type: 'session', sessionId },
+        }) as ViewRoute
+      : routes.view.allSessions(sessionId) as ViewRoute
+    pushPanel({ route, intent: 'explicit' })
+  }, [navigationState, pushPanel])
+
   // =========================================================================
   // AUTO-SELECT ON SESSION LOAD
   // =========================================================================
@@ -1220,6 +1232,7 @@ export function NavigationProvider({
         toggleRightSidebar,
         navigateToSource,
         navigateToSession,
+        openSessionInPanel,
       }}
     >
       {children}

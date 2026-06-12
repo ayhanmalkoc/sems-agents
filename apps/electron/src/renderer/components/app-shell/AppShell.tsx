@@ -75,7 +75,7 @@ import type { ChatDisplayHandle } from "./ChatDisplay"
 import { LeftSidebar } from "./LeftSidebar"
 import { useSession } from "@/hooks/useSession"
 import { ensureSessionMessagesLoadedAtom } from "@/atoms/sessions"
-import { AppShellProvider, type AppShellContextType } from "@/context/AppShellContext"
+import { AppShellProvider, useAppShellContext, type AppShellContextType } from "@/context/AppShellContext"
 import { EscapeInterruptProvider, useEscapeInterrupt } from "@/context/EscapeInterruptContext"
 import { useTheme } from "@/context/ThemeContext"
 import { getResizeGradientStyle } from "@/hooks/useResizeGradient"
@@ -88,7 +88,7 @@ import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSourc
 import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
-import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
+import { panelStackAtom, panelCountAtom, pushPanelAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
 import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config"
 import { useStatuses } from "@/hooks/useStatuses"
 import { useLabels } from "@/hooks/useLabels"
@@ -153,6 +153,24 @@ import { dispatchFocusInputEvent } from "./input/focus-input-events"
  * 2. Update App.tsx to include in contextValue
  * 3. Use via useAppShellContext() hook in child components
  */
+
+function DockChatContent({ navStateOverride }: { navStateOverride: NavigationState }) {
+  const contextValue = useAppShellContext()
+
+  const dockContextValue = React.useMemo<AppShellContextType>(() => ({
+    ...contextValue,
+    panelRole: 'dock',
+    rightSidebarButton: undefined,
+    onToggleRightDock: undefined,
+  }), [contextValue])
+
+  return (
+    <AppShellProvider value={dockContextValue}>
+      <MainContentPanel navStateOverride={navStateOverride} className="h-full rounded-none border-0" />
+    </AppShellProvider>
+  )
+}
+
 interface AppShellProps {
   /** All data and callbacks - passed directly to AppShellProvider */
   contextValue: AppShellContextType
@@ -748,6 +766,7 @@ function AppShellContent({
   // Navigate the focused panel to a session.
   // If the session is already open in another panel, focus that panel instead.
   const setFocusedPanel = useSetAtom(focusedPanelIdAtom)
+  const pushPanel = useSetAtom(pushPanelAtom)
   const navigateToSessionInPanel = useCallback((sessionId: string) => {
     // Check if the session is already open in any panel — focus it instead of navigating
     const stack = store.get(panelStackAtom)
@@ -1287,7 +1306,7 @@ function AppShellContent({
 
   // New chat
   useAction('app.newChat', () => handleNewChat())
-  useAction('app.newChatInPanel', () => { void openNewChatInRightDock() })
+  useAction('app.newChatInPanel', () => { void openNewChatInMainPanel() })
 
   // Settings
   useAction('app.settings', onOpenSettings)
@@ -2051,7 +2070,7 @@ function AppShellContent({
       id: tabId,
       type: 'chat',
       title: title ?? (sessionMetaMap.get(sessionId) ? getSessionTitle(sessionMetaMap.get(sessionId)!) : 'Chat'),
-      content: <MainContentPanel navStateOverride={navStateOverride} className="h-full rounded-none border-0" />,
+      content: <DockChatContent navStateOverride={navStateOverride} />,
     }
     setRightDockTabs((prev) => [...prev, tab])
     setActiveRightDockTabId(tab.id)
@@ -2063,6 +2082,12 @@ function AppShellContent({
     const created = await contextValue.onCreateSession(activeWorkspaceId)
     openSessionInRightDock(created.id, t('session.newSession'))
   }, [activeWorkspaceId, contextValue, openSessionInRightDock, t])
+
+  const openNewChatInMainPanel = useCallback(async () => {
+    if (!activeWorkspaceId) return
+    const created = await contextValue.onCreateSession(activeWorkspaceId)
+    pushPanel({ route: routes.view.allSessions(created.id), intent: 'explicit' })
+  }, [activeWorkspaceId, contextValue, pushPanel])
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -2487,7 +2512,7 @@ function AppShellContent({
           canGoForward={canGoForward}
           onToggleSidebar={handleToggleSidebar}
           onToggleFocusMode={() => setIsSidebarAndNavigatorHidden(prev => !prev)}
-          onAddSessionPanel={() => { void openNewChatInRightDock() }}
+          onAddSessionPanel={() => { void openNewChatInMainPanel() }}
           onAddBrowserPanel={() => openRightDockTool('browser')}
           onOpenFilesTool={() => { void handleOpenFilesTool() }}
           onOpenInspectTool={() => openRightDockTool('inspect')}
@@ -3602,5 +3627,3 @@ function AppShellContent({
     </AppShellProvider>
   )
 }
-
-

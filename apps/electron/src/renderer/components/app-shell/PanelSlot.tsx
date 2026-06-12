@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 import { X, ChevronLeft } from 'lucide-react'
 import { parseRouteToNavigationState } from '../../../shared/route-parser'
 import { closePanelAtom, focusedPanelIdAtom, type PanelStackEntry } from '@/atoms/panel-stack'
-import { useAppShellContext, AppShellProvider } from '@/context/AppShellContext'
+import { useAppShellContext, AppShellProvider, type AppShellContextType } from '@/context/AppShellContext'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { MainContentPanel } from './MainContentPanel'
 import { PANEL_MIN_WIDTH, RADIUS_EDGE, RADIUS_INNER } from './panel-constants'
@@ -41,6 +41,8 @@ interface PanelSlotProps {
   sash?: React.ReactNode
   /** Compact (mobile) mode — shows back button in panel header */
   isCompact?: boolean
+  /** Product role for header/actions policy */
+  panelRole?: NonNullable<AppShellContextType['panelRole']>
 }
 
 export function PanelSlot({
@@ -53,6 +55,7 @@ export function PanelSlot({
   proportion,
   sash,
   isCompact,
+  panelRole = 'primary',
 }: PanelSlotProps) {
   const { t } = useTranslation()
   const closePanel = useSetAtom(closePanelAtom)
@@ -92,10 +95,11 @@ export function PanelSlot({
   // back button (compact mode), and isFocusedPanel for input field appearance
   const contextOverride = useMemo(() => ({
     ...parentContext,
-    rightSidebarButton: closeButton,
+    rightSidebarButton: panelRole === 'secondary' ? closeButton : undefined,
     leadingAction: backButton,
     isFocusedPanel,
-  }), [parentContext, closeButton, backButton, isFocusedPanel])
+    panelRole,
+  }), [parentContext, closeButton, backButton, isFocusedPanel, panelRole])
 
   const handlePointerDown = useCallback(() => {
     if (!isFocusedPanel) {

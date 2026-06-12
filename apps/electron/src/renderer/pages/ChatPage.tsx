@@ -74,6 +74,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onDeleteSession,
     isRightDockOpen,
     onToggleRightDock,
+    panelRole = 'primary',
     leadingAction,
     isCompactMode,
     sessionListSearchQuery,
@@ -83,6 +84,8 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isFocusedPanel,
     agentProfiles,
   } = useAppShellContext()
+  const canOpenRightDock = panelRole === 'primary'
+  const canOpenMainPanelFromMenu = panelRole === 'primary'
 
   // Use the unified session options hook for clean access
   const {
@@ -629,7 +632,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     <div className="flex items-center gap-1.5">
       {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} iconOnly />}
       {isCompactMode ? compactInfoButton : shareButton}
-      {!isCompactMode && !isRightDockOpen && onToggleRightDock && (
+      {!isCompactMode && canOpenRightDock && !isRightDockOpen && onToggleRightDock && (
         <PanelHeaderCenterButton
           aria-label="Toggle right tools panel"
           tooltip="Toggle right tools panel"
@@ -660,6 +663,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
       onSessionStatusChange={handleSessionStatusChange}
       onOpenInNewWindow={handleOpenInNewWindow}
       onDelete={handleDelete}
+      showOpenInNewPanel={canOpenMainPanelFromMenu}
     />
   ) : null, [
     sessionMeta,
@@ -676,6 +680,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     handleSessionStatusChange,
     handleOpenInNewWindow,
     handleDelete,
+    canOpenMainPanelFromMenu,
   ])
 
   const compactTitleMenu = React.useMemo(() => (sessionMeta && isCompactMode) ? (
@@ -695,6 +700,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
       onSessionStatusChange={handleSessionStatusChange}
       onOpenInNewWindow={handleOpenInNewWindow}
       onDelete={handleDelete}
+      showOpenInNewPanel={canOpenMainPanelFromMenu}
     />
   ) : null, [
     sessionMeta,
@@ -713,6 +719,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     handleSessionStatusChange,
     handleOpenInNewWindow,
     handleDelete,
+    canOpenMainPanelFromMenu,
   ])
 
   // Handle missing session - loading or deleted

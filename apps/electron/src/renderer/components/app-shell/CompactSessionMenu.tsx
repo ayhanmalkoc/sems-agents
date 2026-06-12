@@ -93,6 +93,7 @@ export interface CompactSessionMenuProps {
   sessionStatuses: SessionStatus[]
   labels?: LabelConfig[]
   hasRemoteWorkspaces?: boolean
+  showOpenInNewPanel?: boolean
 
   // Callbacks — same as SessionMenu
   onLabelsChange?: (labels: string[]) => void
@@ -145,6 +146,7 @@ export function CompactSessionMenu({
   open: controlledOpen,
   onOpenChange,
   trigger,
+  showOpenInNewPanel = true,
 }: CompactSessionMenuProps) {
   const { t } = useTranslation()
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
@@ -312,7 +314,7 @@ export function CompactSessionMenu({
               onMarkUnread={closeAfter(onMarkUnread)}
               onRename={closeAfter(onRename)}
               onRefreshTitle={closeAfter(actions.refreshTitle)}
-              onOpenInNewPanel={closeAfter(actions.openInNewPanel)}
+              onOpenInNewPanel={showOpenInNewPanel ? closeAfter(actions.openInNewPanel) : undefined}
               onOpenInNewWindow={closeAfter(onOpenInNewWindow)}
               onShowInFinder={closeAfter(actions.showInFinder)}
               onCopyPath={closeAfter(actions.copyPath)}
@@ -499,7 +501,9 @@ function RootPane({
 
       <Separator />
 
-      <Row icon={<Columns2 className="h-4 w-4" />} label={t('sessionMenu.openInNewPanel')} onTap={onOpenInNewPanel} />
+      {onOpenInNewPanel && (
+        <Row icon={<Columns2 className="h-4 w-4" />} label={t('sessionMenu.openInNewPanel')} onTap={onOpenInNewPanel} />
+      )}
       {onOpenInNewWindow && (
         <Row icon={<AppWindow className="h-4 w-4" />} label={t('sessionMenu.openInNewWindow')} onTap={onOpenInNewWindow} />
       )}

@@ -53,6 +53,7 @@ export interface SessionMenuProps {
   onLabelsChange?: (labels: string[]) => void
   /** Whether multiple workspaces exist (enables "Send to Workspace" item) */
   hasRemoteWorkspaces?: boolean
+  showOpenInNewPanel?: boolean
   /** Callbacks */
   onRename: () => void
   onFlag: () => void
@@ -86,6 +87,7 @@ export function SessionMenu({
   onSendToWorkspace,
   onDelete,
   hasRemoteWorkspaces,
+  showOpenInNewPanel = true,
 }: SessionMenuProps) {
   const { t } = useTranslation()
 
@@ -239,10 +241,12 @@ export function SessionMenu({
       <Separator />
 
       {/* Open in New Panel */}
-      <MenuItem onClick={actions.openInNewPanel}>
-        <Columns2 className="h-3.5 w-3.5" />
-        <span className="flex-1">{t("sessionMenu.openInNewPanel")}</span>
-      </MenuItem>
+      {showOpenInNewPanel && (
+        <MenuItem onClick={actions.openInNewPanel}>
+          <Columns2 className="h-3.5 w-3.5" />
+          <span className="flex-1">{t("sessionMenu.openInNewPanel")}</span>
+        </MenuItem>
+      )}
 
       {/* Open in New Window */}
       <MenuItem onClick={onOpenInNewWindow}>

@@ -169,6 +169,7 @@ export function PanelStackContainer({
                 isAtRightEdge={!isRightSidebarVisible}
                 proportion={focusedEntry.proportion}
                 isCompact={true}
+                panelRole="primary"
               />
             </div>
           </CompactPanelTransition>
@@ -284,6 +285,7 @@ export function PanelStackContainer({
               isAtRightEdge={index === visiblePanels.length - 1 && !isRightSidebarVisible}
               proportion={entry.proportion}
               isCompact={false}
+              panelRole={index === 0 ? 'primary' : 'secondary'}
               sash={index > 0 ? (
                 <PanelResizeSash
                   leftIndex={index - 1}
