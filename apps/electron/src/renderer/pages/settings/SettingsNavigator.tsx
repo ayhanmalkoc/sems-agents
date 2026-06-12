@@ -6,13 +6,11 @@
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import type { SettingsSubpage } from '../../../shared/types'
 import { SETTINGS_ITEMS } from '../../../shared/menu-schema'
 import { SETTINGS_ICONS } from '@/components/icons/SettingsIcons'
-import { navigate, routes } from '@/lib/navigate'
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
@@ -30,11 +28,11 @@ interface SettingsItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const SETTINGS_GROUPS: Array<{ label: string; ids: SettingsSubpage[] }> = [
-  { label: 'General', ids: ['app', 'appearance', 'input', 'preferences', 'shortcuts'] },
-  { label: 'AI & Workspace', ids: ['ai', 'workspace', 'permissions', 'labels'] },
-  { label: 'Integrations', ids: ['messaging', 'server'] },
-  { label: 'Archive', ids: ['archivedSessions'] },
+const SETTINGS_GROUPS: Array<{ labelKey: string; ids: SettingsSubpage[] }> = [
+  { labelKey: 'settings.groups.general', ids: ['app', 'appearance', 'input', 'preferences', 'shortcuts'] },
+  { labelKey: 'settings.groups.aiWorkspace', ids: ['ai', 'workspace', 'permissions', 'labels'] },
+  { labelKey: 'settings.groups.integrations', ids: ['messaging', 'server'] },
+  { labelKey: 'settings.groups.archive', ids: ['archivedSessions'] },
 ]
 
 function SettingsRow({ item, selected, onSelect }: { item: SettingsItem; selected: boolean; onSelect: () => void }) {
@@ -70,27 +68,16 @@ export default function SettingsNavigator({ selectedSubpage, onSelectSubpage }: 
   }, [t])
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <div className="shrink-0 px-2 pb-2 pt-2">
-        <button
-          type="button"
-          onClick={() => navigate(routes.view.allSessions())}
-          className="flex h-8 w-full items-center gap-2 rounded-[8px] px-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span className="truncate">{t('settings.backToApp')}</span>
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-2 pb-3">
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto px-2 py-3">
         <div className="space-y-5">
           {SETTINGS_GROUPS.map((group) => {
             const items = group.ids.map((id) => settingsItems.get(id)).filter(Boolean) as SettingsItem[]
             if (items.length === 0) return null
             return (
-              <section key={group.label} className="space-y-1">
+              <section key={group.labelKey} className="space-y-1">
                 <div className="px-2 pb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
-                  {group.label}
+                  {t(group.labelKey)}
                 </div>
                 <div className="space-y-0.5">
                   {items.map((item) => (
