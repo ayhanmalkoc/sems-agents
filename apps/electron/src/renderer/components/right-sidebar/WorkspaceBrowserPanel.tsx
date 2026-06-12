@@ -14,9 +14,10 @@ interface WorkspaceBrowserPanelProps {
   workspaceId?: string | null
   dockRequestId?: string | null
   onTitleChange?: (title: string) => void
+  layoutVersion?: string | number
 }
 
-export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange }: WorkspaceBrowserPanelProps) {
+export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange, layoutVersion = 0 }: WorkspaceBrowserPanelProps) {
   const { activeWorkspaceId } = useAppShellContext()
   const hostRef = React.useRef<HTMLDivElement | null>(null)
   const instanceIdRef = React.useRef<string | null>(null)
@@ -25,6 +26,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   const [starting, setStarting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const updateBoundsRef = React.useRef<() => void>(() => {})
+  const syncBoundsCancelRef = React.useRef<(() => void) | null>(null)
 
   const updateBounds = React.useCallback(() => {
     const id = instanceIdRef.current
@@ -43,6 +45,31 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   React.useEffect(() => {
     updateBoundsRef.current = updateBounds
   }, [updateBounds])
+
+
+  const syncBoundsForFrames = React.useCallback((frameCount = 8) => {
+    syncBoundsCancelRef.current?.()
+
+    let frame = 0
+    let rafId = 0
+    const cancel = () => cancelAnimationFrame(rafId)
+    const tick = () => {
+      updateBoundsRef.current()
+      frame += 1
+      if (frame < frameCount) {
+        rafId = requestAnimationFrame(tick)
+      } else if (syncBoundsCancelRef.current === cancel) {
+        syncBoundsCancelRef.current = null
+      }
+    }
+
+    rafId = requestAnimationFrame(tick)
+    syncBoundsCancelRef.current = cancel
+    return () => {
+      cancel()
+      if (syncBoundsCancelRef.current === cancel) syncBoundsCancelRef.current = null
+    }
+  }, [])
 
   React.useEffect(() => {
     let cancelled = false
@@ -72,7 +99,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
           await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
         }
         console.info('[browser-pane] dock browser created', { tabId, instanceId: id, dockRequestId })
-        requestAnimationFrame(() => updateBoundsRef.current())
+        syncBoundsForFrames(8)
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to start browser'
         setErrorMessage(message)
@@ -93,9 +120,11 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       }
       const id = instanceIdRef.current
       instanceIdRef.current = null
+      syncBoundsCancelRef.current?.()
+      syncBoundsCancelRef.current = null
       if (id) void window.electronAPI.browserPane.destroy(id)
     }
-  }, [activeWorkspaceId, dockRequestId, sessionId, tabId, workspaceId])
+  }, [activeWorkspaceId, dockRequestId, sessionId, syncBoundsForFrames, tabId, workspaceId])
 
   React.useEffect(() => {
     const offState = window.electronAPI.browserPane.onStateChanged((info) => {
@@ -118,16 +147,20 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   React.useEffect(() => {
     const element = hostRef.current
     if (!element) return
-    const observer = new ResizeObserver(() => updateBounds())
+    const observer = new ResizeObserver(() => syncBoundsForFrames(4))
     observer.observe(element)
-    updateBounds()
-    return () => observer.disconnect()
-  }, [updateBounds])
+    const cancel = syncBoundsForFrames(4)
+    return () => {
+      cancel()
+      observer.disconnect()
+    }
+  }, [syncBoundsForFrames])
 
   React.useEffect(() => {
-    updateBounds()
+    const cancel = syncBoundsForFrames(8)
     if (isActive && instanceIdRef.current) void window.electronAPI.browserPane.focus(instanceIdRef.current)
-  }, [isActive, updateBounds])
+    return cancel
+  }, [isActive, layoutVersion, syncBoundsForFrames])
 
   const id = instanceId
   const navigate = React.useCallback((url: string) => { if (id) void window.electronAPI.browserPane.navigate(id, url) }, [id])
