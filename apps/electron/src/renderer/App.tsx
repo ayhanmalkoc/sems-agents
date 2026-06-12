@@ -1103,7 +1103,7 @@ export default function App() {
       setMenuNewChatTrigger(n => n + 1)
     })
     const unsubSettings = window.electronAPI.onMenuOpenSettings(() => {
-      handleOpenSettings()
+      navigate(routes.view.settings())
     })
     const unsubShortcuts = window.electronAPI.onMenuKeyboardShortcuts(() => {
       navigate(routes.view.settings('shortcuts'))
@@ -1113,7 +1113,7 @@ export default function App() {
       unsubSettings()
       unsubShortcuts()
     }
-  }, [])
+  }, [navigate])
 
   const handleCreateSession = useCallback(async (workspaceId: string, options?: import('../shared/types').CreateSessionOptions): Promise<Session> => {
     const session = await window.electronAPI.createSession(workspaceId, options)
@@ -1681,15 +1681,15 @@ export default function App() {
 
   const handleOpenSettings = useCallback(() => {
     navigate(routes.view.settings())
-  }, [])
+  }, [navigate])
 
   const handleOpenKeyboardShortcuts = useCallback(() => {
     navigate(routes.view.settings('shortcuts'))
-  }, [])
+  }, [navigate])
 
   const handleOpenStoredUserPreferences = useCallback(() => {
     navigate(routes.view.settings('preferences'))
-  }, [])
+  }, [navigate])
 
   // Show reset confirmation dialog
   const handleReset = useCallback(() => {
