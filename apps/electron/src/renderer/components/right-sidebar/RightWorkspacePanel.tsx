@@ -148,7 +148,7 @@ export function RightWorkspacePanel({
         <div className="relative min-h-0 flex-1 overflow-hidden">
         {tabs.length > 0 ? (
           tabs.map((tab) => {
-            const selected = tab.id === activeTabId
+            const selected = isOpen && tab.id === activeTabId
             return (
               <div key={tab.id} className={cn('absolute inset-0 min-h-0', selected ? 'block' : 'hidden')}>
                 {tab.content ? (

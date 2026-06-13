@@ -14,4 +14,6 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Bug Fixes
 
+- **Dock browser close visibility** — Hide the native dock browser view when the right dock panel closes so browser content no longer remains over the workspace.
+
 ## Breaking Changes
