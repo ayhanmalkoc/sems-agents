@@ -1,13 +1,28 @@
 import * as React from 'react'
-import { FolderOpen, Globe, GitCompare, Maximize2, MessageSquare, Minimize2, Plus, Terminal, X } from 'lucide-react'
+import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'motion/react'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
 import { WorkspaceTerminalPanel } from './WorkspaceTerminalPanel'
 import { WorkspaceBrowserPanel } from './WorkspaceBrowserPanel'
+import type { BrowserDockBounds } from '../../../shared/types'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
+export type RightDockLayoutPhase = 'idle' | 'opening' | 'resizing' | 'closing'
+
+export interface RightDockPanelBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+const RIGHT_DOCK_HEADER_HEIGHT = 40
+const BROWSER_TOOLBAR_HEIGHT = 44
+const PANEL_SPRING = { type: 'spring' as const, stiffness: 600, damping: 49 }
+
 
 export interface RightDockTab {
   id: string
@@ -17,6 +32,7 @@ export interface RightDockTab {
   browserSessionId?: string | null
   browserWorkspaceId?: string | null
   browserDockRequestId?: string | null
+  browserInstanceId?: string | null
 }
 
 interface ToolConfig {
@@ -39,7 +55,6 @@ const TOOL_BY_TYPE = new Map(TOOL_CONFIGS.map((tool) => [tool.type, tool]))
 
 export interface RightWorkspacePanelProps {
   width: number
-  isMaximized?: boolean
   isOpen?: boolean
   tabs: RightDockTab[]
   activeTabId: string | null
@@ -49,9 +64,12 @@ export interface RightWorkspacePanelProps {
   onSelectTab: (id: string) => void
   onCloseTab: (id: string) => void
   onUpdateTabTitle?: (id: string, title: string) => void
-  onClosePanel: () => void
-  onToggleMaximized?: () => void
+  onUpdateBrowserInstanceId?: (id: string, instanceId: string | null) => void
   onResizeStart: (event: React.MouseEvent<HTMLDivElement>) => void
+  layoutPhase?: RightDockLayoutPhase
+  layoutVersion?: number
+  panelBounds?: RightDockPanelBounds | null
+  onPanelBoundsChange?: (bounds: RightDockPanelBounds) => void
 }
 
 function PlaceholderTool({ tool }: { tool: ToolConfig }) {
@@ -76,14 +94,21 @@ function TerminalTool({ tabId, isActive, onUpdateTabTitle }: { tabId: string; is
   return <WorkspaceTerminalPanel className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tabId, title)} />
 }
 
-function BrowserTool({ tab, isActive, onUpdateTabTitle }: { tab: RightDockTab; isActive: boolean; onUpdateTabTitle?: (id: string, title: string) => void }) {
-  return <WorkspaceBrowserPanel tabId={tab.id} sessionId={tab.browserSessionId ?? null} workspaceId={tab.browserWorkspaceId ?? null} dockRequestId={tab.browserDockRequestId ?? null} className="h-full" isActive={isActive} onTitleChange={(title) => onUpdateTabTitle?.(tab.id, title)} />
+function BrowserTool({ tab, isActive, dockBounds, onUpdateTabTitle, onUpdateBrowserInstanceId }: { tab: RightDockTab; isActive: boolean; dockBounds?: BrowserDockBounds | null; onUpdateTabTitle?: (id: string, title: string) => void; onUpdateBrowserInstanceId?: (id: string, instanceId: string | null) => void }) {
+  return <WorkspaceBrowserPanel tabId={tab.id} sessionId={tab.browserSessionId ?? null} workspaceId={tab.browserWorkspaceId ?? null} dockRequestId={tab.browserDockRequestId ?? null} className="h-full" isActive={isActive} dockBounds={dockBounds} onTitleChange={(title) => onUpdateTabTitle?.(tab.id, title)} onInstanceIdChange={(instanceId) => onUpdateBrowserInstanceId?.(tab.id, instanceId)} />
 }
+
+function getBrowserDockBounds(panelBounds: RightDockPanelBounds | null): BrowserDockBounds | null {
+  if (!panelBounds) return null
+  const y = panelBounds.y + RIGHT_DOCK_HEADER_HEIGHT + BROWSER_TOOLBAR_HEIGHT
+  const height = panelBounds.height - RIGHT_DOCK_HEADER_HEIGHT - BROWSER_TOOLBAR_HEIGHT
+  return { x: panelBounds.x, y, width: panelBounds.width, height, visible: panelBounds.width > 0 && height > 0 }
+}
+
 
 export function RightWorkspacePanel({
   width,
   isOpen = true,
-  isMaximized = false,
   tabs,
   activeTabId,
   activeSessionId,
@@ -92,29 +117,60 @@ export function RightWorkspacePanel({
   onSelectTab,
   onCloseTab,
   onUpdateTabTitle,
-  onClosePanel,
-  onToggleMaximized,
+  onUpdateBrowserInstanceId,
   onResizeStart,
+  layoutPhase = 'idle',
+  layoutVersion = 0,
+  panelBounds = null,
+  onPanelBoundsChange,
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
+  const panelRef = React.useRef<HTMLElement | null>(null)
+  const lastBoundsRef = React.useRef<RightDockPanelBounds | null>(null)
+  const browserDockBounds = React.useMemo(() => getBrowserDockBounds(panelBounds), [panelBounds])
+  const measurePanel = React.useCallback(() => {
+    const element = panelRef.current
+    if (!element || !onPanelBoundsChange) return
+    const rect = element.getBoundingClientRect()
+    const next = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+    const prev = lastBoundsRef.current
+    if (prev && Math.round(prev.x) === Math.round(next.x) && Math.round(prev.y) === Math.round(next.y) && Math.round(prev.width) === Math.round(next.width) && Math.round(prev.height) === Math.round(next.height)) return
+    lastBoundsRef.current = next
+    onPanelBoundsChange(next)
+  }, [onPanelBoundsChange])
+
+  React.useLayoutEffect(() => {
+    measurePanel()
+  }, [measurePanel, isOpen, width, tabs.length, activeTabId, layoutVersion])
+
+  React.useEffect(() => {
+    const element = panelRef.current
+    if (!element || !onPanelBoundsChange) return
+    const observer = new ResizeObserver(() => measurePanel())
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [measurePanel, onPanelBoundsChange])
   const handleAddTool = React.useCallback(async () => {
     const selected = await window.electronAPI.rightDock.showAddToolMenu()
     if (selected) onAddTab(selected)
   }, [onAddTab])
 
   return (
-    <aside
-      className={cn("relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle", isMaximized && "flex-1", !isOpen && "hidden")}
-      style={isMaximized ? undefined : { width }}
+    <motion.aside
+      ref={panelRef}
+      data-layout-phase={layoutPhase}
+      className="relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle"
+      initial={false}
+      animate={{ width: isOpen ? width : 0, opacity: isOpen ? 1 : 0 }}
+      transition={layoutPhase === 'resizing' ? { duration: 0 } : PANEL_SPRING}
+      style={{ width: isOpen ? width : 0 }}
     >
-      {!isMaximized && (
-        <div
-          onMouseDown={onResizeStart}
-          className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize"
-          aria-hidden="true"
-        />
-      )}
+      <div
+        onMouseDown={onResizeStart}
+        className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize"
+        aria-hidden="true"
+      />
 
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -154,13 +210,6 @@ export function RightWorkspacePanel({
           )}
         </div>
 
-        <TopBarButton aria-label={isMaximized ? 'Restore right panel' : 'Expand right panel'} onClick={onToggleMaximized} className="h-7 w-7 rounded-lg">
-          {isMaximized ? <Minimize2 className="h-3.5 w-3.5 text-foreground/50" strokeWidth={1.5} /> : <Maximize2 className="h-3.5 w-3.5 text-foreground/50" strokeWidth={1.5} />}
-        </TopBarButton>
-
-        <TopBarButton aria-label="Close right panel" onClick={onClosePanel} className="h-7 w-7 rounded-lg">
-          <X className="h-4 w-4 text-foreground/50" strokeWidth={1.5} />
-        </TopBarButton>
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -176,7 +225,7 @@ export function RightWorkspacePanel({
                 ) : tab.type === 'terminal' ? (
                   <TerminalTool tabId={tab.id} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
                 ) : tab.type === 'browser' ? (
-                  <BrowserTool tab={tab} isActive={selected} onUpdateTabTitle={onUpdateTabTitle} />
+                  <BrowserTool tab={tab} isActive={selected} dockBounds={browserDockBounds} onUpdateTabTitle={onUpdateTabTitle} onUpdateBrowserInstanceId={onUpdateBrowserInstanceId} />
                 ) : (
                   <PlaceholderTool tool={TOOL_BY_TYPE.get(tab.type)!} />
                 )}
@@ -203,7 +252,7 @@ export function RightWorkspacePanel({
           </div>
         )}
       </div>
-    </aside>
+    </motion.aside>
   )
 }
 

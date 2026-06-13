@@ -8,7 +8,8 @@ type FunctionKeys<T> = {
   [K in keyof T]-?: Extract<T[K], AnyFn> extends never ? never : K
 }[keyof T] & string
 
-type BrowserPaneKeys = `browserPane.${FunctionKeys<ElectronAPI['browserPane']>}`
+type BrowserPaneDirectKeys = 'browserPane.setDockBoundsFast'
+type BrowserPaneKeys = Exclude<`browserPane.${FunctionKeys<ElectronAPI['browserPane']>}`, BrowserPaneDirectKeys>
 type RightDockKeys = `rightDock.${FunctionKeys<ElectronAPI['rightDock']>}`
 
 // Methods excluded from CHANNEL_MAP because they are implemented directly in the preload

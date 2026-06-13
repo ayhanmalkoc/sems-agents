@@ -6,6 +6,7 @@
  */
 
 import * as React from 'react'
+import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, PanelRight } from 'lucide-react'
@@ -74,7 +75,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onSessionStatusChange,
     onDeleteSession,
     isRightDockOpen,
-    onToggleRightDock,
     panelRole = 'primary',
     isOnlyPanel = true,
     leadingAction,
@@ -86,7 +86,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isFocusedPanel,
     agentProfiles,
   } = useAppShellContext()
-  const canOpenRightDock = shouldShowDockToggle(panelRole, isOnlyPanel)
   const canOpenMainPanelFromMenu = shouldShowOpenInNewPanel(panelRole)
 
   // Use the unified session options hook for clean access
@@ -634,14 +633,23 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     <div className="flex items-center gap-1.5">
       {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} iconOnly />}
       {isCompactMode ? compactInfoButton : shareButton}
-      {!isCompactMode && canOpenRightDock && !isRightDockOpen && onToggleRightDock && (
-        <PanelHeaderCenterButton
-          aria-label="Toggle right tools panel"
-          tooltip="Toggle right tools panel"
-          onClick={onToggleRightDock}
-          className={isRightDockOpen ? 'opacity-100 bg-foreground/8' : undefined}
-          icon={<PanelRight className="h-4 w-4" />}
-        />
+      {!isCompactMode && (
+        <motion.div
+          data-right-dock-toggle-anchor="true"
+          aria-hidden="true"
+          className="shrink-0 overflow-hidden"
+          initial={false}
+          animate={{ width: isRightDockOpen ? 0 : 28, marginLeft: isRightDockOpen ? -6 : 0, opacity: isRightDockOpen ? 0 : 1 }}
+          transition={{ type: 'spring', stiffness: 600, damping: 49 }}
+        >
+          <PanelHeaderCenterButton
+            aria-label="Right tools panel placeholder"
+            tabIndex={-1}
+            disabled
+            className="pointer-events-none invisible"
+            icon={<PanelRight className="h-4 w-4" />}
+          />
+        </motion.div>
       )}
     </div>
   )

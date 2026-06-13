@@ -9,7 +9,7 @@
 import { join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { BrowserView, BrowserWindow, app, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
+import { BrowserView, BrowserWindow, WebContentsView, View, app, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
 import { BrowserCDP, type AccessibilitySnapshot, type ElementGeometry } from './browser-cdp'
@@ -142,6 +142,17 @@ interface AgentControlLockState {
   previousResizable: boolean
 }
 
+type BrowserPageView = BrowserView | WebContentsView
+
+function supportsBrowserViewAutoResize(view: BrowserPageView): view is BrowserView {
+  return typeof (view as BrowserView).setAutoResize === 'function'
+}
+
+function setPageViewVisible(view: BrowserPageView, visible: boolean): void {
+  const maybeVisibleView = view as BrowserPageView & { setVisible?: (visible: boolean) => void }
+  maybeVisibleView.setVisible?.(visible)
+}
+
 interface BrowserInstance {
   id: string
   window: BrowserWindow
@@ -150,7 +161,7 @@ interface BrowserInstance {
   dockHostWindow: BrowserWindow | null
   dockBounds: BrowserDockBounds | null
   toolbarView: BrowserView
-  pageView: BrowserView
+  pageView: BrowserPageView
   nativeOverlayView: BrowserView
   cdp: BrowserCDP
   currentUrl: string
@@ -190,6 +201,98 @@ interface BrowserInstance {
   networkLogs: BrowserNetworkEntry[]
   downloads: BrowserDownloadEntry[]
   lastLaunchToken: string | null
+}
+
+
+class DockBrowserSlot {
+  private activeInstanceId: string | null = null
+  private activeView: WebContentsView | null = null
+  private slotView: View | null = null
+  private hostWindow: BrowserWindow | null = null
+  private bounds: BrowserDockBounds | null = null
+
+  attach(instance: BrowserInstance, bounds?: BrowserDockBounds | null): void {
+    if (instance.mode !== 'dock' || !instance.dockHostWindow || instance.dockHostWindow.isDestroyed()) return
+    const view = instance.pageView as WebContentsView
+    const slotView = this.ensureSlotView()
+    if (this.activeView && (this.activeInstanceId !== instance.id || this.hostWindow !== instance.dockHostWindow)) {
+      try { this.slotView?.removeChildView(this.activeView) } catch { /* noop */ }
+    }
+    if (this.activeInstanceId !== instance.id || this.hostWindow !== instance.dockHostWindow) {
+      if (this.hostWindow !== instance.dockHostWindow) {
+        try { this.hostWindow?.contentView.removeChildView(slotView) } catch { /* noop */ }
+        try { instance.dockHostWindow.contentView.addChildView(slotView) } catch { /* noop */ }
+      }
+      try { slotView.addChildView(view) } catch { /* noop */ }
+      this.activeInstanceId = instance.id
+      this.activeView = view
+      this.hostWindow = instance.dockHostWindow
+    }
+    if (bounds) this.bounds = bounds
+    this.apply(instance)
+  }
+
+  update(instance: BrowserInstance, bounds: BrowserDockBounds): void {
+    if (instance.mode !== 'dock') return
+    instance.dockBounds = bounds
+    this.bounds = bounds
+    if (bounds.visible && bounds.width > 0 && bounds.height > 0) {
+      this.attach(instance, bounds)
+      return
+    }
+    this.hide(instance)
+  }
+
+  hide(instance: BrowserInstance): void {
+    if (instance.mode !== 'dock') return
+    this.setBounds(instance, { x: 0, y: 0, width: 0, height: 0 })
+    setPageViewVisible(instance.pageView, false)
+    instance.isVisible = false
+  }
+
+  detach(instance: BrowserInstance): void {
+    if (instance.mode !== 'dock') return
+    this.hide(instance)
+    try { this.slotView?.removeChildView(instance.pageView as WebContentsView) } catch { /* noop */ }
+    if (this.activeInstanceId === instance.id) {
+      this.activeInstanceId = null
+      this.activeView = null
+      this.bounds = null
+    }
+  }
+
+  private apply(instance: BrowserInstance): void {
+    const bounds = this.bounds ?? instance.dockBounds
+    if (!bounds || !bounds.visible || bounds.width <= 0 || bounds.height <= 0) {
+      this.hide(instance)
+      return
+    }
+    this.setBounds(instance, {
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height),
+    })
+    setPageViewVisible(instance.pageView, true)
+    instance.isVisible = true
+  }
+
+  private setBounds(instance: BrowserInstance, bounds: { x: number; y: number; width: number; height: number }): void {
+    const width = Math.max(0, Math.round(bounds.width))
+    const height = Math.max(0, Math.round(bounds.height))
+    this.slotView?.setBounds({
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width,
+      height,
+    })
+    instance.pageView.setBounds({ x: 0, y: 0, width, height })
+  }
+
+  private ensureSlotView(): View {
+    if (!this.slotView) this.slotView = new View()
+    return this.slotView
+  }
 }
 
 interface CreateBrowserInstanceOptions {
@@ -352,6 +455,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
   private pendingDockOpenRequests = new Map<string, { resolve: (id: string) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
+  private dockBrowserSlot = new DockBrowserSlot()
   private pendingRightDockRequests = new Map<string, { resolve: (result: RightDockResult) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
 
   setWindowManager(windowManager: WindowManager): void {
@@ -430,15 +534,25 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const pageView = new BrowserView({
-      webPreferences: {
-        partition: SESSION_PARTITION,
-        session: ses,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-      },
-    })
+    const pageView: BrowserPageView = mode === 'dock'
+      ? new WebContentsView({
+        webPreferences: {
+          partition: SESSION_PARTITION,
+          session: ses,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      })
+      : new BrowserView({
+        webPreferences: {
+          partition: SESSION_PARTITION,
+          session: ses,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      })
 
     const supportsMultiView = typeof window.addBrowserView === 'function' && typeof window.setTopBrowserView === 'function'
     if (!supportsMultiView) {
@@ -519,11 +633,9 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     if (mode === 'dock') {
-      dockHostWindow!.addBrowserView(pageView)
-      pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
-      pageView.setAutoResize({ width: false, height: false })
+      this.dockBrowserSlot.hide(instance)
     } else {
-      window.addBrowserView(pageView)
+      window.addBrowserView(pageView as BrowserView)
       window.addBrowserView(nativeOverlayView)
       window.addBrowserView(toolbarView)
       window.setTopBrowserView(toolbarView)
@@ -560,8 +672,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     if (instance.mode === 'dock') {
-      try { instance.dockHostWindow?.removeBrowserView(instance.pageView) } catch { /* noop */ }
-      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
+      this.dockBrowserSlot.detach(instance)
     }
 
     const destroyedBefore = instance.window.isDestroyed()
@@ -873,8 +984,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     if (instance.mode === 'dock') {
       instance.dockBounds = instance.dockBounds ? { ...instance.dockBounds, visible: false } : null
-      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
-      instance.isVisible = false
+      this.dockBrowserSlot.hide(instance)
       this.emitStateChange(instance)
       return
     }
@@ -924,15 +1034,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   setDockBounds(id: string, bounds: BrowserDockBounds): void {
     const instance = this.instances.get(id)
     if (!instance || instance.mode !== 'dock') return
-    instance.dockBounds = bounds
-    if (bounds.visible && bounds.width > 0 && bounds.height > 0) {
-      instance.pageView.setBounds({ x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.round(bounds.width), height: Math.round(bounds.height) })
-      instance.pageView.setAutoResize({ width: false, height: false })
-      instance.isVisible = true
-    } else {
-      instance.pageView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
-      instance.isVisible = false
-    }
+    this.dockBrowserSlot.update(instance, bounds)
     this.emitStateChange(instance)
   }
 
@@ -2283,19 +2385,29 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     this.destroyingIds.delete(instance.id)
-    this.closePopupsForParent(instance.id, 'parent_destroy')
-    this.applyAgentControlLock(instance, false)
-    this.updateNativeOverlayState(instance)
-    instance.cdp.detach()
+    try {
+      this.closePopupsForParent(instance.id, 'parent_destroy')
+      this.applyAgentControlLock(instance, false)
+      this.updateNativeOverlayState(instance)
+      instance.cdp.detach()
+    } catch (error) {
+      mainLog.warn(`[browser-pane] finalize cleanup failed id=${instance.id} error=${error instanceof Error ? error.message : String(error)}`)
+    }
     this.instances.delete(instance.id)
     this.removedCallback?.(instance.id)
     mainLog.info(`[browser-pane] Destroyed instance: ${instance.id} (${source})`)
   }
 
+  private setPageViewBounds(instance: BrowserInstance, bounds: { x: number; y: number; width: number; height: number }, autoResize?: { width: boolean; height: boolean }): void {
+    instance.pageView.setBounds(bounds)
+    if (autoResize && supportsBrowserViewAutoResize(instance.pageView)) {
+      instance.pageView.setAutoResize(autoResize)
+    }
+  }
+
   private layoutPageView(instance: BrowserInstance): void {
     const [width, height] = instance.window.getContentSize()
-    instance.pageView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: Math.max(100, height - TOOLBAR_HEIGHT) })
-    instance.pageView.setAutoResize({ width: true, height: true })
+    this.setPageViewBounds(instance, { x: 0, y: TOOLBAR_HEIGHT, width, height: Math.max(100, height - TOOLBAR_HEIGHT) }, { width: true, height: true })
     this.updateNativeOverlayState(instance)
   }
 

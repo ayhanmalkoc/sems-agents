@@ -2,7 +2,7 @@ import { RPC_CHANNELS, type BrowserPaneCreateOptions, type BrowserEmptyStateLaun
 import type { BrowserScreenshotOptions } from '../browser-pane-manager'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from './handler-deps'
-import { Menu, nativeImage, type BrowserWindow } from 'electron'
+import { ipcMain, Menu, nativeImage, type BrowserWindow } from 'electron'
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.CREATE,
@@ -15,6 +15,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.browserPane.STOP,
   RPC_CHANNELS.browserPane.FOCUS,
   RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS,
+  RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS_FAST,
   RPC_CHANNELS.browserPane.COMPLETE_DOCK_OPEN,
   RPC_CHANNELS.rightDock.COMPLETE,
   RPC_CHANNELS.rightDock.SHOW_ADD_TOOL_MENU,
@@ -35,6 +36,12 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
   const createMenuIcon = (path: string) => nativeImage.createFromDataURL(`data:image/svg+xml;utf8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>
   `)}`)
+
+
+  ipcMain.removeAllListeners(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS_FAST)
+  ipcMain.on(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS_FAST, (_event, id: string, bounds) => {
+    browserPaneManager.setDockBounds(id, bounds)
+  })
 
   const menuIcons = {
     chat: createMenuIcon('<path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>'),

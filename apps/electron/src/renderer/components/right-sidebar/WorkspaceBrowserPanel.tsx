@@ -4,7 +4,7 @@ import { BrowserToolbar } from '@/components/browser/BrowserToolbar'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { cn } from '@/lib/utils'
-import type { BrowserInstanceInfo } from '../../../shared/types'
+import type { BrowserDockBounds, BrowserInstanceInfo } from '../../../shared/types'
 
 interface WorkspaceBrowserPanelProps {
   tabId: string
@@ -14,12 +14,14 @@ interface WorkspaceBrowserPanelProps {
   workspaceId?: string | null
   dockRequestId?: string | null
   onTitleChange?: (title: string) => void
+  onInstanceIdChange?: (instanceId: string | null) => void
+  dockBounds?: BrowserDockBounds | null
 }
 
-export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange }: WorkspaceBrowserPanelProps) {
+export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange, onInstanceIdChange, dockBounds = null }: WorkspaceBrowserPanelProps) {
   const { activeWorkspaceId } = useAppShellContext()
-  const hostRef = React.useRef<HTMLDivElement | null>(null)
   const instanceIdRef = React.useRef<string | null>(null)
+  const onInstanceIdChangeRef = React.useRef<typeof onInstanceIdChange>(onInstanceIdChange)
   const [instanceId, setInstanceId] = React.useState<string | null>(null)
   const [instanceInfo, setInstanceInfo] = React.useState<BrowserInstanceInfo | null>(null)
   const [starting, setStarting] = React.useState(false)
@@ -28,21 +30,21 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
 
   const updateBounds = React.useCallback(() => {
     const id = instanceIdRef.current
-    const element = hostRef.current
-    if (!id || !element) return
-    const rect = element.getBoundingClientRect()
-    void window.electronAPI.browserPane.setDockBounds(id, {
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-      visible: isActive && rect.width > 0 && rect.height > 0,
-    })
-  }, [isActive])
+    if (!id) return
+    if (!isActive || !dockBounds || !dockBounds.visible || dockBounds.width <= 0 || dockBounds.height <= 0) {
+      window.electronAPI.browserPane.setDockBoundsFast(id, { x: 0, y: 0, width: 0, height: 0, visible: false })
+      return
+    }
+    window.electronAPI.browserPane.setDockBoundsFast(id, dockBounds)
+  }, [dockBounds, isActive])
 
   React.useEffect(() => {
     updateBoundsRef.current = updateBounds
   }, [updateBounds])
+
+  React.useEffect(() => {
+    onInstanceIdChangeRef.current = onInstanceIdChange
+  }, [onInstanceIdChange])
 
   React.useEffect(() => {
     let cancelled = false
@@ -65,6 +67,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
         }
         instanceIdRef.current = id
         setInstanceId(id)
+        onInstanceIdChangeRef.current?.(id)
         const instances = await window.electronAPI.browserPane.list()
         setInstanceInfo(instances.find((instance) => instance.id === id) ?? null)
         if (dockRequestId) {
@@ -72,7 +75,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
           await window.electronAPI.browserPane.completeDockOpen({ requestId: dockRequestId, instanceId: id })
         }
         console.info('[browser-pane] dock browser created', { tabId, instanceId: id, dockRequestId })
-        requestAnimationFrame(() => updateBoundsRef.current())
+        updateBoundsRef.current()
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to start browser'
         setErrorMessage(message)
@@ -93,6 +96,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       }
       const id = instanceIdRef.current
       instanceIdRef.current = null
+      onInstanceIdChangeRef.current?.(null)
       if (id) void window.electronAPI.browserPane.destroy(id)
     }
   }, [activeWorkspaceId, dockRequestId, sessionId, tabId, workspaceId])
@@ -115,19 +119,14 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
     }
   }, [onTitleChange])
 
-  React.useEffect(() => {
-    const element = hostRef.current
-    if (!element) return
-    const observer = new ResizeObserver(() => updateBounds())
-    observer.observe(element)
-    updateBounds()
-    return () => observer.disconnect()
-  }, [updateBounds])
-
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     updateBounds()
     if (isActive && instanceIdRef.current) void window.electronAPI.browserPane.focus(instanceIdRef.current)
   }, [isActive, updateBounds])
+
+  React.useLayoutEffect(() => {
+    updateBounds()
+  }, [dockBounds, updateBounds])
 
   const id = instanceId
   const navigate = React.useCallback((url: string) => { if (id) void window.electronAPI.browserPane.navigate(id, url) }, [id])
@@ -144,7 +143,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col bg-background', className)}>
-      <div className="flex shrink-0 items-center gap-1 border-b border-foreground/5 px-2 py-1.5">
+      <div className="flex h-11 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
         <div className="min-w-0 flex-1">
           <BrowserToolbar
             compact
@@ -164,7 +163,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       ) : starting ? (
         <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">Starting browser...</div>
       ) : null}
-      <div ref={hostRef} className={cn('min-h-0 flex-1 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
+      <div className={cn('min-h-0 flex-1 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
     </div>
   )
 }

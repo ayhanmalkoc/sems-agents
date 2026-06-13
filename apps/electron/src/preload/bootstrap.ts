@@ -36,7 +36,7 @@ import {
 import type { ConfirmDialogSpec, FileDialogSpec, BrowserCapabilityRequest } from '@craft-agent/server-core/transport'
 import type { RpcClient } from '@craft-agent/server-core/transport'
 import type { RemoteServerConfig } from '@craft-agent/core/types'
-import type { ElectronAPI } from '../shared/types'
+import { RPC_CHANNELS, type ElectronAPI } from '../shared/types'
 
 // ---------------------------------------------------------------------------
 // Client interface — common surface for both RoutedClient and WsRpcClient
@@ -192,6 +192,10 @@ client.handleCapability(CLIENT_BROWSER_INVOKE, async (req: BrowserCapabilityRequ
 const api = buildClientApi(client, CHANNEL_MAP, (ch) => client.isChannelAvailable(ch))
 
 ;(api as any).getRuntimeEnvironment = (): 'electron' | 'web' => 'electron'
+
+;(api as ElectronAPI).browserPane.setDockBoundsFast = (id, bounds) => {
+  ipcRenderer.send(RPC_CHANNELS.browserPane.SET_DOCK_BOUNDS_FAST, id, bounds)
+}
 
 // ---------------------------------------------------------------------------
 // Transport connection state logging (for remote connections)

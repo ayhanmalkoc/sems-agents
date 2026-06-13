@@ -659,6 +659,7 @@ export interface ElectronAPI {
     stop(id: string): Promise<void>
     focus(id: string): Promise<void>
     setDockBounds(id: string, bounds: BrowserDockBounds): Promise<void>
+    setDockBoundsFast(id: string, bounds: BrowserDockBounds): void
     completeDockOpen(result: BrowserDockOpenResult): Promise<void>
     onOpenDockRequested(callback: (request: BrowserDockOpenRequest) => void): () => void
     emptyStateLaunch(payload: BrowserEmptyStateLaunchPayload): Promise<BrowserEmptyStateLaunchResult>

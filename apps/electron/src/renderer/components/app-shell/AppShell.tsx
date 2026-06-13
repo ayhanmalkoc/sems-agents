@@ -26,6 +26,7 @@ import {
   Bot,
   Info,
   MailOpen,
+  PanelRight,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -40,6 +41,7 @@ import { isMac } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton } from "@/components/ui/HeaderIconButton"
 import { TopBarButton } from "@/components/ui/TopBarButton"
+import { PanelHeaderCenterButton } from "@/components/ui/PanelHeaderCenterButton"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipTrigger, TooltipContent, DocumentFormattedMarkdownOverlay } from "@craft-agent/ui"
 import {
@@ -122,7 +124,7 @@ import { PanelHeader } from "./PanelHeader"
 import { FabNewChat } from "./FabNewChat"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
-import { RightWorkspacePanel, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
+import { RightWorkspacePanel, type RightDockLayoutPhase, type RightDockPanelBounds, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
 import type { RightDockStatusSnapshot } from "@craft-agent/shared/protocol"
 import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
 import { WorkspaceCreationScreen, type CreationStep } from "@/components/workspace/WorkspaceCreationScreen"
@@ -563,7 +565,12 @@ function AppShellContent({
   const [isRightDockOpen, setIsRightDockOpen] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelOpen, false)
   })
-  const [isRightDockMaximized, setIsRightDockMaximized] = React.useState(false)
+  const [isRightDockMounted, setIsRightDockMounted] = React.useState(isRightDockOpen)
+  const [rightDockToggleTop, setRightDockToggleTop] = React.useState<number | null>(null)
+  const [rightDockLayoutPhase, setRightDockLayoutPhase] = React.useState<RightDockLayoutPhase>('idle')
+  const [rightDockLayoutVersion, setRightDockLayoutVersion] = React.useState(0)
+  const [rightDockPanelBounds, setRightDockPanelBounds] = React.useState<RightDockPanelBounds | null>(null)
+  const rightDockIdleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [rightDockWidth, setRightDockWidth] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelWidth, 360)
   })
@@ -576,22 +583,62 @@ function AppShellContent({
   }, [isRightDockOpen])
 
   React.useEffect(() => {
+    if (isRightDockOpen) {
+      setIsRightDockMounted(true)
+      return
+    }
+    const timer = setTimeout(() => setIsRightDockMounted(false), 260)
+    return () => clearTimeout(timer)
+  }, [isRightDockOpen])
+
+  React.useEffect(() => {
     storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
   }, [rightDockWidth])
+
+  const bumpRightDockLayout = useCallback((phase: RightDockLayoutPhase, settleDelay = 140) => {
+    if (rightDockIdleTimerRef.current) clearTimeout(rightDockIdleTimerRef.current)
+    setRightDockLayoutPhase(phase)
+    setRightDockLayoutVersion((version) => version + 1)
+    if (phase !== 'idle') {
+      rightDockIdleTimerRef.current = setTimeout(() => {
+        rightDockIdleTimerRef.current = null
+        setRightDockLayoutPhase('idle')
+        setRightDockLayoutVersion((version) => version + 1)
+      }, settleDelay)
+    }
+  }, [])
+
+  React.useEffect(() => () => {
+    if (rightDockIdleTimerRef.current) clearTimeout(rightDockIdleTimerRef.current)
+  }, [])
+
+  const handleRightDockPanelBoundsChange = useCallback((bounds: RightDockPanelBounds) => {
+    setRightDockPanelBounds((prev) => {
+      if (prev && Math.round(prev.x) === Math.round(bounds.x) && Math.round(prev.y) === Math.round(bounds.y) && Math.round(prev.width) === Math.round(bounds.width) && Math.round(prev.height) === Math.round(bounds.height)) return prev
+      return bounds
+    })
+    setRightDockLayoutVersion((version) => version + 1)
+  }, [])
 
   const openRightDockTool = useCallback((type: RightDockToolType, options?: Partial<RightDockTab>) => {
     const tab: RightDockTab = { id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, ...options }
     setRightDockTabs((prev) => [...prev, tab])
     setActiveRightDockTabId(tab.id)
     setIsRightDockOpen(true)
+    bumpRightDockLayout('opening')
     return tab.id
-  }, [])
+  }, [bumpRightDockLayout])
 
   const updateRightDockTabTitle = useCallback((tabId: string, title: string) => {
     setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, title } : tab))
   }, [])
 
+  const updateRightDockBrowserInstanceId = useCallback((tabId: string, browserInstanceId: string | null) => {
+    setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, browserInstanceId } : tab))
+  }, [])
+
   const closeRightDockTab = useCallback((tabId: string) => {
+    bumpRightDockLayout('closing')
     setRightDockTabs((prev) => {
       const index = prev.findIndex((tab) => tab.id === tabId)
       if (index === -1) return prev
@@ -602,14 +649,22 @@ function AppShellContent({
       })
       return next
     })
-  }, [])
+  }, [bumpRightDockLayout])
+
+  const toggleRightDock = useCallback(() => {
+    const nextOpen = !isRightDockOpen
+    bumpRightDockLayout(nextOpen ? 'opening' : 'closing', 260)
+    setIsRightDockOpen(nextOpen)
+  }, [bumpRightDockLayout, isRightDockOpen])
+
 
   const handleRightDockResizeStart = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault()
     rightDockResizeStartXRef.current = event.clientX
     rightDockResizeStartWidthRef.current = rightDockWidth
+    bumpRightDockLayout('resizing', 220)
     setIsResizing('right-dock')
-  }, [rightDockWidth])
+  }, [bumpRightDockLayout, rightDockWidth])
   // Hides both sidebar and navigator (CMD+. toggle)
   // Seed from either focused window param or persisted preference, then keep it toggleable.
   const [isSidebarAndNavigatorHidden, setIsSidebarAndNavigatorHidden] = React.useState(() => {
@@ -625,6 +680,45 @@ function AppShellContent({
   const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
+
+  React.useLayoutEffect(() => {
+    if (isAutoCompact) {
+      setRightDockToggleTop(null)
+      return
+    }
+
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const anchor = document.querySelector<HTMLElement>('[data-right-dock-toggle-anchor="true"]')
+      if (!anchor) {
+        setRightDockToggleTop(null)
+        return
+      }
+      const rect = anchor.getBoundingClientRect()
+      setRightDockToggleTop((prev) => {
+        const next = rect.y
+        if (prev != null && Math.round(prev) === Math.round(next)) return prev
+        return next
+      })
+    }
+    const schedule = () => {
+      if (frame) cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    }
+
+    measure()
+    window.addEventListener('resize', schedule)
+    const observer = new ResizeObserver(schedule)
+    const root = shellRef.current
+    if (root) observer.observe(root)
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('resize', schedule)
+      observer.disconnect()
+    }
+  }, [isAutoCompact, shellWidth])
+
 
   const buildRightDockStatus = useCallback((overrides?: { open?: boolean; tabs?: RightDockTab[]; activeTabId?: string | null; reason?: string }): RightDockStatusSnapshot => {
     const tabs = overrides?.tabs ?? rightDockTabs
@@ -663,6 +757,7 @@ function AppShellContent({
       }
       if (request.command === 'open') {
         setIsRightDockOpen(true)
+        bumpRightDockLayout('opening')
         complete(buildRightDockStatus({ open: true }))
         return
       }
@@ -704,7 +799,7 @@ function AppShellContent({
       }
       fail(`Unsupported right dock command: ${request.command}`)
     })
-  }, [buildRightDockStatus, closeRightDockTab, isAutoCompact, openRightDockTool, rightDockTabs])
+  }, [buildRightDockStatus, bumpRightDockLayout, closeRightDockTab, isAutoCompact, openRightDockTool, rightDockTabs])
 
   React.useEffect(() => {
     return window.electronAPI.browserPane.onOpenDockRequested((request) => {
@@ -758,6 +853,9 @@ function AppShellContent({
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
 
+  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
+    ? 0
+    : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
   const panelCount = useAtomValue(panelCountAtom)
@@ -1422,6 +1520,7 @@ function AppShellContent({
         const delta = rightDockResizeStartXRef.current - e.clientX
         const newWidth = Math.min(Math.max(rightDockResizeStartWidthRef.current + delta, 300), 640)
         setRightDockWidth(newWidth)
+        setRightDockLayoutVersion((version) => version + 1)
       }
     }
 
@@ -1434,6 +1533,7 @@ function AppShellContent({
         setSessionListHandleY(null)
       } else if (isResizing === 'right-dock') {
         storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
+        bumpRightDockLayout('idle')
       }
       setIsResizing(null)
     }
@@ -1451,6 +1551,7 @@ function AppShellContent({
     sessionListWidth,
     rightDockWidth,
     isSidebarVisible,
+    bumpRightDockLayout,
   ])
 
   // Spring transition config - shared between sidebar and header
@@ -1776,7 +1877,7 @@ function AppShellContent({
     onSessionSourcesChange: handleSessionSourcesChange,
     rightSidebarButton: null,
     isRightDockOpen,
-    onToggleRightDock: () => setIsRightDockOpen((prev) => !prev),
+    onToggleRightDock: toggleRightDock,
     isCompactMode: isAutoCompact,
     sessionListSearchQuery: undefined,
     isSearchModeActive: false,
@@ -1789,7 +1890,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isRightDockOpen, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isRightDockOpen, toggleRightDock, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -2518,8 +2619,6 @@ function AppShellContent({
           onOpenInspectTool={() => openRightDockTool('inspect')}
           onOpenTerminalTool={() => openRightDockTool('terminal')}
           hasFilesTool={Boolean(activeSessionWorkingDirectory || activeWorkspace?.rootPath)}
-          onToggleRightDock={() => setIsRightDockOpen((prev) => !prev)}
-          isRightDockOpen={isRightDockOpen}
           isCompact={isAutoCompact}
           placement="sidebar"
         />
@@ -3281,10 +3380,10 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={(isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState)) ? 0 : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))}
+          navigatorWidth={navigatorPanelWidth}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
-          isRightSidebarVisible={isRightDockOpen && !isAutoCompact}
-          isContentHidden={isRightDockOpen && isRightDockMaximized && !isAutoCompact}
+          isRightSidebarVisible={isRightDockMounted && !isAutoCompact}
+          isContentHidden={false}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
         />
@@ -3298,10 +3397,21 @@ function AppShellContent({
           </TopBarButton>
         )}
 
-        {isRightDockOpen && !isAutoCompact && (
+        {!isAutoCompact && (
+          <PanelHeaderCenterButton
+            aria-label={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
+            tooltip={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
+            onClick={toggleRightDock}
+            className={cn('absolute right-[13.5px] z-panel', isRightDockOpen && 'opacity-100 bg-foreground/8', rightDockToggleTop == null && 'top-[13px]')}
+            style={rightDockToggleTop != null ? { top: rightDockToggleTop } : undefined}
+            icon={<PanelRight className="h-4 w-4" />}
+          />
+        )}
+
+        {isRightDockMounted && !isAutoCompact && (
           <RightWorkspacePanel
             width={rightDockWidth}
-            isMaximized={isRightDockMaximized}
+            isOpen={isRightDockOpen}
             tabs={rightDockTabs}
             activeTabId={activeRightDockTabId}
             activeSessionId={effectiveSessionId}
@@ -3310,9 +3420,12 @@ function AppShellContent({
             onSelectTab={setActiveRightDockTabId}
             onCloseTab={closeRightDockTab}
             onUpdateTabTitle={updateRightDockTabTitle}
-            onClosePanel={() => setIsRightDockOpen(false)}
-            onToggleMaximized={() => setIsRightDockMaximized((prev) => !prev)}
+            onUpdateBrowserInstanceId={updateRightDockBrowserInstanceId}
             onResizeStart={handleRightDockResizeStart}
+            layoutPhase={rightDockLayoutPhase}
+            layoutVersion={rightDockLayoutVersion}
+            panelBounds={rightDockPanelBounds}
+            onPanelBoundsChange={handleRightDockPanelBoundsChange}
           />
         )}
         {/* Sidebar Resize Handle (absolute, hidden in focused mode) */}
