@@ -6,7 +6,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
-- **Right dock full focus** — Added an expand/restore control that gives the right dock the full workspace while preserving normal dock width on restore.
+- **Right dock full focus** — Added an expand/restore control that hides the main content and gives the right dock the remaining workspace while preserving normal dock width on restore.
 
 - **Browser tool default guidance** — Clarified that normal browser use should open a visible browser window first, with dock and background modes reserved for explicit requests.
 

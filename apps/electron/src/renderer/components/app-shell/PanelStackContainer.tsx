@@ -103,11 +103,11 @@ export function PanelStackContainer({
   const prevCountRef = useRef(contentPanels.length)
   const dockSash = useResizeGradient()
 
-  const hasSidebar = !isDockExpanded && sidebarWidth > 0
+  const hasSidebar = sidebarWidth > 0
   // Desktop: navigator is shown when AppShell asks for it. Compact: navigator
   // is always mounted (transform-hidden when detail-focused) so the slide can
   // animate both slots in lockstep.
-  const hasNavigator = !isDockExpanded && (isCompact ? navigatorWidth > 0 : navigatorWidth > 0)
+  const hasNavigator = isCompact ? navigatorWidth > 0 : navigatorWidth > 0
   const hasDock = Boolean(dockSlot) && Boolean(isDockVisible) && dockWidth > 0
   const dockSlotWidth = dockWidth + 2
   const isMultiPanel = visiblePanels.length > 1
