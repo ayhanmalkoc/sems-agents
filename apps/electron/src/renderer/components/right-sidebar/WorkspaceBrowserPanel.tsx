@@ -15,10 +15,28 @@ interface WorkspaceBrowserPanelProps {
   dockRequestId?: string | null
   onTitleChange?: (title: string) => void
   onInstanceIdChange?: (instanceId: string | null) => void
-  dockBounds?: BrowserDockBounds | null
 }
 
-export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange, onInstanceIdChange, dockBounds = null }: WorkspaceBrowserPanelProps) {
+function rectToDockBounds(rect: DOMRect): BrowserDockBounds {
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    visible: rect.width > 0 && rect.height > 0,
+  }
+}
+
+function isSameDockBounds(a: BrowserDockBounds | null, b: BrowserDockBounds | null): boolean {
+  if (!a || !b) return a === b
+  return Math.round(a.x) === Math.round(b.x)
+    && Math.round(a.y) === Math.round(b.y)
+    && Math.round(a.width) === Math.round(b.width)
+    && Math.round(a.height) === Math.round(b.height)
+    && a.visible === b.visible
+}
+
+export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessionId, workspaceId, dockRequestId, onTitleChange, onInstanceIdChange }: WorkspaceBrowserPanelProps) {
   const { activeWorkspaceId } = useAppShellContext()
   const instanceIdRef = React.useRef<string | null>(null)
   const onInstanceIdChangeRef = React.useRef<typeof onInstanceIdChange>(onInstanceIdChange)
@@ -26,17 +44,22 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   const [instanceInfo, setInstanceInfo] = React.useState<BrowserInstanceInfo | null>(null)
   const [starting, setStarting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-  const updateBoundsRef = React.useRef<() => void>(() => {})
+  const contentSlotRef = React.useRef<HTMLDivElement | null>(null)
+  const lastDockBoundsRef = React.useRef<BrowserDockBounds | null>(null)
+  const updateBoundsRef = React.useRef<(options?: { force?: boolean }) => void>(() => {})
 
-  const updateBounds = React.useCallback(() => {
+  const updateBounds = React.useCallback((options: { force?: boolean } = {}) => {
     const id = instanceIdRef.current
     if (!id) return
-    if (!isActive || !dockBounds || !dockBounds.visible || dockBounds.width <= 0 || dockBounds.height <= 0) {
-      window.electronAPI.browserPane.setDockBoundsFast(id, { x: 0, y: 0, width: 0, height: 0, visible: false })
-      return
-    }
+    const element = contentSlotRef.current
+    const nextBounds = isActive && element
+      ? rectToDockBounds(element.getBoundingClientRect())
+      : { x: 0, y: 0, width: 0, height: 0, visible: false }
+    const dockBounds = nextBounds.visible ? nextBounds : { x: 0, y: 0, width: 0, height: 0, visible: false }
+    if (!options.force && isSameDockBounds(lastDockBoundsRef.current, dockBounds)) return
+    lastDockBoundsRef.current = dockBounds
     window.electronAPI.browserPane.setDockBoundsFast(id, dockBounds)
-  }, [dockBounds, isActive])
+  }, [isActive])
 
   React.useEffect(() => {
     updateBoundsRef.current = updateBounds
@@ -120,13 +143,37 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
   }, [onTitleChange])
 
   React.useLayoutEffect(() => {
-    updateBounds()
-    if (isActive && instanceIdRef.current) void window.electronAPI.browserPane.focus(instanceIdRef.current)
+    lastDockBoundsRef.current = null
+    updateBounds({ force: true })
+    let frame = 0
+    if (isActive && instanceIdRef.current) {
+      void window.electronAPI.browserPane.focus(instanceIdRef.current)
+      frame = requestAnimationFrame(() => updateBounds({ force: true }))
+    }
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+    }
   }, [isActive, updateBounds])
 
   React.useLayoutEffect(() => {
-    updateBounds()
-  }, [dockBounds, updateBounds])
+    const element = contentSlotRef.current
+    if (!element) {
+      updateBounds()
+      return
+    }
+    let frame = 0
+    const schedule = () => {
+      if (frame) cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => updateBounds())
+    }
+    const observer = new ResizeObserver(schedule)
+    observer.observe(element)
+    schedule()
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [updateBounds])
 
   const id = instanceId
   const navigate = React.useCallback((url: string) => { if (id) void window.electronAPI.browserPane.navigate(id, url) }, [id])
@@ -163,7 +210,7 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
       ) : starting ? (
         <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">Starting browser...</div>
       ) : null}
-      <div className={cn('min-h-0 flex-1 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
+      <div ref={contentSlotRef} className={cn('min-h-0 flex-1 overflow-hidden bg-background', (starting || errorMessage) && 'hidden')} />
     </div>
   )
 }

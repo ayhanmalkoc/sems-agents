@@ -125,7 +125,7 @@ import { PanelHeader } from "./PanelHeader"
 import { FabNewChat } from "./FabNewChat"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
-import { RightWorkspacePanel, type RightDockLayoutPhase, type RightDockPanelBounds, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
+import { RightWorkspacePanel, type RightDockLayoutPhase, type RightDockTab, type RightDockToolType } from "@/components/right-sidebar/RightWorkspacePanel"
 import type { RightDockStatusSnapshot } from "@craft-agent/shared/protocol"
 import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
 import { WorkspaceCreationScreen, type CreationStep } from "@/components/workspace/WorkspaceCreationScreen"
@@ -569,7 +569,6 @@ function AppShellContent({
   const [rightDockToggleTop, setRightDockToggleTop] = React.useState<number | null>(null)
   const [hasRightDockToggleAnchor, setHasRightDockToggleAnchor] = React.useState(false)
   const [rightDockLayoutPhase, setRightDockLayoutPhase] = React.useState<RightDockLayoutPhase>('idle')
-  const [rightDockPanelBounds, setRightDockPanelBounds] = React.useState<RightDockPanelBounds | null>(null)
   const rightDockIdleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [rightDockWidth, setRightDockWidth] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelWidth, 360)
@@ -608,13 +607,6 @@ function AppShellContent({
 
   const closeRightDock = useCallback(() => {
     setIsRightDockOpen(false)
-  }, [])
-
-  const handleRightDockPanelBoundsChange = useCallback((bounds: RightDockPanelBounds) => {
-    setRightDockPanelBounds((prev) => {
-      if (prev && Math.round(prev.x) === Math.round(bounds.x) && Math.round(prev.y) === Math.round(bounds.y) && Math.round(prev.width) === Math.round(bounds.width) && Math.round(prev.height) === Math.round(bounds.height)) return prev
-      return bounds
-    })
   }, [])
 
   const openRightDockTool = useCallback((type: RightDockToolType, options?: Partial<RightDockTab>) => {
@@ -3405,8 +3397,6 @@ function AppShellContent({
               onUpdateTabTitle={updateRightDockTabTitle}
               onUpdateBrowserInstanceId={updateRightDockBrowserInstanceId}
               layoutPhase={rightDockLayoutPhase}
-              panelBounds={rightDockPanelBounds}
-              onPanelBoundsChange={handleRightDockPanelBoundsChange}
             />
           ) : undefined}
           dockWidth={rightDockWidth}
