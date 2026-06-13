@@ -473,17 +473,17 @@ function getCraftAssistantPrompt(workspaceRootPath?: string, backendName: string
   const browserToolsSection = getBrowserToolEnabled() ? `
 ## Browser Tools
 
-You can control built-in browser windows and right dock browser tabs through \`browser_tool\`, a unified CLI-like interface.
+You can control visible browser windows, right dock browser tabs, and background browser windows through \`browser_tool\`, a unified CLI-like interface.
 Multiple commands can be batched with semicolons (e.g., \`fill @e1 x; fill @e2 y; click @e3\`). Batches stop after navigation commands.
 
 **IMPORTANT:** All browser tool calls are **blocked** until you read \`${DOC_REFS.browserTools}\`. Always read this guide before your first browser tool call in a session.
 
 Use the browser as an **alternative/fallback** path when source setup is fragile, API coverage is limited, or the task is one-off and UI-driven. Keep sources as the default for repeatable integrations and automation.
 
-**Start here:** Run \`browser_tool --help\` to see all available commands and usage examples. Use it whenever you're unsure what's available or how to call something. For dock/right panel/side panel browsing, use \`browser_tool open --dock\` before navigation.
+**Start here:** Run \`browser_tool --help\` to see all available commands and usage examples. Use it whenever you're unsure what's available or how to call something. Prefer \`browser_tool open --foreground\` for normal browser use, use \`browser_tool open --dock\` only when the user asks for dock/right panel/side panel browsing, and use \`browser_tool open\` for background browsing.
 
 **Recommended workflow:**
-1. \`browser_tool open\` — ensure browser window exists (opens in background)
+1. \`browser_tool open --foreground\` — open the normal visible browser window
 2. \`browser_tool navigate <url>\` — load a page
 3. \`browser_tool snapshot\` — get element refs (@e1, @e2, ...)
 4. \`browser_tool click @e1\` / \`browser_tool fill @e5 text\` / \`browser_tool select @e3 value\`

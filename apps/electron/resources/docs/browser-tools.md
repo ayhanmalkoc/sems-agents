@@ -35,13 +35,12 @@ browser_tool({ command: "windows" })
 ```
 
 Recommended flow:
-1. `open` — ensure a browser window exists (background by default)
-2. `open --dock` — use the right dock browser when the user asks for dock/right panel/side panel browsing
-3. `navigate <url>` — load a URL
-4. `snapshot` — inspect accessible elements and get refs (`@e1`, `@e2`, ...)
-5. `find <query>` — quickly narrow to matching refs by keyword
-6. `click` / `fill` / `select` — interact using refs
-7. `screenshot --annotated` (or `screenshot-region`) — visual verification when needed
+1. `open --foreground` — open the normal visible browser window
+2. `navigate <url>` — load a URL
+3. `snapshot` — inspect accessible elements and get refs (`@e1`, `@e2`, ...)
+4. `find <query>` — quickly narrow to matching refs by keyword
+5. `click` / `fill` / `select` — interact using refs
+6. `screenshot --annotated` (or `screenshot-region`) — visual verification when needed
 
 ---
 
@@ -49,9 +48,9 @@ Recommended flow:
 
 ```text
 browser_tool({ command: "--help" })
-browser_tool({ command: "open" })
-browser_tool({ command: "open --dock" })
 browser_tool({ command: "open --foreground" })
+browser_tool({ command: "open --dock" })
+browser_tool({ command: "open" })
 browser_tool({ command: "navigate https://example.com" })
 browser_tool({ command: "snapshot" })
 browser_tool({ command: "find login button" })
@@ -196,7 +195,7 @@ browser_tool({ command: "click @e12" })
 browser_tool({ command: "screenshot --annotated" })
 ```
 
-Use `open` for the default background browser window and `open --foreground` when the user explicitly wants a separate visible browser window.
+Use `open --foreground` for normal visible browser use, `open --dock` when the user asks for right dock/right panel/side panel browsing, and `open` for background browsing.
 
 ### `focus [windowId]` / `windows`
 Manage and inspect browser window ownership and visibility. `windows` includes each instance mode (`window` or `dock`) when available.
