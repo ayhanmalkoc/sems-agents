@@ -60,6 +60,7 @@ interface PanelStackContainerProps {
   onDockResizeStart?: (event: React.MouseEvent<HTMLDivElement>) => void
   isSidebarAndNavigatorHidden: boolean
   isDockVisible?: boolean
+  isDockExpanded?: boolean
   isContentHidden?: boolean
   /** Compact mode: single-panel, list/content toggle (mobile or narrow window) */
   isCompact?: boolean
@@ -76,6 +77,7 @@ export function PanelStackContainer({
   onDockResizeStart,
   isSidebarAndNavigatorHidden,
   isDockVisible,
+  isDockExpanded = false,
   isContentHidden,
   isCompact = false,
   isResizing,
@@ -84,7 +86,7 @@ export function PanelStackContainer({
   const focusedPanelId = useAtomValue(focusedPanelIdAtom)
   const focusedRoute = useAtomValue(focusedPanelRouteAtom)
 
-  const contentPanels = panelStack
+  const contentPanels = isDockExpanded ? [] : panelStack
 
   // Compact mode: drill-in is "detail focused", not just "session selected".
   // For sessions: a session is selected. For settings: a subpage is selected.
@@ -101,11 +103,11 @@ export function PanelStackContainer({
   const prevCountRef = useRef(contentPanels.length)
   const dockSash = useResizeGradient()
 
-  const hasSidebar = sidebarWidth > 0
+  const hasSidebar = !isDockExpanded && sidebarWidth > 0
   // Desktop: navigator is shown when AppShell asks for it. Compact: navigator
   // is always mounted (transform-hidden when detail-focused) so the slide can
   // animate both slots in lockstep.
-  const hasNavigator = isCompact ? navigatorWidth > 0 : navigatorWidth > 0
+  const hasNavigator = !isDockExpanded && (isCompact ? navigatorWidth > 0 : navigatorWidth > 0)
   const hasDock = Boolean(dockSlot) && Boolean(isDockVisible) && dockWidth > 0
   const dockSlotWidth = dockWidth + 2
   const isMultiPanel = visiblePanels.length > 1
@@ -285,7 +287,7 @@ export function PanelStackContainer({
 
         {/* === CONTENT PANELS WITH SASHES === */}
         {visiblePanels.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center" />
+          isDockExpanded ? null : <div className="flex-1 flex items-center justify-center" />
         ) : (
           visiblePanels.map((entry, index) => (
             <PanelSlot
@@ -310,7 +312,7 @@ export function PanelStackContainer({
         )}
 
         {/* === DOCK SLOT === */}
-        {dockSlot && hasDock && onDockResizeStart && (
+        {dockSlot && hasDock && !isDockExpanded && onDockResizeStart && (
           <div
             className="relative w-0 shrink-0"
             style={{ marginLeft: PANEL_SASH_FLEX_MARGIN, marginRight: PANEL_SASH_FLEX_MARGIN }}

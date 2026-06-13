@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
+import { FolderOpen, Globe, GitCompare, Maximize2, MessageSquare, Minimize2, PanelRight, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
@@ -50,6 +50,8 @@ export interface RightWorkspacePanelProps {
   onCloseTab: (id: string) => void
   onUpdateTabTitle?: (id: string, title: string) => void
   onUpdateBrowserInstanceId?: (id: string, instanceId: string | null) => void
+  isExpanded?: boolean
+  onToggleExpanded?: () => void
   layoutPhase?: RightDockLayoutPhase
 }
 
@@ -91,6 +93,8 @@ export function RightWorkspacePanel({
   onCloseTab,
   onUpdateTabTitle,
   onUpdateBrowserInstanceId,
+  isExpanded = false,
+  onToggleExpanded,
   layoutPhase = 'idle',
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
@@ -143,6 +147,24 @@ export function RightWorkspacePanel({
           )}
         </div>
 
+          <div className="flex shrink-0 items-center gap-1.5">
+            {onToggleExpanded && (
+              <TopBarButton
+                aria-label={isExpanded ? 'Restore right tools panel' : 'Expand right tools panel'}
+                title={isExpanded ? 'Restore right tools panel' : 'Expand right tools panel'}
+                onClick={onToggleExpanded}
+                isActive={isExpanded}
+                className="rounded-lg"
+              >
+                {isExpanded ? <Minimize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} /> : <Maximize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} />}
+              </TopBarButton>
+            )}
+            <div data-right-dock-toggle-anchor="true" aria-hidden="true" className="h-7 w-7 shrink-0 overflow-hidden rounded-lg">
+              <TopBarButton tabIndex={-1} disabled className="pointer-events-none invisible rounded-lg">
+                <PanelRight className="h-4 w-4" />
+              </TopBarButton>
+            </div>
+          </div>
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-hidden">

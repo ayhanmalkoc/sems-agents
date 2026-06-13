@@ -6,6 +6,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- **Right dock full focus** — Added an expand/restore control that gives the right dock the full workspace while preserving normal dock width on restore.
+
 - **Browser tool default guidance** — Clarified that normal browser use should open a visible browser window first, with dock and background modes reserved for explicit requests.
 
 - **Browser dock mode guidance** — Clarified `browser_tool open --dock` as the agent path for right dock browsing and exposed dock metadata in browser/right dock status output.

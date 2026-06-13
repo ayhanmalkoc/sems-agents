@@ -568,6 +568,7 @@ function AppShellContent({
   })
   const [rightDockToggleTop, setRightDockToggleTop] = React.useState<number | null>(null)
   const [hasRightDockToggleAnchor, setHasRightDockToggleAnchor] = React.useState(false)
+  const [isRightDockExpanded, setIsRightDockExpanded] = React.useState(false)
   const [rightDockLayoutPhase, setRightDockLayoutPhase] = React.useState<RightDockLayoutPhase>('idle')
   const rightDockIdleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [rightDockWidth, setRightDockWidth] = React.useState(() => {
@@ -606,6 +607,7 @@ function AppShellContent({
   }, [])
 
   const closeRightDock = useCallback(() => {
+    setIsRightDockExpanded(false)
     setIsRightDockOpen(false)
   }, [])
 
@@ -638,6 +640,11 @@ function AppShellContent({
     })
   }, [])
 
+  const toggleRightDockExpanded = useCallback(() => {
+    setIsRightDockExpanded((expanded) => !expanded)
+    bumpRightDockLayout('resizing', 260)
+  }, [bumpRightDockLayout])
+
   const toggleRightDock = useCallback(() => {
     const nextOpen = !isRightDockOpen
     if (nextOpen) {
@@ -649,12 +656,13 @@ function AppShellContent({
 
 
   const handleRightDockResizeStart = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (isRightDockExpanded) return
     event.preventDefault()
     rightDockResizeStartXRef.current = event.clientX
     rightDockResizeStartWidthRef.current = rightDockWidth
     bumpRightDockLayout('resizing', 220)
     setIsResizing('right-dock')
-  }, [bumpRightDockLayout, rightDockWidth])
+  }, [bumpRightDockLayout, isRightDockExpanded, rightDockWidth])
   // Hides both sidebar and navigator (CMD+. toggle)
   // Seed from either focused window param or persisted preference, then keep it toggleable.
   const [isSidebarAndNavigatorHidden, setIsSidebarAndNavigatorHidden] = React.useState(() => {
@@ -668,6 +676,11 @@ function AppShellContent({
   const shellWidth = useContainerWidth(shellRef)
   const MOBILE_THRESHOLD = 768
   const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
+
+  const effectiveRightDockWidth = React.useMemo(() => {
+    if (!isRightDockExpanded) return rightDockWidth
+    return Math.max(rightDockWidth, shellWidth - PANEL_EDGE_INSET - 8)
+  }, [isRightDockExpanded, rightDockWidth, shellWidth])
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
 
@@ -3397,13 +3410,16 @@ function AppShellContent({
               onCloseTab={closeRightDockTab}
               onUpdateTabTitle={updateRightDockTabTitle}
               onUpdateBrowserInstanceId={updateRightDockBrowserInstanceId}
+              isExpanded={isRightDockExpanded}
+              onToggleExpanded={toggleRightDockExpanded}
               layoutPhase={rightDockLayoutPhase}
             />
           ) : undefined}
-          dockWidth={rightDockWidth}
+          dockWidth={effectiveRightDockWidth}
           onDockResizeStart={handleRightDockResizeStart}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isDockVisible={isRightDockOpen && !isAutoCompact}
+          isDockExpanded={isRightDockExpanded}
           isContentHidden={false}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
@@ -3418,7 +3434,7 @@ function AppShellContent({
           </TopBarButton>
         )}
 
-        {!isAutoCompact && hasRightDockToggleAnchor && shouldShowDockToggle('primary', { isOnlyPanel: isOnlyMainPanel }) && (
+        {!isAutoCompact && hasRightDockToggleAnchor && (isRightDockExpanded || shouldShowDockToggle('primary', { isOnlyPanel: isOnlyMainPanel })) && (
           <PanelHeaderCenterButton
             aria-label={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
             tooltip={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
