@@ -146,10 +146,30 @@ export function WorkspaceBrowserPanel({ tabId, className, isActive = true, sessi
     lastDockBoundsRef.current = null
     updateBounds({ force: true })
     let frame = 0
-    if (isActive && instanceIdRef.current) {
-      void window.electronAPI.browserPane.focus(instanceIdRef.current)
-      frame = requestAnimationFrame(() => updateBounds({ force: true }))
+    if (!isActive || !instanceIdRef.current) {
+      return () => {
+        if (frame) cancelAnimationFrame(frame)
+      }
     }
+
+    void window.electronAPI.browserPane.focus(instanceIdRef.current)
+    let frameCount = 0
+    let stableCount = 0
+    let lastKey = ''
+    const syncUntilStable = () => {
+      updateBounds({ force: true })
+      const rect = contentSlotRef.current?.getBoundingClientRect()
+      const key = rect
+        ? `${Math.round(rect.x)}:${Math.round(rect.y)}:${Math.round(rect.width)}:${Math.round(rect.height)}`
+        : 'none'
+      stableCount = key === lastKey ? stableCount + 1 : 0
+      lastKey = key
+      frameCount += 1
+      if (frameCount < 30 && stableCount < 3) {
+        frame = requestAnimationFrame(syncUntilStable)
+      }
+    }
+    frame = requestAnimationFrame(syncUntilStable)
     return () => {
       if (frame) cancelAnimationFrame(frame)
     }
