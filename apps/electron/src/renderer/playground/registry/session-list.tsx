@@ -96,6 +96,7 @@ function createMockContext(overrides: Partial<SessionListContextValue> = {}): Se
     flatLabels: [],
     labels: [],
     isMultiSelectActive: false,
+    showOpenInNewPanel: true,
     contentSearchResults: new Map(),
     ...overrides,
   }

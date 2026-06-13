@@ -55,11 +55,11 @@ interface PanelStackContainerProps {
   sidebarWidth: number
   navigatorSlot: React.ReactNode
   navigatorWidth: number
-  rightSidebarSlot?: React.ReactNode
-  rightSidebarWidth?: number
-  onRightSidebarResizeStart?: (event: React.MouseEvent<HTMLDivElement>) => void
+  dockSlot?: React.ReactNode
+  dockWidth?: number
+  onDockResizeStart?: (event: React.MouseEvent<HTMLDivElement>) => void
   isSidebarAndNavigatorHidden: boolean
-  isRightSidebarVisible?: boolean
+  isDockVisible?: boolean
   isContentHidden?: boolean
   /** Compact mode: single-panel, list/content toggle (mobile or narrow window) */
   isCompact?: boolean
@@ -71,11 +71,11 @@ export function PanelStackContainer({
   sidebarWidth,
   navigatorSlot,
   navigatorWidth,
-  rightSidebarSlot,
-  rightSidebarWidth = 0,
-  onRightSidebarResizeStart,
+  dockSlot,
+  dockWidth = 0,
+  onDockResizeStart,
   isSidebarAndNavigatorHidden,
-  isRightSidebarVisible,
+  isDockVisible,
   isContentHidden,
   isCompact = false,
   isResizing,
@@ -99,15 +99,15 @@ export function PanelStackContainer({
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(contentPanels.length)
-  const rightSidebarSash = useResizeGradient()
+  const dockSash = useResizeGradient()
 
   const hasSidebar = sidebarWidth > 0
   // Desktop: navigator is shown when AppShell asks for it. Compact: navigator
   // is always mounted (transform-hidden when detail-focused) so the slide can
   // animate both slots in lockstep.
   const hasNavigator = isCompact ? navigatorWidth > 0 : navigatorWidth > 0
-  const hasRightSidebar = Boolean(rightSidebarSlot) && Boolean(isRightSidebarVisible) && rightSidebarWidth > 0
-  const rightSidebarSlotWidth = rightSidebarWidth + 2
+  const hasDock = Boolean(dockSlot) && Boolean(isDockVisible) && dockWidth > 0
+  const dockSlotWidth = dockWidth + 2
   const isMultiPanel = visiblePanels.length > 1
   const isLeftEdge = !hasSidebar && !hasNavigator
 
@@ -179,7 +179,7 @@ export function PanelStackContainer({
                 isFocusedPanel={true}
                 isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
                 isAtLeftEdge={isLeftEdge}
-                isAtRightEdge={!isRightSidebarVisible}
+                isAtRightEdge={!isDockVisible}
                 proportion={focusedEntry.proportion}
                 isCompact={true}
                 panelRole="primary"
@@ -295,7 +295,7 @@ export function PanelStackContainer({
               isFocusedPanel={isMultiPanel ? entry.id === focusedPanelId : true}
               isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
               isAtLeftEdge={index === 0 && isLeftEdge}
-              isAtRightEdge={index === visiblePanels.length - 1 && !hasRightSidebar}
+              isAtRightEdge={index === visiblePanels.length - 1 && !hasDock}
               proportion={entry.proportion}
               isCompact={false}
               panelRole={index === 0 ? 'primary' : 'secondary'}
@@ -309,20 +309,20 @@ export function PanelStackContainer({
           ))
         )}
 
-        {/* === RIGHT SIDEBAR SLOT === */}
-        {rightSidebarSlot && hasRightSidebar && onRightSidebarResizeStart && (
+        {/* === DOCK SLOT === */}
+        {dockSlot && hasDock && onDockResizeStart && (
           <div
             className="relative w-0 shrink-0"
             style={{ marginLeft: PANEL_SASH_FLEX_MARGIN, marginRight: PANEL_SASH_FLEX_MARGIN }}
           >
             <div
-              ref={rightSidebarSash.ref}
+              ref={dockSash.ref}
               onMouseDown={(event) => {
-                rightSidebarSash.handlers.onMouseDown()
-                onRightSidebarResizeStart(event)
+                dockSash.handlers.onMouseDown()
+                onDockResizeStart(event)
               }}
-              onMouseMove={rightSidebarSash.handlers.onMouseMove}
-              onMouseLeave={rightSidebarSash.handlers.onMouseLeave}
+              onMouseMove={dockSash.handlers.onMouseMove}
+              onMouseLeave={dockSash.handlers.onMouseLeave}
               className="absolute inset-y-0 z-[4] flex cursor-col-resize justify-center"
               style={{ left: -PANEL_SASH_HALF_HIT_WIDTH, right: -PANEL_SASH_HALF_HIT_WIDTH }}
               aria-hidden="true"
@@ -330,29 +330,29 @@ export function PanelStackContainer({
               <div
                 className="h-full"
                 style={{
-                  ...rightSidebarSash.gradientStyle,
+                  ...dockSash.gradientStyle,
                   width: PANEL_SASH_LINE_WIDTH,
                 }}
               />
             </div>
           </div>
         )}
-        {rightSidebarSlot && (
+        {dockSlot && (
           <motion.div
-            data-panel-role="right-sidebar"
+            data-panel-role="dock"
             initial={false}
             animate={{
-              width: hasRightSidebar ? rightSidebarSlotWidth : 0,
-              marginLeft: hasRightSidebar ? 0 : -PANEL_GAP,
-              opacity: hasRightSidebar ? 1 : 0,
+              width: hasDock ? dockSlotWidth : 0,
+              marginLeft: hasDock ? 0 : -PANEL_GAP,
+              opacity: hasDock ? 1 : 0,
             }}
             transition={transition}
             className="h-full relative shrink-0"
             style={{ overflowX: 'clip', overflowY: 'visible' }}
           >
-            <div className="h-full p-px" style={{ width: rightSidebarSlotWidth }}>
-              <div className="h-full" style={{ width: rightSidebarWidth }}>
-                {rightSidebarSlot}
+            <div className="h-full p-px" style={{ width: dockSlotWidth }}>
+              <div className="h-full" style={{ width: dockWidth }}>
+                {dockSlot}
               </div>
             </div>
           </motion.div>

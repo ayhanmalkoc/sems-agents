@@ -29,6 +29,7 @@ export interface SessionListContextValue {
   searchQuery?: string
   selectedSessionId?: string | null
   isMultiSelectActive: boolean
+  showOpenInNewPanel: boolean
 
   // Per-session lookup maps
   sessionOptions?: Map<string, SessionOptions>

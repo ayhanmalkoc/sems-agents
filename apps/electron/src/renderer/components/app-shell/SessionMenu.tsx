@@ -41,6 +41,8 @@ import type { SessionMeta } from '@/atoms/sessions'
 import { getSessionStatus, hasUnreadMeta, hasMessagesMeta } from '@/utils/session'
 import { MessagingSessionMenuItem } from '@/components/messaging/MessagingSessionMenuItem'
 import { useSessionMenuActions } from '@/hooks/useSessionMenuActions'
+import { useAppShellContext } from '@/context/AppShellContext'
+import { shouldShowOpenInNewPanel } from './panel-role'
 
 export interface SessionMenuProps {
   /** Session data — display state is derived from this */
@@ -90,6 +92,11 @@ export function SessionMenu({
   showOpenInNewPanel = true,
 }: SessionMenuProps) {
   const { t } = useTranslation()
+  const { panelRole = 'primary', isOnlyPanel = true, isRightDockOpen } = useAppShellContext()
+  const canOpenInNewPanel = showOpenInNewPanel && shouldShowOpenInNewPanel(panelRole, {
+    isDockOpen: Boolean(isRightDockOpen),
+    isOnlyPanel,
+  })
 
   const sessionId = item.id
   const isFlagged = item.isFlagged ?? false
@@ -241,7 +248,7 @@ export function SessionMenu({
       <Separator />
 
       {/* Open in New Panel */}
-      {showOpenInNewPanel && (
+      {canOpenInNewPanel && (
         <MenuItem onClick={actions.openInNewPanel}>
           <Columns2 className="h-3.5 w-3.5" />
           <span className="flex-1">{t("sessionMenu.openInNewPanel")}</span>

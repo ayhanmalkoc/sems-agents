@@ -9,13 +9,17 @@ import {
 describe('panel role behavior', () => {
   it('shows the dock toggle only for a single primary panel', () => {
     expect(shouldShowDockToggle('primary', true)).toBe(true)
+    expect(shouldShowDockToggle('primary', { isOnlyPanel: true })).toBe(true)
     expect(shouldShowDockToggle('primary', false)).toBe(false)
+    expect(shouldShowDockToggle('primary', { isOnlyPanel: false })).toBe(false)
     expect(shouldShowDockToggle('secondary', true)).toBe(false)
     expect(shouldShowDockToggle('dock', true)).toBe(false)
   })
 
-  it('shows Open in New Panel only on primary panels', () => {
+  it('shows Open in New Panel only on primary panels when dock is closed', () => {
     expect(shouldShowOpenInNewPanel('primary')).toBe(true)
+    expect(shouldShowOpenInNewPanel('primary', { isDockOpen: true })).toBe(false)
+    expect(shouldShowOpenInNewPanel('primary', { isOnlyPanel: false })).toBe(false)
     expect(shouldShowOpenInNewPanel('secondary')).toBe(false)
     expect(shouldShowOpenInNewPanel('dock')).toBe(false)
   })

@@ -37,6 +37,7 @@ import { SearchCommandDialog } from "./SearchCommandDialog"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { PanelLeftRounded } from "../icons/PanelLeftRounded"
 import { cn } from "@/lib/utils"
+import { shouldShowDockToggle, shouldShowOpenInNewPanel } from "./panel-role"
 import { isMac } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton } from "@/components/ui/HeaderIconButton"
@@ -566,6 +567,7 @@ function AppShellContent({
     return storage.get(storage.KEYS.rightWorkspacePanelOpen, false)
   })
   const [rightDockToggleTop, setRightDockToggleTop] = React.useState<number | null>(null)
+  const [hasRightDockToggleAnchor, setHasRightDockToggleAnchor] = React.useState(false)
   const [rightDockLayoutPhase, setRightDockLayoutPhase] = React.useState<RightDockLayoutPhase>('idle')
   const [rightDockPanelBounds, setRightDockPanelBounds] = React.useState<RightDockPanelBounds | null>(null)
   const rightDockIdleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -679,6 +681,7 @@ function AppShellContent({
 
   React.useLayoutEffect(() => {
     if (isAutoCompact) {
+      setHasRightDockToggleAnchor(false)
       setRightDockToggleTop(null)
       return
     }
@@ -688,9 +691,11 @@ function AppShellContent({
       frame = 0
       const anchor = document.querySelector<HTMLElement>('[data-right-dock-toggle-anchor="true"]')
       if (!anchor) {
+        setHasRightDockToggleAnchor(false)
         setRightDockToggleTop(null)
         return
       }
+      setHasRightDockToggleAnchor(true)
       const rect = anchor.getBoundingClientRect()
       setRightDockToggleTop((prev) => {
         const next = rect.y
@@ -706,12 +711,17 @@ function AppShellContent({
     measure()
     window.addEventListener('resize', schedule)
     const observer = new ResizeObserver(schedule)
+    const mutationObserver = new MutationObserver(schedule)
     const root = shellRef.current
-    if (root) observer.observe(root)
+    if (root) {
+      observer.observe(root)
+      mutationObserver.observe(root, { childList: true, subtree: true })
+    }
     return () => {
       if (frame) cancelAnimationFrame(frame)
       window.removeEventListener('resize', schedule)
       observer.disconnect()
+      mutationObserver.disconnect()
     }
   }, [isAutoCompact, shellWidth])
 
@@ -855,6 +865,11 @@ function AppShellContent({
   const panelStack = useAtomValue(panelStackAtom)
   const panelCount = useAtomValue(panelCountAtom)
   const focusedSessionId = useAtomValue(focusedSessionIdAtom)
+  const isOnlyMainPanel = panelCount <= 1
+  const canOpenSessionInNewPanel = shouldShowOpenInNewPanel('primary', {
+    isDockOpen: isRightDockOpen,
+    isOnlyPanel: isOnlyMainPanel && isSessionsNavigation(navState),
+  })
 
   // Navigate the focused panel to a session.
   // If the session is already open in another panel, focus that panel instead.
@@ -1870,6 +1885,7 @@ function AppShellContent({
     sessionStatuses: effectiveSessionStatuses,
     onSessionSourcesChange: handleSessionSourcesChange,
     rightSidebarButton: null,
+    isOnlyPanel: isOnlyMainPanel,
     isRightDockOpen,
     onToggleRightDock: toggleRightDock,
     isCompactMode: isAutoCompact,
@@ -1884,7 +1900,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isRightDockOpen, toggleRightDock, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isOnlyMainPanel, isRightDockOpen, toggleRightDock, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -3360,7 +3376,8 @@ function AppShellContent({
                   statusFilter={listFilter}
                   labelFilterMap={labelFilter}
                   focusedSessionId={panelCount === 0 ? null : panelCount > 1 ? focusedSessionId : undefined}
-                  onNavigateToSession={panelCount > 1 ? navigateToSessionInPanel : undefined}
+                  onNavigateToSession={canOpenSessionInNewPanel && panelCount > 1 ? navigateToSessionInPanel : undefined}
+                  showOpenInNewPanel={canOpenSessionInNewPanel}
                   hasPendingPrompt={hasPendingPrompt}
                   activeChatMatchInfo={chatMatchInfo}
                 />
@@ -3375,7 +3392,7 @@ function AppShellContent({
             </div>
           }
           navigatorWidth={navigatorPanelWidth}
-          rightSidebarSlot={!isAutoCompact ? (
+          dockSlot={!isAutoCompact ? (
             <RightWorkspacePanel
               isOpen={isRightDockOpen}
               tabs={rightDockTabs}
@@ -3392,10 +3409,10 @@ function AppShellContent({
               onPanelBoundsChange={handleRightDockPanelBoundsChange}
             />
           ) : undefined}
-          rightSidebarWidth={rightDockWidth}
-          onRightSidebarResizeStart={handleRightDockResizeStart}
+          dockWidth={rightDockWidth}
+          onDockResizeStart={handleRightDockResizeStart}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
-          isRightSidebarVisible={isRightDockOpen && !isAutoCompact}
+          isDockVisible={isRightDockOpen && !isAutoCompact}
           isContentHidden={false}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
@@ -3410,7 +3427,7 @@ function AppShellContent({
           </TopBarButton>
         )}
 
-        {!isAutoCompact && (
+        {!isAutoCompact && hasRightDockToggleAnchor && shouldShowDockToggle('primary', { isOnlyPanel: isOnlyMainPanel }) && (
           <PanelHeaderCenterButton
             aria-label={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
             tooltip={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}

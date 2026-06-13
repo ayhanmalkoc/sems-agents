@@ -82,7 +82,7 @@ export function SessionItem({
       if (ctx.isMultiSelectActive && !isInMultiSelect && onToggleSelect) onToggleSelect()
       return
     }
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+    if (ctx.showOpenInNewPanel && (e.metaKey || e.ctrlKey) && e.shiftKey) {
       // Cmd+Shift+Click: open session in a new panel
       e.preventDefault()
       navigate(routes.view.allSessions(item.id), { newPanel: true })
@@ -135,6 +135,7 @@ export function SessionItem({
           onOpenInNewWindow={() => ctx.onOpenInNewWindow(item)}
           onSendToWorkspace={ctx.onSendToWorkspace ? () => ctx.onSendToWorkspace!([item.id]) : undefined}
           hasRemoteWorkspaces={hasRemoteWorkspaces}
+          showOpenInNewPanel={ctx.showOpenInNewPanel}
           onDelete={() => ctx.onDelete(item.id)}
         />
       }
@@ -160,6 +161,7 @@ export function SessionItem({
           onSessionStatusChange={(s) => ctx.onSessionStatusChange(item.id, s)}
           onOpenInNewWindow={() => ctx.onOpenInNewWindow(item)}
           onSendToWorkspace={ctx.onSendToWorkspace ? () => ctx.onSendToWorkspace!([item.id]) : undefined}
+          showOpenInNewPanel={ctx.showOpenInNewPanel}
           onDelete={() => ctx.onDelete(item.id)}
         />
       )}

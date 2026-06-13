@@ -86,7 +86,8 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     isFocusedPanel,
     agentProfiles,
   } = useAppShellContext()
-  const canOpenMainPanelFromMenu = shouldShowOpenInNewPanel(panelRole)
+  const canShowDockToggle = shouldShowDockToggle(panelRole, { isOnlyPanel })
+  const canOpenMainPanelFromMenu = shouldShowOpenInNewPanel(panelRole, { isDockOpen: Boolean(isRightDockOpen), isOnlyPanel })
 
   // Use the unified session options hook for clean access
   const {
@@ -633,7 +634,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     <div className="flex items-center gap-1.5">
       {!isCompactMode && <OpenWithMenuButton path={activeWorkspace?.rootPath} iconOnly />}
       {isCompactMode ? compactInfoButton : shareButton}
-      {!isCompactMode && (
+      {!isCompactMode && canShowDockToggle && (
         <motion.div
           data-right-dock-toggle-anchor="true"
           aria-hidden="true"

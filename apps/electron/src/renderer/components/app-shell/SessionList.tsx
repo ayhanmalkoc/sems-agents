@@ -87,6 +87,7 @@ interface SessionListProps {
   focusedSessionId?: string | null
   /** Override navigation target (for multi-panel: focuses existing panel or navigates focused panel) */
   onNavigateToSession?: (sessionId: string) => void
+  showOpenInNewPanel?: boolean
   /** Session-level pending prompt marker (permission/admin approval) */
   hasPendingPrompt?: (sessionId: string) => boolean
   /** DOM-verified match info for the active session (from ChatDisplay) */
@@ -139,6 +140,7 @@ export function SessionList({
   labelFilterMap,
   focusedSessionId,
   onNavigateToSession,
+  showOpenInNewPanel = true,
   hasPendingPrompt,
   activeChatMatchInfo,
 }: SessionListProps) {
@@ -634,6 +636,7 @@ export function SessionList({
     searchQuery: resolvedSearchQuery,
     selectedSessionId: focusedSessionId !== undefined ? focusedSessionId : selectionStore.state.selected,
     isMultiSelectActive,
+    showOpenInNewPanel,
     sessionOptions,
     contentSearchResults,
     activeChatMatchInfo,
@@ -645,7 +648,7 @@ export function SessionList({
     onMarkUnread, handleDeleteWithToast, onLabelsChange,
     handleSelectSessionById, handleOpenInNewWindow, setSendToWorkspace, handleFocusZone, handleKeyDown,
     sessionStatuses, flatLabels, labels, resolvedSearchQuery,
-    focusedSessionId, selectionStore.state.selected, isMultiSelectActive,
+    focusedSessionId, selectionStore.state.selected, isMultiSelectActive, showOpenInNewPanel,
     sessionOptions, contentSearchResults, activeChatMatchInfo, hasPendingPrompt,
   ])
 

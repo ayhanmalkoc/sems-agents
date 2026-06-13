@@ -77,6 +77,8 @@ import { getSessionStatus, hasUnreadMeta, hasMessagesMeta } from '@/utils/sessio
 import { getFileManagerName } from '@/lib/platform'
 import { useMessagingConnect, type MessagingPlatform } from '@/components/messaging/MessagingSessionMenuItem'
 import { useSessionMenuActions } from '@/hooks/useSessionMenuActions'
+import { useAppShellContext } from '@/context/AppShellContext'
+import { shouldShowOpenInNewPanel } from './panel-role'
 
 type View = 'root' | 'status' | 'labels' | 'share' | 'messaging'
 
@@ -149,6 +151,11 @@ export function CompactSessionMenu({
   showOpenInNewPanel = true,
 }: CompactSessionMenuProps) {
   const { t } = useTranslation()
+  const { panelRole = 'primary', isOnlyPanel = true, isRightDockOpen } = useAppShellContext()
+  const canOpenInNewPanel = showOpenInNewPanel && shouldShowOpenInNewPanel(panelRole, {
+    isDockOpen: Boolean(isRightDockOpen),
+    isOnlyPanel,
+  })
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
@@ -314,7 +321,7 @@ export function CompactSessionMenu({
               onMarkUnread={closeAfter(onMarkUnread)}
               onRename={closeAfter(onRename)}
               onRefreshTitle={closeAfter(actions.refreshTitle)}
-              onOpenInNewPanel={showOpenInNewPanel ? closeAfter(actions.openInNewPanel) : undefined}
+              onOpenInNewPanel={canOpenInNewPanel ? closeAfter(actions.openInNewPanel) : undefined}
               onOpenInNewWindow={closeAfter(onOpenInNewWindow)}
               onShowInFinder={closeAfter(actions.showInFinder)}
               onCopyPath={closeAfter(actions.copyPath)}
