@@ -1,6 +1,6 @@
 # Browser Tools
 
-Use `browser_tool` to control built-in browser windows (Chromium) inside Craft Agents.
+Use `browser_tool` to control built-in browser windows and right dock browser tabs (Chromium) inside Craft Agents.
 
 > **Quick start:** Run `browser_tool --help` to see all available commands and usage examples.
 
@@ -35,12 +35,13 @@ browser_tool({ command: "windows" })
 ```
 
 Recommended flow:
-1. `open` — ensure browser window exists (background by default)
-2. `navigate <url>` — load a URL
-3. `snapshot` — inspect accessible elements and get refs (`@e1`, `@e2`, ...)
-4. `find <query>` — quickly narrow to matching refs by keyword
-5. `click` / `fill` / `select` — interact using refs
-6. `screenshot --annotated` (or `screenshot-region`) — visual verification when needed
+1. `open` — ensure a browser window exists (background by default)
+2. `open --dock` — use the right dock browser when the user asks for dock/right panel/side panel browsing
+3. `navigate <url>` — load a URL
+4. `snapshot` — inspect accessible elements and get refs (`@e1`, `@e2`, ...)
+5. `find <query>` — quickly narrow to matching refs by keyword
+6. `click` / `fill` / `select` — interact using refs
+7. `screenshot --annotated` (or `screenshot-region`) — visual verification when needed
 
 ---
 
@@ -49,6 +50,7 @@ Recommended flow:
 ```text
 browser_tool({ command: "--help" })
 browser_tool({ command: "open" })
+browser_tool({ command: "open --dock" })
 browser_tool({ command: "open --foreground" })
 browser_tool({ command: "navigate https://example.com" })
 browser_tool({ command: "snapshot" })
@@ -182,8 +184,22 @@ Debug runtime issues, requests, synchronization points, and download progress.
 
 `downloads` output includes the resolved local `savePath` when available so you can reference the downloaded file directly.
 
+
+### Dock browser mode
+Use `open --dock` when the user asks to browse in the right dock, right panel, right sidebar, or side panel. Continue using the same `browser_tool` commands after opening dock mode:
+
+```text
+browser_tool({ command: "open --dock" })
+browser_tool({ command: "navigate https://example.com" })
+browser_tool({ command: "snapshot" })
+browser_tool({ command: "click @e12" })
+browser_tool({ command: "screenshot --annotated" })
+```
+
+Use `open` for the default background browser window and `open --foreground` when the user explicitly wants a separate visible browser window.
+
 ### `focus [windowId]` / `windows`
-Manage and inspect browser window ownership and visibility.
+Manage and inspect browser window ownership and visibility. `windows` includes each instance mode (`window` or `dock`) when available.
 
 ### Lifecycle commands
 - `release` — dismiss agent overlay, keep window visible for user

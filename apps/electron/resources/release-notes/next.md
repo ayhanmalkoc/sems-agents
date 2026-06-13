@@ -6,7 +6,9 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
-- **Right dock tool guide** � Added the agent-facing Right Dock Tools guide, prompt reference, and prerequisite checks so agents read the dock orchestration docs before using `right_dock`.
+- **Browser dock mode guidance** — Clarified `browser_tool open --dock` as the agent path for right dock browsing and exposed dock metadata in browser/right dock status output.
+
+- **Right dock tool guide** — Added the agent-facing Right Dock Tools guide, prompt reference, and prerequisite checks so agents read the dock orchestration docs before using `right_dock`.
 
 ## Bug Fixes
 

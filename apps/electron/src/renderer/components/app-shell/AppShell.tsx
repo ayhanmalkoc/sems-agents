@@ -731,6 +731,7 @@ function AppShellContent({
         type: tab.type,
         title: tab.title,
         active: tab.id === activeTabId,
+        browserInstanceId: tab.browserInstanceId ?? null,
       })),
     }
   }, [activeRightDockTabId, isAutoCompact, isRightDockOpen, rightDockTabs])

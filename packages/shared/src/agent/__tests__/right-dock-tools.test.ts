@@ -49,6 +49,16 @@ describe('right_dock tools', () => {
     expect(fns.calls).toEqual(['status'])
   })
 
+  it('formats browser tab instance ids in status snapshots', async () => {
+    fns.status = async () => status({
+      activeTabId: 'browser-1',
+      tabs: [{ id: 'browser-1', type: 'browser', active: true, title: 'Browser', browserInstanceId: 'browser-instance-1' }],
+    })
+    const result = await executeRightDockCommand('status', fns)
+    expect(result.content[0].text).toContain('browser-1 type=browser active=true title="Browser" browserInstanceId=browser-instance-1')
+  })
+
+
   it('opens and closes the dock', async () => {
     await executeRightDockCommand('open', fns)
     await executeRightDockCommand('close', fns)

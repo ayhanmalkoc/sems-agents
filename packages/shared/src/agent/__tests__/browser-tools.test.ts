@@ -127,6 +127,7 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('screenshot [--annotated|-a]')
       expect(result.content[0].text).toContain('focus [windowId]')
       expect(result.content[0].text).toContain('windows')
+      expect(result.content[0].text).toContain('open [--foreground|-f] [--dock]')
       expect(result.content[0].text).toContain('Array mode (JSON array input, no batch splitting/tokenization):')
       expect(result.content[0].text).not.toContain('When you are done using the browser')
     })
@@ -156,20 +157,20 @@ describe('createBrowserTools', () => {
     })
 
     it('routes open command in background by default', async () => {
-      let openOptions: { background?: boolean } | undefined
+      let openOptions: { background?: boolean; mode?: 'window' | 'dock' } | undefined
       mockFns.openPanel = async (options) => {
         openOptions = options
         return { instanceId: 'browser-test-1' }
       }
 
       const result = await executeTool(tools, 'browser_tool', { command: 'open' })
-      expect(openOptions).toEqual({ background: true })
+      expect(openOptions).toEqual({ background: true, mode: 'window' })
       expect(result.content[0].text).toContain('Opened in-app browser window in background')
       expect(result.content[0].text).toContain('browser-test-1')
     })
 
     it('routes open command with --foreground flag and reports settled visibility', async () => {
-      let openOptions: { background?: boolean } | undefined
+      let openOptions: { background?: boolean; mode?: 'window' | 'dock' } | undefined
       let listCalls = 0
       mockFns.openPanel = async (options) => {
         openOptions = options
@@ -191,7 +192,7 @@ describe('createBrowserTools', () => {
       }
 
       const result = await executeTool(tools, 'browser_tool', { command: 'open --foreground' })
-      expect(openOptions).toEqual({ background: false })
+      expect(openOptions).toEqual({ background: false, mode: 'window' })
       expect(result.content[0].text).toContain('Opened in-app browser window in foreground')
       expect(result.content[0].text).toContain('Visibility settle: wait-loop')
       expect(result.content[0].text).toContain('Visible: true')
@@ -258,6 +259,33 @@ describe('createBrowserTools', () => {
       expect(focusCalls).toBe(0)
       expect(result.content[0].text).not.toContain('Visibility settle:')
     })
+
+    it('routes open command with --dock flag to dock mode', async () => {
+      let openOptions: { background?: boolean; mode?: 'window' | 'dock' } | undefined
+      mockFns.openPanel = async (options) => {
+        openOptions = options
+        return { instanceId: 'browser-dock-1' }
+      }
+      mockFns.listWindows = async () => ([{
+        id: 'browser-dock-1',
+        title: 'Dock Browser',
+        url: 'about:blank',
+        isVisible: true,
+        ownerType: 'session',
+        ownerSessionId: 'test-session',
+        boundSessionId: 'test-session',
+        agentControlActive: true,
+        mode: 'dock',
+        dockTabId: 'browser-tab-1',
+      }])
+
+      const result = await executeTool(tools, 'browser_tool', { command: 'open --dock' })
+      expect(openOptions).toEqual({ background: false, mode: 'dock' })
+      expect(result.content[0].text).toContain('Opened in-app browser dock in dock mode')
+      expect(result.content[0].text).toContain('mode: dock')
+      expect(result.content[0].text).toContain('dockTabId: browser-tab-1')
+    })
+
 
     it('routes snapshot command and formats nodes', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'snapshot' })
@@ -865,6 +893,7 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('lockState: locked-session(test-session)')
       expect(result.content[0].text).toContain('availableToSession: true')
       expect(result.content[0].text).toContain('agentControlActive: true')
+      expect(result.content[0].text).toContain('mode: window')
       expect(result.content[0].text).not.toContain('When you are done using the browser')
     })
 

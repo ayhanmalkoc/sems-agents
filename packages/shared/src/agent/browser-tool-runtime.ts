@@ -732,7 +732,7 @@ async function executeSingleCommand(args: {
     }
     if (win) {
       lines.push(
-        `Visible: ${win.isVisible}, mode: ${win.mode ?? 'window'}, ownerType: ${win.ownerType}, boundSessionId: ${win.boundSessionId ?? 'none'}`,
+        `Visible: ${win.isVisible}, mode: ${win.mode ?? 'window'}${win.dockTabId ? `, dockTabId: ${win.dockTabId}` : ''}, ownerType: ${win.ownerType}, boundSessionId: ${win.boundSessionId ?? 'none'}`,
       );
     }
 
@@ -1642,6 +1642,7 @@ async function executeSingleCommand(args: {
         `  url: ${w.url || 'about:blank'}`,
         `  visible: ${w.isVisible}`,
         `  mode: ${w.mode ?? 'window'}`,
+        ...(w.dockTabId ? [`  dockTabId: ${w.dockTabId}`] : []),
         `  ownerType: ${w.ownerType}`,
         `  ownerSessionId: ${w.ownerSessionId ?? 'none'}`,
         `  boundSessionId: ${w.boundSessionId ?? 'none'}`,
