@@ -640,7 +640,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
           className="shrink-0 overflow-hidden"
           initial={false}
           animate={{ width: isRightDockOpen ? 0 : 28, marginLeft: isRightDockOpen ? -6 : 0, opacity: isRightDockOpen ? 0 : 1 }}
-          transition={{ type: 'spring', stiffness: 600, damping: 49 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
           <PanelHeaderCenterButton
             aria-label="Right tools panel placeholder"

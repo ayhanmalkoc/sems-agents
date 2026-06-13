@@ -565,10 +565,8 @@ function AppShellContent({
   const [isRightDockOpen, setIsRightDockOpen] = React.useState(() => {
     return storage.get(storage.KEYS.rightWorkspacePanelOpen, false)
   })
-  const [isRightDockMounted, setIsRightDockMounted] = React.useState(isRightDockOpen)
   const [rightDockToggleTop, setRightDockToggleTop] = React.useState<number | null>(null)
   const [rightDockLayoutPhase, setRightDockLayoutPhase] = React.useState<RightDockLayoutPhase>('idle')
-  const [rightDockLayoutVersion, setRightDockLayoutVersion] = React.useState(0)
   const [rightDockPanelBounds, setRightDockPanelBounds] = React.useState<RightDockPanelBounds | null>(null)
   const rightDockIdleTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [rightDockWidth, setRightDockWidth] = React.useState(() => {
@@ -582,28 +580,18 @@ function AppShellContent({
     storage.set(storage.KEYS.rightWorkspacePanelOpen, isRightDockOpen)
   }, [isRightDockOpen])
 
-  React.useEffect(() => {
-    if (isRightDockOpen) {
-      setIsRightDockMounted(true)
-      return
-    }
-    const timer = setTimeout(() => setIsRightDockMounted(false), 260)
-    return () => clearTimeout(timer)
-  }, [isRightDockOpen])
 
   React.useEffect(() => {
     storage.set(storage.KEYS.rightWorkspacePanelWidth, rightDockWidth)
   }, [rightDockWidth])
 
-  const bumpRightDockLayout = useCallback((phase: RightDockLayoutPhase, settleDelay = 140) => {
+  const bumpRightDockLayout = useCallback((phase: RightDockLayoutPhase, settleDelay = 220) => {
     if (rightDockIdleTimerRef.current) clearTimeout(rightDockIdleTimerRef.current)
     setRightDockLayoutPhase(phase)
-    setRightDockLayoutVersion((version) => version + 1)
-    if (phase !== 'idle') {
+    if (phase === 'resizing') {
       rightDockIdleTimerRef.current = setTimeout(() => {
         rightDockIdleTimerRef.current = null
         setRightDockLayoutPhase('idle')
-        setRightDockLayoutVersion((version) => version + 1)
       }, settleDelay)
     }
   }, [])
@@ -612,22 +600,28 @@ function AppShellContent({
     if (rightDockIdleTimerRef.current) clearTimeout(rightDockIdleTimerRef.current)
   }, [])
 
+  const openRightDock = useCallback(() => {
+    setIsRightDockOpen(true)
+  }, [])
+
+  const closeRightDock = useCallback(() => {
+    setIsRightDockOpen(false)
+  }, [])
+
   const handleRightDockPanelBoundsChange = useCallback((bounds: RightDockPanelBounds) => {
     setRightDockPanelBounds((prev) => {
       if (prev && Math.round(prev.x) === Math.round(bounds.x) && Math.round(prev.y) === Math.round(bounds.y) && Math.round(prev.width) === Math.round(bounds.width) && Math.round(prev.height) === Math.round(bounds.height)) return prev
       return bounds
     })
-    setRightDockLayoutVersion((version) => version + 1)
   }, [])
 
   const openRightDockTool = useCallback((type: RightDockToolType, options?: Partial<RightDockTab>) => {
     const tab: RightDockTab = { id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, ...options }
     setRightDockTabs((prev) => [...prev, tab])
     setActiveRightDockTabId(tab.id)
-    setIsRightDockOpen(true)
-    bumpRightDockLayout('opening')
+    openRightDock()
     return tab.id
-  }, [bumpRightDockLayout])
+  }, [openRightDock])
 
   const updateRightDockTabTitle = useCallback((tabId: string, title: string) => {
     setRightDockTabs((prev) => prev.map((tab) => tab.id === tabId ? { ...tab, title } : tab))
@@ -638,7 +632,6 @@ function AppShellContent({
   }, [])
 
   const closeRightDockTab = useCallback((tabId: string) => {
-    bumpRightDockLayout('closing')
     setRightDockTabs((prev) => {
       const index = prev.findIndex((tab) => tab.id === tabId)
       if (index === -1) return prev
@@ -649,13 +642,16 @@ function AppShellContent({
       })
       return next
     })
-  }, [bumpRightDockLayout])
+  }, [])
 
   const toggleRightDock = useCallback(() => {
     const nextOpen = !isRightDockOpen
-    bumpRightDockLayout(nextOpen ? 'opening' : 'closing', 260)
-    setIsRightDockOpen(nextOpen)
-  }, [bumpRightDockLayout, isRightDockOpen])
+    if (nextOpen) {
+      openRightDock()
+      return
+    }
+    closeRightDock()
+  }, [closeRightDock, isRightDockOpen, openRightDock])
 
 
   const handleRightDockResizeStart = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -756,13 +752,12 @@ function AppShellContent({
         return
       }
       if (request.command === 'open') {
-        setIsRightDockOpen(true)
-        bumpRightDockLayout('opening')
+        openRightDock()
         complete(buildRightDockStatus({ open: true }))
         return
       }
       if (request.command === 'close') {
-        setIsRightDockOpen(false)
+        closeRightDock()
         complete(buildRightDockStatus({ open: false }))
         return
       }
@@ -782,7 +777,7 @@ function AppShellContent({
           fail('selectTab requires an existing tabId')
           return
         }
-        setIsRightDockOpen(true)
+        openRightDock()
         setActiveRightDockTabId(request.tabId)
         complete(buildRightDockStatus({ open: true, activeTabId: request.tabId }))
         return
@@ -799,7 +794,7 @@ function AppShellContent({
       }
       fail(`Unsupported right dock command: ${request.command}`)
     })
-  }, [buildRightDockStatus, bumpRightDockLayout, closeRightDockTab, isAutoCompact, openRightDockTool, rightDockTabs])
+  }, [buildRightDockStatus, closeRightDock, closeRightDockTab, isAutoCompact, openRightDock, openRightDockTool, rightDockTabs])
 
   React.useEffect(() => {
     return window.electronAPI.browserPane.onOpenDockRequested((request) => {
@@ -1520,7 +1515,6 @@ function AppShellContent({
         const delta = rightDockResizeStartXRef.current - e.clientX
         const newWidth = Math.min(Math.max(rightDockResizeStartWidthRef.current + delta, 300), 640)
         setRightDockWidth(newWidth)
-        setRightDockLayoutVersion((version) => version + 1)
       }
     }
 
@@ -2175,8 +2169,8 @@ function AppShellContent({
     }
     setRightDockTabs((prev) => [...prev, tab])
     setActiveRightDockTabId(tab.id)
-    setIsRightDockOpen(true)
-  }, [sessionMetaMap, t])
+    openRightDock()
+  }, [openRightDock, sessionMetaMap, t])
 
   const openNewChatInRightDock = useCallback(async () => {
     if (!activeWorkspaceId) return
@@ -3381,8 +3375,27 @@ function AppShellContent({
             </div>
           }
           navigatorWidth={navigatorPanelWidth}
+          rightSidebarSlot={!isAutoCompact ? (
+            <RightWorkspacePanel
+              isOpen={isRightDockOpen}
+              tabs={rightDockTabs}
+              activeTabId={activeRightDockTabId}
+              activeSessionId={effectiveSessionId}
+              sessionFolderPath={activeSessionWorkingDirectory}
+              onAddTab={(type) => { type === 'chat' ? void openNewChatInRightDock() : openRightDockTool(type) }}
+              onSelectTab={setActiveRightDockTabId}
+              onCloseTab={closeRightDockTab}
+              onUpdateTabTitle={updateRightDockTabTitle}
+              onUpdateBrowserInstanceId={updateRightDockBrowserInstanceId}
+              layoutPhase={rightDockLayoutPhase}
+              panelBounds={rightDockPanelBounds}
+              onPanelBoundsChange={handleRightDockPanelBoundsChange}
+            />
+          ) : undefined}
+          rightSidebarWidth={rightDockWidth}
+          onRightSidebarResizeStart={handleRightDockResizeStart}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
-          isRightSidebarVisible={isRightDockMounted && !isAutoCompact}
+          isRightSidebarVisible={isRightDockOpen && !isAutoCompact}
           isContentHidden={false}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
@@ -3408,26 +3421,6 @@ function AppShellContent({
           />
         )}
 
-        {isRightDockMounted && !isAutoCompact && (
-          <RightWorkspacePanel
-            width={rightDockWidth}
-            isOpen={isRightDockOpen}
-            tabs={rightDockTabs}
-            activeTabId={activeRightDockTabId}
-            activeSessionId={effectiveSessionId}
-            sessionFolderPath={activeSessionWorkingDirectory}
-            onAddTab={(type) => { type === 'chat' ? void openNewChatInRightDock() : openRightDockTool(type) }}
-            onSelectTab={setActiveRightDockTabId}
-            onCloseTab={closeRightDockTab}
-            onUpdateTabTitle={updateRightDockTabTitle}
-            onUpdateBrowserInstanceId={updateRightDockBrowserInstanceId}
-            onResizeStart={handleRightDockResizeStart}
-            layoutPhase={rightDockLayoutPhase}
-            layoutVersion={rightDockLayoutVersion}
-            panelBounds={rightDockPanelBounds}
-            onPanelBoundsChange={handleRightDockPanelBoundsChange}
-          />
-        )}
         {/* Sidebar Resize Handle (absolute, hidden in focused mode) */}
         {!effectiveSidebarAndNavigatorHidden && (
         <div

@@ -13,7 +13,7 @@
  * they have their own fixed/user-resizable widths managed by AppShell.
  * They just reduce the available width for content panels and scroll with everything else.
  *
- * The right sidebar stays OUTSIDE this container.
+ * Right sidebar is managed as a fixed-width slot alongside the panel stack.
  *
  * Compact mode (mobile / narrow window):
  * The flex layout is replaced with an absolute-positioned, transform-animated
@@ -32,10 +32,14 @@ import { isDetailNavState } from '@/lib/nav-helpers'
 import { PanelSlot } from './PanelSlot'
 import { PanelResizeSash } from './PanelResizeSash'
 import { CompactPanelTransition } from './CompactPanelTransition'
+import { useResizeGradient } from '@/hooks/useResizeGradient'
 import {
   PANEL_GAP,
   PANEL_EDGE_INSET,
   PANEL_STACK_VERTICAL_OVERFLOW,
+  PANEL_SASH_FLEX_MARGIN,
+  PANEL_SASH_HALF_HIT_WIDTH,
+  PANEL_SASH_LINE_WIDTH,
   RADIUS_EDGE,
   RADIUS_INNER,
 } from './panel-constants'
@@ -51,6 +55,9 @@ interface PanelStackContainerProps {
   sidebarWidth: number
   navigatorSlot: React.ReactNode
   navigatorWidth: number
+  rightSidebarSlot?: React.ReactNode
+  rightSidebarWidth?: number
+  onRightSidebarResizeStart?: (event: React.MouseEvent<HTMLDivElement>) => void
   isSidebarAndNavigatorHidden: boolean
   isRightSidebarVisible?: boolean
   isContentHidden?: boolean
@@ -64,6 +71,9 @@ export function PanelStackContainer({
   sidebarWidth,
   navigatorSlot,
   navigatorWidth,
+  rightSidebarSlot,
+  rightSidebarWidth = 0,
+  onRightSidebarResizeStart,
   isSidebarAndNavigatorHidden,
   isRightSidebarVisible,
   isContentHidden,
@@ -89,12 +99,15 @@ export function PanelStackContainer({
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(contentPanels.length)
+  const rightSidebarSash = useResizeGradient()
 
   const hasSidebar = sidebarWidth > 0
   // Desktop: navigator is shown when AppShell asks for it. Compact: navigator
   // is always mounted (transform-hidden when detail-focused) so the slide can
   // animate both slots in lockstep.
   const hasNavigator = isCompact ? navigatorWidth > 0 : navigatorWidth > 0
+  const hasRightSidebar = Boolean(rightSidebarSlot) && Boolean(isRightSidebarVisible) && rightSidebarWidth > 0
+  const rightSidebarSlotWidth = rightSidebarWidth + 2
   const isMultiPanel = visiblePanels.length > 1
   const isLeftEdge = !hasSidebar && !hasNavigator
 
@@ -282,7 +295,7 @@ export function PanelStackContainer({
               isFocusedPanel={isMultiPanel ? entry.id === focusedPanelId : true}
               isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
               isAtLeftEdge={index === 0 && isLeftEdge}
-              isAtRightEdge={index === visiblePanels.length - 1 && !isRightSidebarVisible}
+              isAtRightEdge={index === visiblePanels.length - 1 && !hasRightSidebar}
               proportion={entry.proportion}
               isCompact={false}
               panelRole={index === 0 ? 'primary' : 'secondary'}
@@ -294,6 +307,55 @@ export function PanelStackContainer({
               ) : undefined}
             />
           ))
+        )}
+
+        {/* === RIGHT SIDEBAR SLOT === */}
+        {rightSidebarSlot && hasRightSidebar && onRightSidebarResizeStart && (
+          <div
+            className="relative w-0 shrink-0"
+            style={{ marginLeft: PANEL_SASH_FLEX_MARGIN, marginRight: PANEL_SASH_FLEX_MARGIN }}
+          >
+            <div
+              ref={rightSidebarSash.ref}
+              onMouseDown={(event) => {
+                rightSidebarSash.handlers.onMouseDown()
+                onRightSidebarResizeStart(event)
+              }}
+              onMouseMove={rightSidebarSash.handlers.onMouseMove}
+              onMouseLeave={rightSidebarSash.handlers.onMouseLeave}
+              className="absolute inset-y-0 z-[4] flex cursor-col-resize justify-center"
+              style={{ left: -PANEL_SASH_HALF_HIT_WIDTH, right: -PANEL_SASH_HALF_HIT_WIDTH }}
+              aria-hidden="true"
+            >
+              <div
+                className="h-full"
+                style={{
+                  ...rightSidebarSash.gradientStyle,
+                  width: PANEL_SASH_LINE_WIDTH,
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {rightSidebarSlot && (
+          <motion.div
+            data-panel-role="right-sidebar"
+            initial={false}
+            animate={{
+              width: hasRightSidebar ? rightSidebarSlotWidth : 0,
+              marginLeft: hasRightSidebar ? 0 : -PANEL_GAP,
+              opacity: hasRightSidebar ? 1 : 0,
+            }}
+            transition={transition}
+            className="h-full relative shrink-0"
+            style={{ overflowX: 'clip', overflowY: 'visible' }}
+          >
+            <div className="h-full p-px" style={{ width: rightSidebarSlotWidth }}>
+              <div className="h-full" style={{ width: rightSidebarWidth }}>
+                {rightSidebarSlot}
+              </div>
+            </div>
+          </motion.div>
         )}
       </motion.div>
     </div>

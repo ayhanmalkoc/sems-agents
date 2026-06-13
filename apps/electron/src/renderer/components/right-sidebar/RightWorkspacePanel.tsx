@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { FolderOpen, Globe, GitCompare, MessageSquare, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'motion/react'
 import { TopBarButton } from '@/components/ui/TopBarButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
@@ -10,7 +9,7 @@ import { WorkspaceBrowserPanel } from './WorkspaceBrowserPanel'
 import type { BrowserDockBounds } from '../../../shared/types'
 
 export type RightDockToolType = 'chat' | 'files' | 'browser' | 'inspect' | 'terminal'
-export type RightDockLayoutPhase = 'idle' | 'opening' | 'resizing' | 'closing'
+export type RightDockLayoutPhase = 'idle' | 'resizing'
 
 export interface RightDockPanelBounds {
   x: number
@@ -21,8 +20,6 @@ export interface RightDockPanelBounds {
 
 const RIGHT_DOCK_HEADER_HEIGHT = 40
 const BROWSER_TOOLBAR_HEIGHT = 44
-const PANEL_SPRING = { type: 'spring' as const, stiffness: 600, damping: 49 }
-
 
 export interface RightDockTab {
   id: string
@@ -54,7 +51,6 @@ const TOOL_CONFIGS: ToolConfig[] = [
 const TOOL_BY_TYPE = new Map(TOOL_CONFIGS.map((tool) => [tool.type, tool]))
 
 export interface RightWorkspacePanelProps {
-  width: number
   isOpen?: boolean
   tabs: RightDockTab[]
   activeTabId: string | null
@@ -65,9 +61,7 @@ export interface RightWorkspacePanelProps {
   onCloseTab: (id: string) => void
   onUpdateTabTitle?: (id: string, title: string) => void
   onUpdateBrowserInstanceId?: (id: string, instanceId: string | null) => void
-  onResizeStart: (event: React.MouseEvent<HTMLDivElement>) => void
   layoutPhase?: RightDockLayoutPhase
-  layoutVersion?: number
   panelBounds?: RightDockPanelBounds | null
   onPanelBoundsChange?: (bounds: RightDockPanelBounds) => void
 }
@@ -107,7 +101,6 @@ function getBrowserDockBounds(panelBounds: RightDockPanelBounds | null): Browser
 
 
 export function RightWorkspacePanel({
-  width,
   isOpen = true,
   tabs,
   activeTabId,
@@ -118,31 +111,28 @@ export function RightWorkspacePanel({
   onCloseTab,
   onUpdateTabTitle,
   onUpdateBrowserInstanceId,
-  onResizeStart,
   layoutPhase = 'idle',
-  layoutVersion = 0,
   panelBounds = null,
   onPanelBoundsChange,
 }: RightWorkspacePanelProps) {
   const { t } = useTranslation()
-  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
-  const panelRef = React.useRef<HTMLElement | null>(null)
+  const panelRef = React.useRef<HTMLDivElement | null>(null)
   const lastBoundsRef = React.useRef<RightDockPanelBounds | null>(null)
   const browserDockBounds = React.useMemo(() => getBrowserDockBounds(panelBounds), [panelBounds])
   const measurePanel = React.useCallback(() => {
     const element = panelRef.current
-    if (!element || !onPanelBoundsChange) return
+    if (!element || !onPanelBoundsChange || !isOpen) return
     const rect = element.getBoundingClientRect()
     const next = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
     const prev = lastBoundsRef.current
     if (prev && Math.round(prev.x) === Math.round(next.x) && Math.round(prev.y) === Math.round(next.y) && Math.round(prev.width) === Math.round(next.width) && Math.round(prev.height) === Math.round(next.height)) return
     lastBoundsRef.current = next
     onPanelBoundsChange(next)
-  }, [onPanelBoundsChange])
+  }, [isOpen, onPanelBoundsChange])
 
   React.useLayoutEffect(() => {
     measurePanel()
-  }, [measurePanel, isOpen, width, tabs.length, activeTabId, layoutVersion])
+  }, [measurePanel, isOpen, tabs.length, activeTabId])
 
   React.useEffect(() => {
     const element = panelRef.current
@@ -157,22 +147,12 @@ export function RightWorkspacePanel({
   }, [onAddTab])
 
   return (
-    <motion.aside
-      ref={panelRef}
+    <aside
       data-layout-phase={layoutPhase}
-      className="relative flex h-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle"
-      initial={false}
-      animate={{ width: isOpen ? width : 0, opacity: isOpen ? 1 : 0 }}
-      transition={layoutPhase === 'resizing' ? { duration: 0 } : PANEL_SPRING}
-      style={{ width: isOpen ? width : 0 }}
+      className="relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle"
     >
-      <div
-        onMouseDown={onResizeStart}
-        className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize"
-        aria-hidden="true"
-      />
-
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
+      <div ref={panelRef} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-10 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const tool = TOOL_BY_TYPE.get(tab.type)!
@@ -210,9 +190,9 @@ export function RightWorkspacePanel({
           )}
         </div>
 
-      </div>
+        </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
         {tabs.length > 0 ? (
           tabs.map((tab) => {
             const selected = tab.id === activeTabId
@@ -251,8 +231,9 @@ export function RightWorkspacePanel({
             ))}
           </div>
         )}
+        </div>
       </div>
-    </motion.aside>
+    </aside>
   )
 }
 
