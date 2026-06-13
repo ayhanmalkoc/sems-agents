@@ -30,6 +30,10 @@ function browserDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'browser-tools.md'));
 }
 
+function rightDockDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'right-dock-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -98,7 +102,7 @@ describe('PrerequisiteManager', () => {
       const docsPath = browserDocPath();
       mockExistsPaths.add(docsPath);
 
-      const result = manager.checkPrerequisites('browser_snapshot');
+      const result = manager.checkPrerequisites('browser_tool');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
     });
@@ -108,6 +112,24 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(docsPath);
 
       const result = manager.checkPrerequisites('mcp__session__browser_tool');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches right dock tools and blocks until right dock docs are read', () => {
+      const docsPath = rightDockDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('right_dock');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches session right dock tools and blocks until right dock docs are read', () => {
+      const docsPath = rightDockDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('mcp__session__right_dock');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
     });
@@ -298,11 +320,23 @@ describe('PrerequisiteManager', () => {
       const docsPath = browserDocPath();
       mockExistsPaths.add(docsPath);
 
-      expect(manager.checkPrerequisites('browser_open').allowed).toBe(false);
-      expect(manager.checkPrerequisites('browser_open').allowed).toBe(false);
+      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(false);
+      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(false);
 
       manager.trackReadTool({ file_path: docsPath });
-      expect(manager.checkPrerequisites('browser_open').allowed).toBe(true);
+      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(true);
+    });
+
+
+    it('does not bypass strict right dock prerequisite after repeated rejections', () => {
+      const docsPath = rightDockDocPath();
+      mockExistsPaths.add(docsPath);
+
+      expect(manager.checkPrerequisites('right_dock').allowed).toBe(false);
+      expect(manager.checkPrerequisites('right_dock').allowed).toBe(false);
+
+      manager.trackReadTool({ file_path: docsPath });
+      expect(manager.checkPrerequisites('right_dock').allowed).toBe(true);
     });
   });
 
@@ -312,7 +346,7 @@ describe('PrerequisiteManager', () => {
 
   describe('trackBashSkillRead', () => {
     it('clears skill prerequisite when Bash command contains the skill path', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+      const skillPath = resolve(WORKSPACE_ROOT, 'skills', 'my-skill', 'SKILL.md');
       manager.registerSkillPrerequisites([skillPath]);
 
       // WebSearch should be blocked (skill prerequisite pending)
@@ -331,7 +365,7 @@ describe('PrerequisiteManager', () => {
     });
 
     it('returns false when Bash command does not contain a pending skill path', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+      const skillPath = resolve(WORKSPACE_ROOT, 'skills', 'my-skill', 'SKILL.md');
       manager.registerSkillPrerequisites([skillPath]);
 
       const result = manager.trackBashSkillRead({ command: 'ls -la /some/other/path' });
@@ -350,8 +384,8 @@ describe('PrerequisiteManager', () => {
     });
 
     it('clears multiple skill prerequisites from a single command', () => {
-      const skill1 = '/test/workspace/skills/alpha/SKILL.md';
-      const skill2 = '/test/workspace/skills/beta/SKILL.md';
+      const skill1 = resolve(WORKSPACE_ROOT, 'skills', 'alpha', 'SKILL.md');
+      const skill2 = resolve(WORKSPACE_ROOT, 'skills', 'beta', 'SKILL.md');
       manager.registerSkillPrerequisites([skill1, skill2]);
 
       // Command that contains both paths
@@ -365,7 +399,7 @@ describe('PrerequisiteManager', () => {
     });
 
     it('logs debug message when clearing via Bash', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+      const skillPath = resolve(WORKSPACE_ROOT, 'skills', 'my-skill', 'SKILL.md');
       manager.registerSkillPrerequisites([skillPath]);
 
       manager.trackBashSkillRead({ command: `cat ${skillPath}` });

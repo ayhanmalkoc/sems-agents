@@ -75,8 +75,12 @@ export async function executeRightDockCommand(command: string, fns: RightDockFns
   try {
     if (verb === 'status') return success(formatStatus(await fns.status()));
     if (verb === 'open') {
-      const toolType = parseToolType(parts[1]);
-      return success(formatStatus(toolType ? await fns.openTool(toolType) : await fns.open()));
+      if (parts[1]) {
+        const toolType = parseToolType(parts[1]);
+        if (!toolType) return failure(`Unknown right_dock tool type: ${parts[1]}`);
+        return success(formatStatus(await fns.openTool(toolType)));
+      }
+      return success(formatStatus(await fns.open()));
     }
     if (verb === 'close') return success(formatStatus(await fns.close()));
     if (verb === 'tabs') return success(formatStatus(await fns.tabs()));
@@ -97,7 +101,7 @@ export async function executeRightDockCommand(command: string, fns: RightDockFns
 }
 
 export function createRightDockTool(options: { getRightDockFns: () => RightDockFns | undefined }) {
-  return tool('right_dock', 'Control the visible Craft right workspace dock. Use this for right panel actions: open/close the dock, list/select/close tabs, and open Browser, Files, or Terminal tabs in the current workspace window.', RightDockSchema.shape, async (args) => {
+  return tool('right_dock', 'Control the visible right workspace dock: open/close it, list tabs, open/select/close dock tool tabs.', RightDockSchema.shape, async (args) => {
     const fns = options.getRightDockFns();
     if (!fns) return failure('Right dock controls are not available. This tool requires the desktop app.');
     return executeRightDockCommand(String(args.command ?? 'status'), fns);
