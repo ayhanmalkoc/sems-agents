@@ -677,11 +677,6 @@ function AppShellContent({
   const MOBILE_THRESHOLD = 768
   const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
 
-  const effectiveRightDockWidth = React.useMemo(() => {
-    if (!isRightDockExpanded) return rightDockWidth
-    return Math.max(rightDockWidth, shellWidth - PANEL_EDGE_INSET - 8)
-  }, [isRightDockExpanded, rightDockWidth, shellWidth])
-
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
 
   React.useLayoutEffect(() => {
@@ -3415,7 +3410,7 @@ function AppShellContent({
               layoutPhase={rightDockLayoutPhase}
             />
           ) : undefined}
-          dockWidth={effectiveRightDockWidth}
+          dockWidth={rightDockWidth}
           onDockResizeStart={handleRightDockResizeStart}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isDockVisible={isRightDockOpen && !isAutoCompact}

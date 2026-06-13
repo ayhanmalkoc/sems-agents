@@ -86,7 +86,7 @@ export function PanelStackContainer({
   const focusedPanelId = useAtomValue(focusedPanelIdAtom)
   const focusedRoute = useAtomValue(focusedPanelRouteAtom)
 
-  const contentPanels = isDockExpanded ? [] : panelStack
+  const contentPanels = panelStack
 
   // Compact mode: drill-in is "detail focused", not just "session selected".
   // For sessions: a session is selected. For settings: a subpage is selected.
@@ -286,30 +286,43 @@ export function PanelStackContainer({
         </motion.div>
 
         {/* === CONTENT PANELS WITH SASHES === */}
-        {visiblePanels.length === 0 ? (
-          isDockExpanded ? null : <div className="flex-1 flex items-center justify-center" />
-        ) : (
-          visiblePanels.map((entry, index) => (
-            <PanelSlot
-              key={entry.id}
-              entry={entry}
-              isOnly={visiblePanels.length === 1}
-              isFocusedPanel={isMultiPanel ? entry.id === focusedPanelId : true}
-              isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
-              isAtLeftEdge={index === 0 && isLeftEdge}
-              isAtRightEdge={index === visiblePanels.length - 1 && !hasDock}
-              proportion={entry.proportion}
-              isCompact={false}
-              panelRole={index === 0 ? 'primary' : 'secondary'}
-              sash={index > 0 ? (
-                <PanelResizeSash
-                  leftIndex={index - 1}
-                  rightIndex={index}
-                />
-              ) : undefined}
-            />
-          ))
-        )}
+        <motion.div
+          className="h-full min-w-0 flex"
+          initial={false}
+          animate={{
+            flexGrow: isDockExpanded ? 0 : 1,
+            flexBasis: isDockExpanded ? 0 : 0,
+            opacity: isDockExpanded ? 0 : 1,
+          }}
+          transition={transition}
+          style={{ overflow: isDockExpanded ? 'clip' : 'visible', gap: PANEL_GAP }}
+          aria-hidden={isDockExpanded}
+        >
+          {visiblePanels.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center" />
+          ) : (
+            visiblePanels.map((entry, index) => (
+              <PanelSlot
+                key={entry.id}
+                entry={entry}
+                isOnly={visiblePanels.length === 1}
+                isFocusedPanel={isMultiPanel ? entry.id === focusedPanelId : true}
+                isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
+                isAtLeftEdge={index === 0 && isLeftEdge}
+                isAtRightEdge={index === visiblePanels.length - 1 && !hasDock}
+                proportion={entry.proportion}
+                isCompact={false}
+                panelRole={index === 0 ? 'primary' : 'secondary'}
+                sash={index > 0 ? (
+                  <PanelResizeSash
+                    leftIndex={index - 1}
+                    rightIndex={index}
+                  />
+                ) : undefined}
+              />
+            ))
+          )}
+        </motion.div>
 
         {/* === DOCK SLOT === */}
         {dockSlot && hasDock && !isDockExpanded && onDockResizeStart && (
@@ -344,16 +357,17 @@ export function PanelStackContainer({
             data-panel-role="dock"
             initial={false}
             animate={{
-              width: hasDock ? dockSlotWidth : 0,
+              width: hasDock && !isDockExpanded ? dockSlotWidth : 0,
+              flexGrow: hasDock && isDockExpanded ? 1 : 0,
               marginLeft: hasDock ? 0 : -PANEL_GAP,
               opacity: hasDock ? 1 : 0,
             }}
             transition={transition}
-            className="h-full relative shrink-0"
+            className="h-full relative min-w-0 shrink-0"
             style={{ overflowX: 'clip', overflowY: 'visible' }}
           >
-            <div className="h-full p-px" style={{ width: dockSlotWidth }}>
-              <div className="h-full" style={{ width: dockWidth }}>
+            <div className="h-full p-px" style={{ width: '100%' }}>
+              <div className="h-full w-full">
                 {dockSlot}
               </div>
             </div>
