@@ -562,6 +562,7 @@ export interface TestAutomationPayload {
   workspaceId: string
   automationId?: string
   automationName?: string
+  eventName?: string
   actions: TestAutomationAction[]
   permissionMode?: PermissionMode
   labels?: string[]

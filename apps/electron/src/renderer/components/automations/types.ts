@@ -277,6 +277,10 @@ export interface ExecutionEntry {
   timestamp: number
   /** Error message (if status === 'error') */
   error?: string
+  triggerSummary?: string
+  matcherSummary?: string
+  conditionSummary?: string
+  outcome?: 'action_completed' | 'action_failed'
   /** Truncated action summary */
   actionSummary?: string
   /** Session ID created by this execution (for deep linking) */

@@ -100,6 +100,7 @@ export function useAutomations(
       workspaceId: activeWorkspaceId,
       automationId: automation.id,
       automationName: automation.name,
+      eventName: automation.event,
       actions: automation.actions,
       permissionMode: automation.permissionMode,
       labels: automation.labels,
@@ -177,11 +178,15 @@ export function useAutomations(
       return entries.map(e => ({
         id: `${e.id}-${e.ts}`,
         automationId: e.id,
-        event: automation?.event ?? 'LabelAdd',
+        event: (e.event ?? automation?.event ?? 'LabelAdd') as ExecutionEntry['event'],
         status: e.ok ? 'success' as const : 'error' as const,
         duration: e.webhook?.durationMs ?? 0,
         timestamp: e.ts,
         sessionId: e.sessionId,
+        triggerSummary: e.triggerSummary,
+        matcherSummary: e.matcherSummary,
+        conditionSummary: e.conditionSummary,
+        outcome: e.outcome,
         actionSummary: e.webhook
           ? `Webhook ${e.webhook.method} ${e.webhook.url}${e.webhook.attempts && e.webhook.attempts > 1 ? ` (${e.webhook.attempts} attempts)` : ''}`
           : e.prompt,

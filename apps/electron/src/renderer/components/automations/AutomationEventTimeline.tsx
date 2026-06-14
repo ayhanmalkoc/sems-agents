@@ -107,6 +107,16 @@ export function AutomationEventTimeline({ entries, className, onReplay }: Automa
         const StatusIcon = config.icon
         const isWebhook = !!entry.webhookDetails
         const isExpanded = expandedId === entry.id
+        const actionResult = entry.webhookDetails
+          ? entry.status === 'error'
+            ? t('automations.webhookFailedStatus', { status: formatStatusCode(entry.webhookDetails.statusCode, t) })
+            : t('automations.webhookDeliveredStatus', { status: formatStatusCode(entry.webhookDetails.statusCode, t) })
+          : entry.sessionId
+            ? t('automations.promptCreatedSession')
+            : entry.status === 'error'
+              ? entry.error
+              : undefined
+        const hasRunMetadata = Boolean(entry.triggerSummary || entry.matcherSummary || entry.conditionSummary || actionResult)
 
         const handleToggle = isWebhook ? () => setExpandedId(isExpanded ? null : entry.id) : undefined
         const handleKeyDown = isWebhook ? (e: React.KeyboardEvent) => {
@@ -136,10 +146,18 @@ export function AutomationEventTimeline({ entries, className, onReplay }: Automa
                 {formatShortRelativeTime(entry.timestamp)}
               </span>
 
-              {/* Action summary — truncated prompt text */}
-              <span className="flex-1 min-w-0 truncate text-xs text-foreground/70">
-                {entry.actionSummary || entry.error || '—'}
-              </span>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="truncate text-xs text-foreground/80">
+                  {entry.triggerSummary || entry.actionSummary || entry.error || '—'}
+                </div>
+                {hasRunMetadata && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    {entry.matcherSummary && <span>{entry.matcherSummary}</span>}
+                    {entry.conditionSummary && <span>{entry.conditionSummary}</span>}
+                    {actionResult && <span>{actionResult}</span>}
+                  </div>
+                )}
+              </div>
 
               {/* Session deep link */}
               {entry.sessionId && (

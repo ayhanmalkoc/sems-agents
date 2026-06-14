@@ -9,8 +9,8 @@
 import { createLogger } from '../../utils/debug.ts';
 import type { EventBus, BaseEventPayload } from '../event-bus.ts';
 import type { AutomationHandler, AutomationsConfigProvider } from './types.ts';
-import { APP_EVENTS, type AutomationEvent, type WebhookAction, type WebhookActionResult, type AppEvent } from '../types.ts';
-import { matcherMatches, buildWebhookEnv, expandEnvVars } from '../utils.ts';
+import { APP_EVENTS, type AutomationEvent, type AutomationRunMetadata, type WebhookAction, type WebhookActionResult, type AppEvent } from '../types.ts';
+import { matcherMatches, buildAutomationRunMetadata, buildWebhookEnv, expandEnvVars } from '../utils.ts';
 import { executeWithRetry, redactUrl, isTransientFailure, createWebhookHistoryEntry, expandWebhookAction } from '../webhook-utils.ts';
 import { RetryScheduler } from '../retry-scheduler.ts';
 import { appendAutomationHistoryEntry } from '../history-store.ts';
@@ -36,6 +36,7 @@ export interface WebhookHandlerOptions {
 interface WebhookTask {
   action: WebhookAction;
   matcherId: string;
+  runMetadata: AutomationRunMetadata;
 }
 
 // ============================================================================
@@ -149,7 +150,11 @@ export class WebhookHandler implements AutomationHandler {
 
       for (const action of matcher.actions) {
         if (action.type === 'webhook') {
-          webhookTasks.push({ action, matcherId: matcher.id ?? 'unknown' });
+          webhookTasks.push({
+            action,
+            matcherId: matcher.id ?? 'unknown',
+            runMetadata: buildAutomationRunMetadata(event, matcher, payload as unknown as Record<string, unknown>),
+          });
         }
       }
     }
@@ -225,6 +230,7 @@ export class WebhookHandler implements AutomationHandler {
       const entry = createWebhookHistoryEntry({
         matcherId: task.matcherId,
         ok: result.success,
+        metadata: task.runMetadata,
         method: task.action.method,
         url: result.url,
         statusCode: result.statusCode,
@@ -245,7 +251,7 @@ export class WebhookHandler implements AutomationHandler {
       if (isTransientFailure(result)) {
         if (result.attempts && result.attempts > 1) {
           const expandedAction = expandWebhookAction(task.action, env);
-          this.retryScheduler.enqueue(task.matcherId, expandedAction, result.url, result.error)
+          this.retryScheduler.enqueue(task.matcherId, expandedAction, result.url, result.error, task.runMetadata)
             .catch(e => log.debug(`[WebhookHandler] Failed to enqueue for deferred retry: ${e}`));
         }
       }

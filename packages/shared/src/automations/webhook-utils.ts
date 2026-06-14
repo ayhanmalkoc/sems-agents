@@ -6,7 +6,7 @@
  * env var expansion, and retry logic so the two code paths can't diverge.
  */
 
-import type { WebhookAction, WebhookActionResult } from './types.ts';
+import type { AutomationRunMetadata, WebhookAction, WebhookActionResult } from './types.ts';
 import { expandEnvVars } from './utils.ts';
 import { DEFAULT_WEBHOOK_METHOD, HISTORY_FIELD_MAX_LENGTH } from './constants.ts';
 
@@ -32,6 +32,7 @@ export function redactUrl(url: string): string {
 export function createWebhookHistoryEntry(opts: {
   matcherId: string;
   ok: boolean;
+  metadata?: AutomationRunMetadata;
   method?: string;
   url: string;
   statusCode: number;
@@ -44,6 +45,8 @@ export function createWebhookHistoryEntry(opts: {
     id: opts.matcherId,
     ts: Date.now(),
     ok: opts.ok,
+    ...opts.metadata,
+    outcome: opts.metadata?.outcome ?? (opts.ok ? 'action_completed' : 'action_failed'),
     webhook: {
       method: opts.method ?? DEFAULT_WEBHOOK_METHOD,
       url: redactUrl(opts.url),
@@ -62,6 +65,7 @@ export function createWebhookHistoryEntry(opts: {
 export function createPromptHistoryEntry(opts: {
   matcherId: string;
   ok: boolean;
+  metadata?: AutomationRunMetadata;
   sessionId?: string;
   prompt?: string;
   error?: string;
@@ -70,6 +74,8 @@ export function createPromptHistoryEntry(opts: {
     id: opts.matcherId,
     ts: Date.now(),
     ok: opts.ok,
+    ...opts.metadata,
+    outcome: opts.metadata?.outcome ?? (opts.ok ? 'action_completed' : 'action_failed'),
     ...(opts.sessionId ? { sessionId: opts.sessionId } : {}),
     ...(opts.prompt ? { prompt: opts.prompt.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),
     ...(opts.error ? { error: opts.error.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),

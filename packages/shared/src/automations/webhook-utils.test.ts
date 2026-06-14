@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import { expandWebhookAction } from './webhook-utils.ts';
+import { createPromptHistoryEntry, createWebhookHistoryEntry, expandWebhookAction } from './webhook-utils.ts';
 import type { WebhookAction } from './types.ts';
 
 const env = {
@@ -86,5 +86,67 @@ describe('expandWebhookAction', () => {
     expect(result.method).toBe('PUT');
     expect(result.bodyFormat).toBe('json');
     expect(result.captureResponse).toBe(true);
+  });
+});
+
+describe('history entry metadata', () => {
+  it('adds metadata and outcome to prompt history entries', () => {
+    const entry = createPromptHistoryEntry({
+      matcherId: 'abc123',
+      ok: true,
+      metadata: {
+        event: 'LabelAdd',
+        triggerSummary: 'LabelAdd: urgent',
+        matcherSummary: 'Matcher matched: urgent',
+        conditionSummary: 'No conditions',
+      },
+      sessionId: 'session-1',
+      prompt: 'Triage urgent label',
+    });
+
+    expect(entry).toMatchObject({
+      id: 'abc123',
+      ok: true,
+      event: 'LabelAdd',
+      triggerSummary: 'LabelAdd: urgent',
+      matcherSummary: 'Matcher matched: urgent',
+      conditionSummary: 'No conditions',
+      outcome: 'action_completed',
+      sessionId: 'session-1',
+    });
+  });
+
+  it('adds metadata and failed outcome to webhook history entries', () => {
+    const entry = createWebhookHistoryEntry({
+      matcherId: 'def456',
+      ok: false,
+      metadata: {
+        event: 'SessionStatusChange',
+        triggerSummary: 'SessionStatusChange: done',
+        matcherSummary: 'Matcher matched: done',
+        conditionSummary: 'Conditions passed (1)',
+      },
+      method: 'POST',
+      url: 'https://hooks.example.com/secret/path',
+      statusCode: 401,
+      durationMs: 120,
+      error: 'Unauthorized',
+    });
+
+    expect(entry).toMatchObject({
+      id: 'def456',
+      ok: false,
+      event: 'SessionStatusChange',
+      triggerSummary: 'SessionStatusChange: done',
+      matcherSummary: 'Matcher matched: done',
+      conditionSummary: 'Conditions passed (1)',
+      outcome: 'action_failed',
+      webhook: {
+        method: 'POST',
+        statusCode: 401,
+        durationMs: 120,
+        error: 'Unauthorized',
+      },
+    });
   });
 });

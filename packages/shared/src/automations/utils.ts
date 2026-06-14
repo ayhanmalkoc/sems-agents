@@ -6,7 +6,7 @@
  */
 
 import type { BaseEventPayload } from './event-bus.ts';
-import type { AutomationEvent, AutomationMatcher, PromptReferences, AgentEvent, SdkAutomationInput } from './types.ts';
+import type { AutomationEvent, AutomationMatcher, AutomationRunMetadata, PromptReferences, AgentEvent, SdkAutomationInput } from './types.ts';
 import { matchesCron } from './cron-matcher.ts';
 import { sanitizeForShell } from './security.ts';
 import { evaluateConditions } from './conditions.ts';
@@ -106,6 +106,40 @@ export function getMatchValue(event: AutomationEvent, data: Record<string, unkno
     default:
       return JSON.stringify(data);
   }
+}
+
+function formatSummaryValue(value: unknown): string {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(formatSummaryValue).filter(Boolean).join(', ');
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+export function buildAutomationRunMetadata(
+  event: AutomationEvent,
+  matcher: AutomationMatcher,
+  payload: Record<string, unknown>,
+): AutomationRunMetadata {
+  const matchValue = getMatchValue(event, payload);
+  const triggerSummary = matchValue ? `${event}: ${matchValue}` : event;
+  const matcherSummary = event === 'SchedulerTick'
+    ? matcher.cron ? `Cron matched: ${matcher.cron}` : 'Scheduler matched'
+    : matcher.matcher ? `Matcher matched: ${matcher.matcher}` : 'Matcher matched: all events';
+  const conditionSummary = matcher.conditions?.length
+    ? `Conditions passed (${matcher.conditions.length})`
+    : 'No conditions';
+
+  return {
+    event,
+    triggerSummary: formatSummaryValue(triggerSummary),
+    matcherSummary,
+    conditionSummary,
+  };
 }
 
 /**

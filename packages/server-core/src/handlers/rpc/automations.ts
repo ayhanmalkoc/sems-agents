@@ -4,12 +4,23 @@ import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { appendAutomationHistoryEntry } from '@craft-agent/shared/automations/history-store'
 import { AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER } from '@craft-agent/shared/automations/constants'
+import type { AutomationEvent, AutomationRunMetadata } from '@craft-agent/shared/automations'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
 // History file name — matches AUTOMATIONS_HISTORY_FILE from @craft-agent/shared/automations/constants
 const HISTORY_FILE = 'automations-history.jsonl'
-interface HistoryEntry { id: string; ts: number; ok: boolean; sessionId?: string; prompt?: string; error?: string; webhook?: { method: string; url: string; statusCode: number; durationMs: number; attempts?: number; error?: string; responseBody?: string } }
+interface HistoryEntry { id: string; ts: number; ok: boolean; event?: AutomationEvent; triggerSummary?: string; matcherSummary?: string; conditionSummary?: string; outcome?: 'action_completed' | 'action_failed'; sessionId?: string; prompt?: string; error?: string; webhook?: { method: string; url: string; statusCode: number; durationMs: number; attempts?: number; error?: string; responseBody?: string } }
+
+function createManualRunMetadata(eventName?: string): AutomationRunMetadata | undefined {
+  if (!eventName) return undefined
+  return {
+    event: eventName as AutomationEvent,
+    triggerSummary: `${eventName}: manual test`,
+    matcherSummary: 'Manual test run',
+    conditionSummary: 'Not evaluated in manual test',
+  }
+}
 
 // Per-workspace config mutex: serializes read-modify-write cycles on automations.json
 // to prevent concurrent IPC calls from clobbering each other's changes.
@@ -103,6 +114,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
     const results: import('@craft-agent/shared/protocol').TestAutomationActionResult[] = []
     const { parsePromptReferences } = await import('@craft-agent/shared/automations')
     const { executeWebhookRequest, createWebhookHistoryEntry, createPromptHistoryEntry } = await import('@craft-agent/shared/automations/webhook-utils')
+    const runMetadata = createManualRunMetadata(payload.eventName)
 
     for (const action of payload.actions) {
       const start = Date.now()
@@ -122,6 +134,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
           const entry = createWebhookHistoryEntry({
             matcherId: payload.automationId,
             ok: result.success,
+            metadata: runMetadata,
             method,
             url: action.url as string,
             statusCode: result.statusCode,
@@ -165,7 +178,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
 
         // Write history entry for test runs
         if (payload.automationId) {
-          const entry = createPromptHistoryEntry({ matcherId: payload.automationId, ok: true, sessionId, prompt: action.prompt })
+          const entry = createPromptHistoryEntry({ matcherId: payload.automationId, ok: true, metadata: runMetadata, sessionId, prompt: action.prompt })
           try {
             await appendAutomationHistoryEntry(workspace.rootPath, entry)
           } catch (e) {
@@ -182,7 +195,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
 
         // Write failed history entry
         if (payload.automationId) {
-          const entry = createPromptHistoryEntry({ matcherId: payload.automationId, ok: false, error: (err as Error).message, prompt: action.prompt })
+          const entry = createPromptHistoryEntry({ matcherId: payload.automationId, ok: false, metadata: runMetadata, error: (err as Error).message, prompt: action.prompt })
           try {
             await appendAutomationHistoryEntry(workspace.rootPath, entry)
           } catch (e) {
@@ -269,6 +282,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
     if (webhookActions.length === 0) throw new Error('No webhook actions to replay')
 
     const { executeWebhookRequest, createWebhookHistoryEntry } = await import('@craft-agent/shared/automations/webhook-utils')
+    const runMetadata = createManualRunMetadata(eventName)
     const results = await Promise.all(
       webhookActions.map(a => executeWebhookRequest(a as unknown as import('@craft-agent/shared/automations').WebhookAction))
     )
@@ -280,6 +294,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
       const entry = createWebhookHistoryEntry({
         matcherId: automationId,
         ok: result.success,
+        metadata: runMetadata,
         method: (action as { method?: string }).method,
         url: result.url,
         statusCode: result.statusCode,

@@ -1623,6 +1623,7 @@ export class SessionManager implements ISessionManager {
             const entry = createPromptHistoryEntry({
               matcherId: pending.matcherId,
               ok: result.status === 'fulfilled',
+              metadata: pending.runMetadata,
               sessionId: result.status === 'fulfilled' ? result.value.sessionId : undefined,
               prompt: pending.prompt,
               error: result.status === 'rejected' ? String(result.reason) : undefined,

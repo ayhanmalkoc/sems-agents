@@ -18,7 +18,7 @@ import { createLogger } from '../utils/debug.ts';
 import { executeWebhookRequest, createWebhookHistoryEntry } from './webhook-utils.ts';
 import { AUTOMATIONS_RETRY_QUEUE_FILE } from './constants.ts';
 import { appendAutomationHistoryEntry } from './history-store.ts';
-import type { WebhookAction, WebhookActionResult } from './types.ts';
+import type { AutomationRunMetadata, WebhookAction, WebhookActionResult } from './types.ts';
 
 const log = createLogger('retry-scheduler');
 
@@ -55,6 +55,8 @@ export interface RetryQueueEntry {
   createdAt: number;
   /** Last error message */
   lastError?: string;
+  /** Optional run metadata preserved from the original webhook execution. */
+  runMetadata?: AutomationRunMetadata;
 }
 
 // ============================================================================
@@ -105,6 +107,7 @@ export class RetryScheduler {
     action: WebhookAction,
     expandedUrl: string,
     lastError?: string,
+    runMetadata?: AutomationRunMetadata,
   ): Promise<void> {
     const entry: RetryQueueEntry = {
       id: `${matcherId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -115,6 +118,7 @@ export class RetryScheduler {
       nextRetryAt: Date.now() + DEFERRED_DELAYS_MS[0]!,
       createdAt: Date.now(),
       lastError,
+      runMetadata,
     };
 
     const queuePath = join(this.workspaceRootPath, AUTOMATIONS_RETRY_QUEUE_FILE);
@@ -186,6 +190,7 @@ export class RetryScheduler {
           const historyEntry = createWebhookHistoryEntry({
             matcherId: entry.matcherId,
             ok: true,
+            metadata: entry.runMetadata,
             method: entry.action.method,
             url: entry.expandedUrl,
             statusCode: result.statusCode,
@@ -204,6 +209,7 @@ export class RetryScheduler {
           const historyEntry = createWebhookHistoryEntry({
             matcherId: entry.matcherId,
             ok: false,
+            metadata: entry.runMetadata,
             method: entry.action.method,
             url: entry.expandedUrl,
             statusCode: result.statusCode,

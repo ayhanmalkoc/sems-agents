@@ -60,6 +60,12 @@ describe('PromptHandler', () => {
       expect(prompts).toHaveLength(1);
       expect(prompts[0]!.prompt).toBe('A bug label was added');
       expect(prompts[0]!.sessionId).toBe('test-session');
+      expect(prompts[0]!.runMetadata).toMatchObject({
+        event: 'LabelAdd',
+        triggerSummary: 'LabelAdd: bug',
+        matcherSummary: 'Matcher matched: bug',
+        conditionSummary: 'No conditions',
+      });
 
       handler.dispose();
     });

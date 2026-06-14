@@ -31,6 +31,7 @@ export type {
   PromptActionResult,
   WebhookActionResult,
   ActionExecutionResult,
+  AutomationRunMetadata,
   PendingPrompt,
   AutomationResult,
   AutomationsValidationResult,

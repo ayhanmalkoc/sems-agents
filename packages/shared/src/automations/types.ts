@@ -231,6 +231,14 @@ export interface WebhookActionResult {
 
 export type ActionExecutionResult = PromptActionResult | WebhookActionResult;
 
+export interface AutomationRunMetadata {
+  event?: AutomationEvent;
+  triggerSummary?: string;
+  matcherSummary?: string;
+  conditionSummary?: string;
+  outcome?: 'action_completed' | 'action_failed';
+}
+
 /** A pending prompt with its metadata */
 export interface PendingPrompt {
   /** The session ID this prompt should be sent to */
@@ -258,6 +266,8 @@ export interface PendingPrompt {
   thinkingLevel?: ThinkingLevel;
   /** Forum-topic name to bind the new session to (Telegram supergroup, when paired). */
   telegramTopic?: string;
+  /** Optional run metadata for history/Recent Activity. */
+  runMetadata?: AutomationRunMetadata;
 }
 
 export interface AutomationResult {
