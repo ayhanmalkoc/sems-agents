@@ -3429,7 +3429,7 @@ function AppShellContent({
           </TopBarButton>
         )}
 
-        {!isAutoCompact && hasRightDockToggleAnchor && (isRightDockExpanded || shouldShowDockToggle('primary', { isOnlyPanel: isOnlyMainPanel })) && (
+        {!isAutoCompact && isSessionsNavigation(navState) && hasRightDockToggleAnchor && (isRightDockExpanded || shouldShowDockToggle('primary', { isOnlyPanel: isOnlyMainPanel })) && (
           <PanelHeaderCenterButton
             aria-label={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
             tooltip={isRightDockOpen ? 'Close right tools panel' : 'Open right tools panel'}
