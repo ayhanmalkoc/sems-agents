@@ -2,6 +2,7 @@ import * as React from 'react'
 import { FolderOpen, Globe, GitCompare, Maximize2, MessageSquare, Minimize2, PanelRight, Plus, Terminal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TopBarButton } from '@/components/ui/TopBarButton'
+import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { cn } from '@/lib/utils'
 import { WorkspaceFilesPanel } from './WorkspaceFilesPanel'
 import { WorkspaceTerminalPanel } from './WorkspaceTerminalPanel'
@@ -109,7 +110,7 @@ export function RightWorkspacePanel({
       className="relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-[12px] bg-foreground-2 shadow-middle"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex h-10 shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
+        <div className="flex h-[42px] shrink-0 items-center gap-1 border-b border-foreground/5 px-2">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const tool = TOOL_BY_TYPE.get(tab.type)!
@@ -149,20 +150,22 @@ export function RightWorkspacePanel({
 
           <div className="flex shrink-0 items-center gap-1.5">
             {onToggleExpanded && (
-              <TopBarButton
+              <PanelHeaderCenterButton
                 aria-label={isExpanded ? 'Restore right tools panel' : 'Expand right tools panel'}
-                title={isExpanded ? 'Restore right tools panel' : 'Expand right tools panel'}
+                tooltip={isExpanded ? 'Restore right tools panel' : 'Expand right tools panel'}
                 onClick={onToggleExpanded}
-                isActive={isExpanded}
-                className="rounded-lg"
-              >
-                {isExpanded ? <Minimize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} /> : <Maximize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} />}
-              </TopBarButton>
+                className={isExpanded ? 'opacity-100 bg-foreground/8' : undefined}
+                icon={isExpanded ? <Minimize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} /> : <Maximize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} />}
+              />
             )}
             <div data-right-dock-toggle-anchor="true" aria-hidden="true" className="h-7 w-7 shrink-0 overflow-hidden rounded-lg">
-              <TopBarButton tabIndex={-1} disabled className="pointer-events-none invisible rounded-lg">
-                <PanelRight className="h-4 w-4" />
-              </TopBarButton>
+              <PanelHeaderCenterButton
+                aria-label="Right tools panel placeholder"
+                tabIndex={-1}
+                disabled
+                className="pointer-events-none invisible"
+                icon={<PanelRight className="h-4 w-4" />}
+              />
             </div>
           </div>
         </div>
