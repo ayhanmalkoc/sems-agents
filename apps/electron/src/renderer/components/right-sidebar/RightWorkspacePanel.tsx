@@ -158,7 +158,7 @@ export function RightWorkspacePanel({
                 icon={isExpanded ? <Minimize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} /> : <Maximize2 className="h-4 w-4 text-foreground/60" strokeWidth={1.6} />}
               />
             )}
-            <div data-right-dock-toggle-anchor="true" aria-hidden="true" className="h-7 w-7 shrink-0 overflow-hidden rounded-lg">
+            <div data-right-dock-toggle-spacer="true" aria-hidden="true" className="h-7 w-7 shrink-0 overflow-hidden rounded-lg">
               <PanelHeaderCenterButton
                 aria-label="Right tools panel placeholder"
                 tabIndex={-1}

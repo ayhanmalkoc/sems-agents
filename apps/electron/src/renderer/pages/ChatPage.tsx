@@ -636,7 +636,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
       {isCompactMode ? compactInfoButton : shareButton}
       {!isCompactMode && canShowDockToggle && (
         <motion.div
-          data-right-dock-toggle-anchor="true"
+          data-main-right-dock-toggle-anchor="true"
           aria-hidden="true"
           className="shrink-0 overflow-hidden"
           initial={false}

@@ -313,7 +313,7 @@ export function PanelStackContainer({
                 proportion={entry.proportion}
                 isCompact={false}
                 panelRole={index === 0 ? 'primary' : 'secondary'}
-                sash={index > 0 ? (
+                sash={!isDockExpanded && index > 0 ? (
                   <PanelResizeSash
                     leftIndex={index - 1}
                     rightIndex={index}

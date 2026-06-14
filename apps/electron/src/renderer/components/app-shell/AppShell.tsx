@@ -689,7 +689,7 @@ function AppShellContent({
     let frame = 0
     const measure = () => {
       frame = 0
-      const anchor = document.querySelector<HTMLElement>('[data-right-dock-toggle-anchor="true"]')
+      const anchor = document.querySelector<HTMLElement>('[data-main-right-dock-toggle-anchor="true"]')
       if (!anchor) {
         setHasRightDockToggleAnchor(false)
         setRightDockToggleTop(null)
