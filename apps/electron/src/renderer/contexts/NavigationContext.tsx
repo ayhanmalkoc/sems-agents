@@ -81,6 +81,7 @@ import {
   focusedPanelIndexAtom,
   updateFocusedPanelRouteAtom,
   parseSessionIdFromRoute,
+  type PanelStackEntry,
 } from '@/atoms/panel-stack'
 
 // Re-export routes for convenience
@@ -148,6 +149,33 @@ interface NavigationProviderProps {
   remoteWorkspaceId?: string | null
 }
 
+interface SettingsReturnOrigin {
+  entries: { route: ViewRoute; proportion: number }[]
+  focusedIndex: number
+  sidebar: RightSidebarPanel | undefined
+}
+
+function isSettingsRoute(route: string | null | undefined): boolean {
+  if (!route) return false
+  return parseRouteToNavigationState(route)?.navigator === 'settings'
+}
+
+function createSettingsReturnOrigin(
+  panels: PanelStackEntry[],
+  focusedIndex: number,
+  sidebar: RightSidebarPanel | undefined
+): SettingsReturnOrigin | null {
+  if (panels.length === 0) return null
+  return {
+    entries: panels.map((panel) => ({
+      route: panel.route,
+      proportion: panel.proportion,
+    })),
+    focusedIndex: Math.min(Math.max(focusedIndex, 0), panels.length - 1),
+    sidebar,
+  }
+}
+
 export function NavigationProvider({
   children,
   workspaceId,
@@ -188,6 +216,7 @@ export function NavigationProvider({
   const [rightSidebar, setRightSidebar] = useState<RightSidebarPanel | undefined>()
   const rightSidebarRef = useRef<RightSidebarPanel | undefined>(rightSidebar)
   useEffect(() => { rightSidebarRef.current = rightSidebar }, [rightSidebar])
+  const settingsReturnOriginRef = useRef<SettingsReturnOrigin | null>(null)
 
   // NavigationState derived from the focused panel's route
   const navigationState: NavigationState = useMemo(() => {
@@ -827,6 +856,19 @@ export function NavigationProvider({
         return
       }
 
+      if (isSettingsRoute(route)) {
+        const panels = store.get(panelStackAtom)
+        const focusedIndex = store.get(focusedPanelIndexAtom)
+        const focusedRoute = panels[focusedIndex]?.route ?? null
+        if (!isSettingsRoute(focusedRoute)) {
+          settingsReturnOriginRef.current = createSettingsReturnOrigin(
+            panels,
+            focusedIndex,
+            rightSidebarRef.current
+          )
+        }
+      }
+
       // For view routes with newPanel: push a panel using lane-aware routing.
       //
       // Important distinction:
@@ -888,8 +930,27 @@ export function NavigationProvider({
   // =========================================================================
 
   const goBack = useCallback(() => {
+    const focusedRoute = store.get(focusedPanelRouteAtom)
+    const origin = settingsReturnOriginRef.current
+
+    if (isSettingsRoute(focusedRoute) && origin) {
+      settingsReturnOriginRef.current = null
+      suppressPushRef.current = true
+      setRightSidebar(origin.sidebar)
+      store.set(reconcilePanelStackAtom, {
+        entries: origin.entries,
+        focusedIndex: origin.focusedIndex,
+      })
+      queueMicrotask(() => {
+        syncUrlRef.current(false)
+        lastSemanticHistoryKeyRef.current = getSemanticHistoryKey()
+        suppressPushRef.current = false
+      })
+      return
+    }
+
     history.back()
-  }, [])
+  }, [getSemanticHistoryKey, store])
 
   const goForward = useCallback(() => {
     history.forward()
