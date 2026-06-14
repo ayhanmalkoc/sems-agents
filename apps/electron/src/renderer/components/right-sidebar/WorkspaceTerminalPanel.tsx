@@ -20,9 +20,26 @@ function basename(path: string): string {
   return normalized.split('/').filter(Boolean).pop() || path
 }
 
+
+function readCssToken(name: string): string {
+  if (typeof document === 'undefined') return ''
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+function getTerminalTheme() {
+  const background = readCssToken('--background')
+  const foreground = readCssToken('--foreground')
+  const selection = readCssToken('--foreground-20') || readCssToken('--foreground-30')
+  return {
+    ...(background ? { background } : {}),
+    ...(foreground ? { foreground, cursor: foreground } : {}),
+    ...(selection ? { selectionBackground: selection } : {}),
+  }
+}
+
 export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChange }: WorkspaceTerminalPanelProps) {
   const { activeWorkspaceId, workspaces } = useAppShellContext()
-  const { isDark } = useTheme()
+  const { resolvedTheme, isDark } = useTheme()
   const activeWorkspace = React.useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
     [activeWorkspaceId, workspaces]
@@ -100,20 +117,7 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
     const terminal = new Terminal({
       cursorBlink: true,
       convertEol: true,
-      fontFamily: 'var(--font-mono), Consolas, "Liberation Mono", monospace',
-      fontSize: 12,
-      lineHeight: 1.25,
-      theme: isDark ? {
-        background: '#111113',
-        foreground: '#f4f4f5',
-        cursor: '#f4f4f5',
-        selectionBackground: '#71717a88',
-      } : {
-        background: '#ffffff',
-        foreground: '#111827',
-        cursor: '#111827',
-        selectionBackground: '#94a3b866',
-      },
+      theme: getTerminalTheme(),
       allowProposedApi: false,
     })
     const fitAddon = new FitAddon()
@@ -155,7 +159,7 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
     } finally {
       setStarting(false)
     }
-  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, isDark, scrollTerminalToPrompt])
+  }, [activeWorkspace?.id, activeWorkspace?.rootPath, disposeTerminal, fit, focusTerminal, scrollTerminalToPrompt])
 
   React.useEffect(() => {
     const offData = window.electronAPI.onTerminalData((event) => {
@@ -193,6 +197,20 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
     if (!starting && terminalRef.current) focusTerminal()
   }, [focusTerminal, starting])
 
+
+  React.useEffect(() => {
+    let frame = 0
+    frame = requestAnimationFrame(() => {
+      const terminal = terminalRef.current
+      if (!terminal) return
+      terminal.options.theme = getTerminalTheme()
+      if (terminal.rows > 0) terminal.refresh(0, terminal.rows - 1)
+    })
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [resolvedTheme, isDark])
+
   React.useEffect(() => {
     if (!isActive || !terminalRef.current) return
     fit()
@@ -222,10 +240,7 @@ export function WorkspaceTerminalPanel({ className, isActive = true, onTitleChan
         ref={containerRef}
         onMouseDown={focusTerminal}
         onClick={focusTerminal}
-        className={cn(
-          'min-h-0 flex-1 cursor-text overflow-hidden [&_.xterm]:h-full [&_.xterm-screen]:h-full [&_.xterm-viewport]:!h-full',
-          isDark ? 'bg-[#111113]' : 'bg-white'
-        )}
+        className="min-h-0 flex-1 cursor-text overflow-hidden [&_.xterm]:h-full [&_.xterm-screen]:h-full [&_.xterm-viewport]:!h-full"
       />
     </div>
   )
