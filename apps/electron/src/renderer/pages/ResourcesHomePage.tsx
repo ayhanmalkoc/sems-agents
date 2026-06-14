@@ -24,15 +24,20 @@ import {
 import { navigate, routes } from '@/lib/navigate'
 import { CHAT_LAYOUT } from '@/config/layout'
 import { cn } from '@/lib/utils'
-import type { LoadedSkill, LoadedSource, SourceFilter } from '../../shared/types'
+import type { LoadedSkill, LoadedSource, NavigationState, SourceFilter } from '../../shared/types'
 
 function sourceFilterType(filter?: SourceFilter | null): 'api' | 'mcp' | 'local' | undefined {
   return filter?.kind === 'type' ? filter.sourceType : undefined
 }
 
-export default function ResourcesHomePage() {
+interface ResourcesHomePageProps {
+  navState?: NavigationState
+}
+
+export default function ResourcesHomePage({ navState: navStateProp }: ResourcesHomePageProps = {}) {
   const { t } = useTranslation()
-  const navState = useNavigationState()
+  const globalNavState = useNavigationState()
+  const navState = navStateProp ?? globalNavState
   const {
     activeWorkspaceId,
     workspaces,

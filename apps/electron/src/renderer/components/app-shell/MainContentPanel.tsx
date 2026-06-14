@@ -349,7 +349,7 @@ export function MainContentPanel({
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <ResourcesHomePage />
+        <ResourcesHomePage navState={navState} />
       </Panel>
     )
   }
@@ -381,7 +381,7 @@ export function MainContentPanel({
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <ResourcesHomePage />
+        <ResourcesHomePage navState={navState} />
       </Panel>
     )
   }
@@ -409,7 +409,7 @@ if (navState.details) {
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <AutomationsHomePage />
+        <AutomationsHomePage navState={navState} />
       </Panel>
     )
   }

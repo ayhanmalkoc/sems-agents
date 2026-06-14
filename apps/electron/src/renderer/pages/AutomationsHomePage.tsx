@@ -18,7 +18,7 @@ import { AutomationMenu } from '@/components/automations/AutomationMenu'
 import { automationsAtom } from '@/atoms/automations'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { automationSelection } from '@/hooks/useEntitySelection'
-import { useNavigationState, isAutomationsNavigation } from '@/contexts/NavigationContext'
+import { isAutomationsNavigation } from '@/contexts/NavigationContext'
 import { CHAT_LAYOUT } from '@/config/layout'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ import {
   type AutomationListFilter,
 } from '@/components/automations/types'
 import { formatShortRelativeTime } from '@/components/automations/utils'
+import type { NavigationState } from '../../shared/types'
 
 type AutomationKindFilter = 'all' | 'scheduled' | 'app' | 'agent'
 
@@ -71,9 +72,12 @@ function actionSummary(automation: AutomationListItem, t: (key: string) => strin
   return parts.join(' · ')
 }
 
-export default function AutomationsHomePage() {
+interface AutomationsHomePageProps {
+  navState: NavigationState
+}
+
+export default function AutomationsHomePage({ navState }: AutomationsHomePageProps) {
   const { t } = useTranslation()
-  const navState = useNavigationState()
   const automations = useAtomValue(automationsAtom)
   const {
     activeWorkspaceId,
