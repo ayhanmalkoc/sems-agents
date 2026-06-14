@@ -858,6 +858,8 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
+  const isRightDockSuspended = isSettingsNavigation(navState)
+  const isRightDockVisible = isRightDockOpen && !isRightDockSuspended
 
   const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
     ? 0
@@ -3395,7 +3397,7 @@ function AppShellContent({
           navigatorWidth={navigatorPanelWidth}
           dockSlot={!isAutoCompact ? (
             <RightWorkspacePanel
-              isOpen={isRightDockOpen}
+              isOpen={isRightDockVisible}
               tabs={rightDockTabs}
               activeTabId={activeRightDockTabId}
               activeSessionId={effectiveSessionId}
@@ -3413,8 +3415,8 @@ function AppShellContent({
           dockWidth={rightDockWidth}
           onDockResizeStart={handleRightDockResizeStart}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
-          isDockVisible={isRightDockOpen && !isAutoCompact}
-          isDockExpanded={isRightDockExpanded}
+          isDockVisible={isRightDockVisible && !isAutoCompact}
+          isDockExpanded={isRightDockVisible && isRightDockExpanded}
           isContentHidden={false}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
