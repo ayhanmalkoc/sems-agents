@@ -858,8 +858,7 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  const isRightDockSuspended = isSettingsNavigation(navState)
-  const isRightDockVisible = isRightDockOpen && !isRightDockSuspended
+  const isRightDockVisible = isRightDockOpen && isSessionsNavigation(navState)
 
   const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
     ? 0
