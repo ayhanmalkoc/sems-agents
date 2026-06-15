@@ -42,6 +42,10 @@ function automationsDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'automations-tools.md'));
 }
 
+function resourcesDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'resources-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -138,6 +142,24 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(docsPath);
 
       const result = manager.checkPrerequisites('mcp__session__automations');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches resources tools and blocks until resources docs are read', () => {
+      const docsPath = resourcesDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('resources');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches session resources tools and blocks until resources docs are read', () => {
+      const docsPath = resourcesDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('mcp__session__resources');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
     });
@@ -381,6 +403,17 @@ describe('PrerequisiteManager', () => {
 
       manager.trackReadTool({ file_path: docsPath });
       expect(manager.checkPrerequisites('agents').allowed).toBe(true);
+    });
+
+    it('does not bypass strict resources prerequisite after repeated rejections', () => {
+      const docsPath = resourcesDocPath();
+      mockExistsPaths.add(docsPath);
+
+      expect(manager.checkPrerequisites('resources').allowed).toBe(false);
+      expect(manager.checkPrerequisites('resources').allowed).toBe(false);
+
+      manager.trackReadTool({ file_path: docsPath });
+      expect(manager.checkPrerequisites('resources').allowed).toBe(true);
     });
 
     it('does not bypass strict browser prerequisite after repeated rejections', () => {

@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -4118,6 +4118,127 @@ export class SessionManager implements ISessionManager {
               return { results }
             },
           } satisfies AutomationsFns,
+          resourcesFns: {
+            status: async () => ({
+              available: true,
+              sources: loadWorkspaceSources(managed.workspace.rootPath),
+              skills: loadAllSkills(managed.workspace.rootPath, managed.workingDirectory),
+            }),
+            listSources: async () => loadWorkspaceSources(managed.workspace.rootPath),
+            listSkills: async () => loadAllSkills(managed.workspace.rootPath, managed.workingDirectory),
+            showSource: async (slug) => loadWorkspaceSources(managed.workspace.rootPath).find(source => source.config.slug === slug),
+            showSkill: async (slug) => loadSkillBySlug(managed.workspace.rootPath, slug, managed.workingDirectory) ?? undefined,
+            createSource: async (input) => {
+              const { createSource } = await import('@craft-agent/shared/sources')
+              const created = await createSource(managed.workspace.rootPath, input)
+              const sources = loadWorkspaceSources(managed.workspace.rootPath)
+              const source = sources.find(item => item.config.slug === created.slug)
+              if (!source) throw new Error(`Created source "${created.slug}" could not be loaded`)
+              this.broadcastSourcesChanged(workspaceId, sources)
+              await this.reloadSourcesForWorkspace(managed.workspace.rootPath)
+              return source
+            },
+            deleteSource: async (slug) => {
+              const { deleteSource } = await import('@craft-agent/shared/sources')
+              deleteSource(managed.workspace.rootPath, slug)
+              const { loadWorkspaceConfig, saveWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+              const config = loadWorkspaceConfig(managed.workspace.rootPath)
+              if (config?.defaults?.enabledSourceSlugs?.includes(slug)) {
+                config.defaults.enabledSourceSlugs = config.defaults.enabledSourceSlugs.filter(s => s !== slug)
+                saveWorkspaceConfig(managed.workspace.rootPath, config)
+              }
+              this.broadcastSourcesChanged(workspaceId, loadWorkspaceSources(managed.workspace.rootPath))
+              await this.reloadSourcesForWorkspace(managed.workspace.rootPath)
+            },
+            deleteSkill: async (slug) => {
+              const { deleteSkill, loadAllSkills: loadSkills, invalidateSkillsCache } = await import('@craft-agent/shared/skills')
+              if (!deleteSkill(managed.workspace.rootPath, slug)) throw new Error(`Skill "${slug}" not found`)
+              invalidateSkillsCache()
+              this.broadcastSkillsChanged(workspaceId, loadSkills(managed.workspace.rootPath, managed.workingDirectory))
+            },
+            testSource: async (slug) => {
+              const source = loadWorkspaceSources(managed.workspace.rootPath).find(item => item.config.slug === slug)
+              if (!source) throw new Error(`Source "${slug}" not found`)
+              const status = source.config.connectionStatus ?? 'untested'
+              return {
+                success: status === 'connected',
+                status,
+                message: source.config.connectionError ?? (status === 'connected' ? 'Source is connected' : `Source status is ${status}. Use source_test for full validation/activation.`),
+              }
+            },
+            listTools: async (slug) => {
+              const source = loadWorkspaceSources(managed.workspace.rootPath).find(item => item.config.slug === slug)
+              if (!source) return { success: false, error: 'Source not found' }
+              if (source.config.type !== 'mcp') return { success: false, error: 'Source is not an MCP server' }
+              if (!source.config.mcp) return { success: false, error: 'MCP config not found' }
+              if (source.config.connectionStatus === 'needs_auth') return { success: false, error: 'Source requires authentication' }
+              if (source.config.connectionStatus === 'failed') return { success: false, error: source.config.connectionError || 'Connection failed' }
+              if (source.config.connectionStatus === 'untested') return { success: false, error: 'Source has not been tested yet' }
+
+              const { CraftMcpClient } = await import('@craft-agent/shared/mcp')
+              let client: InstanceType<typeof CraftMcpClient>
+              if (source.config.mcp.transport === 'stdio') {
+                if (!source.config.mcp.command) return { success: false, error: 'Stdio MCP source is missing required "command" field' }
+                client = new CraftMcpClient({ transport: 'stdio', command: source.config.mcp.command, args: source.config.mcp.args, env: source.config.mcp.env })
+              } else {
+                if (!source.config.mcp.url) return { success: false, error: 'MCP source URL is required for HTTP/SSE transport' }
+                let accessToken: string | undefined
+                if (source.config.mcp.authType === 'oauth' || source.config.mcp.authType === 'bearer') {
+                  const credentialManager = getCredentialManager()
+                  const credentialId = source.config.mcp.authType === 'oauth'
+                    ? { type: 'source_oauth' as const, workspaceId: source.workspaceId, sourceId: slug }
+                    : { type: 'source_bearer' as const, workspaceId: source.workspaceId, sourceId: slug }
+                  const credential = await credentialManager.get(credentialId)
+                  accessToken = credential?.value
+                }
+                client = new CraftMcpClient({ transport: 'http', url: source.config.mcp.url, headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined })
+              }
+              try {
+                const tools = await client.listTools()
+                const { permissionsConfigCache } = await import('@craft-agent/shared/agent')
+                const mergedConfig = permissionsConfigCache.getMergedConfig({ workspaceRootPath: managed.workspace.rootPath, activeSourceSlugs: [slug] })
+                return {
+                  success: true,
+                  tools: tools.map(item => ({
+                    name: item.name,
+                    description: item.description,
+                    allowed: mergedConfig.readOnlyMcpPatterns.some((pattern: RegExp) => pattern.test(item.name)),
+                  })),
+                }
+              } finally {
+                await client.close()
+              }
+            },
+            exportBundle: async () => {
+              const { exportResources } = await import('@craft-agent/shared/resources')
+              const result = exportResources(managed.workspace.rootPath, { sources: 'all', skills: 'all', automations: false })
+              const bundlePath = join(managed.workspace.rootPath, `resources-export-${Date.now()}.json`)
+              await writeFile(bundlePath, JSON.stringify(result.bundle, null, 2) + '\n', 'utf-8')
+              return {
+                path: bundlePath,
+                sourceCount: result.bundle.resources.sources?.length ?? 0,
+                skillCount: result.bundle.resources.skills?.length ?? 0,
+                automationCount: result.bundle.resources.automations?.length ?? 0,
+                warnings: result.warnings,
+              }
+            },
+            importBundle: async (bundlePath) => {
+              const { importResources } = await import('@craft-agent/shared/resources')
+              const bundle = JSON.parse(await readFile(bundlePath, 'utf-8'))
+              const result = await importResources(managed.workspace.rootPath, bundle, 'skip', {
+                clearSourceCredentials: async (targetWorkspaceId, sourceSlug) => {
+                  const credentialManager = getCredentialManager()
+                  await credentialManager.delete({ type: 'source_oauth', workspaceId: targetWorkspaceId, sourceId: sourceSlug })
+                  await credentialManager.delete({ type: 'source_bearer', workspaceId: targetWorkspaceId, sourceId: sourceSlug })
+                },
+              })
+              this.broadcastSourcesChanged(workspaceId, loadWorkspaceSources(managed.workspace.rootPath))
+              this.broadcastSkillsChanged(workspaceId, loadAllSkills(managed.workspace.rootPath, managed.workingDirectory))
+              this.broadcastAutomationsChanged(workspaceId)
+              await this.reloadSourcesForWorkspace(managed.workspace.rootPath)
+              return result
+            },
+          } satisfies ResourcesFns,
         })
       }
 

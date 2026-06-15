@@ -104,6 +104,7 @@ import { LLM_QUERY_TIMEOUT_MS, type LLMQueryRequest, type LLMQueryResult } from 
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { executeAgentsCommand } from './agents-tools.ts';
 import { executeAutomationsCommand } from './automations-tools.ts';
+import { executeResourcesCommand } from './resources-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
@@ -119,6 +120,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'right_dock',
   'agents',
   'automations',
+  'resources',
 ]);
 
 /**
@@ -1583,6 +1585,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Automation controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeAutomationsCommand(String(args.command ?? 'status'), automationsFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'resources') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const resourcesFns = callbacks?.resourcesFns;
+        if (!resourcesFns) {
+          return { content: 'Resource controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeResourcesCommand(String(args.command ?? 'status'), resourcesFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
 

@@ -596,6 +596,7 @@ Read relevant context files using the Read tool - they contain architecture info
 | Right Dock Tools | \`${DOC_REFS.rightDockTools}\` | When controlling the right workspace dock (\`right_dock\`) |
 | Agents Tools | \`${DOC_REFS.agentsTools}\` | When managing workspace agents (\`agents\`) |
 | Automations Tools | \`${DOC_REFS.automationsTools}\` | When managing workspace automations (\`automations\`) |
+| Resources Tools | \`${DOC_REFS.resourcesTools}\` | When managing workspace resources (\`resources\`) |
 | LLM Tool | \`${DOC_REFS.llmTool}\` | When using \`call_llm\` for subtasks |${FEATURE_FLAGS.craftAgentsCli ? `
 | Craft CLI | \`${DOC_REFS.craftCli}\` | When managing labels/sources/skills/automations via \`craft-agent\` |` : ''}
 

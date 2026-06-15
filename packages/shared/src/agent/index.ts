@@ -27,6 +27,7 @@ export {
   type RightDockFns,
   type AgentsFns,
   type AutomationsFns,
+  type ResourcesFns,
   // Auth request types (unified auth flow)
   type AuthRequest,
   type AuthRequestType,

@@ -310,9 +310,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to add a new source to their workspace. ' +
         'Sources can be MCP servers (HTTP/SSE or stdio), REST APIs, or local filesystems. ' +
         'Ask clarifying questions if needed: What service? MCP or API? Auth type? ' +
-        'Create the source folder and config.json in the workspace sources directory. ' +
-        'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
-        'After creating the source, call source_test with the source slug to verify the configuration.',
+        'Read ~/.craft-agent/docs/resources-tools.md first, then use resources create-source with the existing source schema. ' +
+        'Use ~/.craft-agent/docs/sources.md as schema reference only. ' +
+        'After creating the source, call resources test-source or source_test with the source slug to verify the configuration.',
     },
     example: 'Connect to my Craft space',
     overridePlaceholder: 'What would you like to connect?',
@@ -331,9 +331,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'Default to creating an API source (type: "api") unless they specify otherwise. ' +
         'APIs connect to REST endpoints with authentication (bearer, header, basic, or query). ' +
         'Ask about the API endpoint URL and auth type. ' +
-        'Create the source folder and config.json in the workspace sources directory. ' +
-        'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
-        'After creating the source, call source_test with the source slug to verify the configuration.',
+        'Read ~/.craft-agent/docs/resources-tools.md first, then use resources create-source with type "api". ' +
+        'Use ~/.craft-agent/docs/sources.md as schema reference only. ' +
+        'After creating the source, call resources test-source or source_test with the source slug to verify the configuration.',
     },
     example: 'Connect to the OpenAI API',
     overridePlaceholder: 'What API would you like to connect?',
@@ -351,9 +351,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'Default to creating an MCP source (type: "mcp") unless they specify otherwise. ' +
         'MCP servers can use HTTP/SSE transport (remote) or stdio transport (local subprocess). ' +
         'Ask about the service they want to connect to and whether it\'s a remote URL or local command. ' +
-        'Create the source folder and config.json in the workspace sources directory. ' +
-        'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
-        'After creating the source, call source_test with the source slug to verify the configuration.',
+        'Read ~/.craft-agent/docs/resources-tools.md first, then use resources create-source with type "mcp". ' +
+        'Use ~/.craft-agent/docs/sources.md as schema reference only. ' +
+        'After creating the source, call resources test-source or source_test with the source slug to verify the configuration.',
     },
     example: 'Connect to Linear',
     overridePlaceholder: 'What MCP server would you like to connect?',
@@ -372,9 +372,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'Local folders are bookmarks - use type: "local" with a local.path field. ' +
         'They use existing Read, Write, Glob, Grep tools - no MCP server needed. ' +
         'If unclear, ask about the folder path they want to connect. ' +
-        'Create the source folder and config.json in the workspace sources directory. ' +
-        'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
-        'After creating the source, call source_test with the source slug to verify the configuration.',
+        'Read ~/.craft-agent/docs/resources-tools.md first, then use resources create-source with type "local". ' +
+        'Use ~/.craft-agent/docs/sources.md as schema reference only. ' +
+        'After creating the source, call resources test-source or source_test with the source slug to verify the configuration.',
     },
     example: 'Connect to my Obsidian vault',
     overridePlaceholder: 'What folder would you like to connect?',

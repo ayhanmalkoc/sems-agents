@@ -37,6 +37,7 @@ import { createBrowserTools, type BrowserPaneFns } from './browser-tools.ts';
 import { createRightDockTool, type RightDockFns } from './right-dock-tools.ts';
 import { createAgentsTool, type AgentsFns } from './agents-tools.ts';
 import { createAutomationsTool, type AutomationsFns } from './automations-tools.ts';
+import { createResourcesTool, type ResourcesFns } from './resources-tools.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 
@@ -61,6 +62,7 @@ export type { BrowserPaneFns } from './browser-tools.ts';
 export type { RightDockFns } from './right-dock-tools.ts';
 export type { AgentsFns } from './agents-tools.ts';
 export type { AutomationsFns } from './automations-tools.ts';
+export type { ResourcesFns } from './resources-tools.ts';
 
 // ============================================================
 // Session-Scoped Tool Callbacks (re-exported from dedicated registry module)
@@ -87,6 +89,7 @@ export const CLAUDE_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'right_dock',
   'agents',
   'automations',
+  'resources',
 ]);
 
 /**
@@ -336,6 +339,15 @@ export function getSessionScopedTools(
         getAutomationsFns: () => {
           const callbacks = getSessionScopedToolCallbacks(sessionId);
           return callbacks?.automationsFns;
+        },
+      }),
+    );
+
+    tools.push(
+      createResourcesTool({
+        getResourcesFns: () => {
+          const callbacks = getSessionScopedToolCallbacks(sessionId);
+          return callbacks?.resourcesFns;
         },
       }),
     );

@@ -172,6 +172,10 @@ export const AutomationsToolSchema = z.object({
   command: z.string().describe('Automations command: status, list, show <automationId>, create <json>, update <automationId> <json>, duplicate <automationId> <name>, delete <automationId>, enable <automationId>, disable <automationId>, test <automationId>, history <automationId>, replay <automationId> <runId>.'),
 });
 
+export const ResourcesToolSchema = z.object({
+  command: z.string().describe('Resources command: status, list, list sources, list skills, show source <slug>, show skill <slug>, create-source <json>, delete-source <slug>, delete-skill <slug>, test-source <slug>, list-tools <sourceSlug>, export, import <bundlePath>.'),
+});
+
 export const SpawnSessionSchema = z.object({
   help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
   prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
@@ -457,30 +461,49 @@ Commands:
 Use this when the user asks to list, inspect, create, update, duplicate, or delete workspace agents.
 
 Commands:
-- \`status\` — summarize agent profile availability and count
-- \`list\` — list workspace agent profiles
-- \`show <agentId>\` — inspect one profile
-- \`create <json>\` — create one user agent profile
-- \`update <agentId> <json>\` — update one user agent profile
-- \`duplicate <agentId> <name>\` — create a user copy
-- \`delete <agentId>\` — delete one user agent profile`,
+- \`status\` ï¿½ summarize agent profile availability and count
+- \`list\` ï¿½ list workspace agent profiles
+- \`show <agentId>\` ï¿½ inspect one profile
+- \`create <json>\` ï¿½ create one user agent profile
+- \`update <agentId> <json>\` ï¿½ update one user agent profile
+- \`duplicate <agentId> <name>\` ï¿½ create a user copy
+- \`delete <agentId>\` ï¿½ delete one user agent profile`,
 
   automations: `Manage workspace automations.
 
 Use this when the user asks to list, inspect, create, update, duplicate, enable, disable, test, replay, or view history for workspace automations.
 
 Commands:
-- \`status\` — summarize automation availability and count
-- \`list\` — list workspace automations
-- \`show <automationId>\` — inspect one automation
-- \`create <json>\` — create one automation matcher
-- \`update <automationId> <json>\` — update one automation matcher
-- \`duplicate <automationId> <name>\` — create a copy
-- \`delete <automationId>\` — delete one automation
-- \`enable <automationId>\` / \`disable <automationId>\` — change enabled state
-- \`test <automationId>\` — run configured actions manually
-- \`history <automationId>\` — show recent runs
-- \`replay <automationId> <runId>\` — replay webhook actions`,
+- \`status\` ï¿½ summarize automation availability and count
+- \`list\` ï¿½ list workspace automations
+- \`show <automationId>\` ï¿½ inspect one automation
+- \`create <json>\` ï¿½ create one automation matcher
+- \`update <automationId> <json>\` ï¿½ update one automation matcher
+- \`duplicate <automationId> <name>\` ï¿½ create a copy
+- \`delete <automationId>\` ï¿½ delete one automation
+- \`enable <automationId>\` / \`disable <automationId>\` ï¿½ change enabled state
+- \`test <automationId>\` ï¿½ run configured actions manually
+- \`history <automationId>\` ï¿½ show recent runs
+- \`replay <automationId> <runId>\` ï¿½ replay webhook actions`,
+
+  resources: `Manage workspace resources.
+
+Use this when the user asks to list, inspect, create, delete, test, import, or export workspace sources and skills.
+
+Commands:
+- \`status\` - summarize resource availability and counts
+- \`list\` - list sources and skills
+- \`list sources\` - list workspace sources
+- \`list skills\` - list workspace skills
+- \`show source <slug>\` - inspect one source
+- \`show skill <slug>\` - inspect one skill
+- \`create-source <json>\` - create one source
+- \`delete-source <slug>\` - delete one source
+- \`delete-skill <slug>\` - delete one skill
+- \`test-source <slug>\` - test one source
+- \`list-tools <sourceSlug>\` - list MCP tools for a source
+- \`export\` - export workspace resources to a bundle
+- \`import <bundlePath>\` - import a resource bundle`,
 
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)
@@ -610,6 +633,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'right_dock', description: TOOL_DESCRIPTIONS.right_dock, inputSchema: RightDockToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   { name: 'agents', description: TOOL_DESCRIPTIONS.agents, inputSchema: AgentsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'automations', description: TOOL_DESCRIPTIONS.automations, inputSchema: AutomationsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'resources', description: TOOL_DESCRIPTIONS.resources, inputSchema: ResourcesToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   // Session self-management tools (registry â€” use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },
