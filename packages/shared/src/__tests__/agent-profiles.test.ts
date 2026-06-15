@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import {
@@ -24,7 +24,29 @@ describe('agent profiles storage', () => {
   it('provides an implicit default profile', () => withWorkspace((dir) => {
     const profiles = listAgentProfiles(dir)
     expect(profiles[0]?.id).toBe(DEFAULT_AGENT_PROFILE_ID)
+    expect(profiles).toHaveLength(1)
+    expect(profiles[0]?.kind).toBe('system')
   }))
+
+
+  it('filters legacy template seed profiles', () => withWorkspace((dir) => {
+    const filePath = join(dir, 'agent-profiles.json')
+    const now = Date.now()
+    const file = {
+      version: 1,
+      profiles: [
+        { id: DEFAULT_AGENT_PROFILE_ID, name: 'Default Agent', kind: 'system', createdAt: now, updatedAt: now },
+        { id: 'code-reviewer', name: 'Code Reviewer', kind: 'template', createdAt: now, updatedAt: now },
+        { id: 'researcher', name: 'Researcher', kind: 'template', createdAt: now, updatedAt: now },
+        { id: 'custom-agent', name: 'Custom Agent', kind: 'user', createdAt: now, updatedAt: now },
+      ],
+    }
+    writeFileSync(filePath, JSON.stringify(file), 'utf8')
+
+    const profiles = listAgentProfiles(dir)
+    expect(profiles.map(profile => profile.id)).toEqual([DEFAULT_AGENT_PROFILE_ID, 'custom-agent'])
+  }))
+
 
   it('creates, updates, and deletes workspace profiles', () => withWorkspace((dir) => {
     const created = saveAgentProfile(dir, {

@@ -1,10 +1,11 @@
 import * as React from 'react'
-import { Bot, DatabaseZap, MoreHorizontal } from 'lucide-react'
+import { Bot, DatabaseZap, LayoutTemplate, MoreHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
 import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
+import { AGENT_TEMPLATES, AgentTemplatesDialog, type AgentTemplate } from '@/components/app-shell/AgentTemplatesDialog'
 import { SidebarFilterPills } from '@/components/app-shell/SidebarFilterPills'
 import { EntityListBadge } from '@/components/ui/entity-list-badge'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -17,7 +18,7 @@ import { cn } from '@/lib/utils'
 import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles/types'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
-type AgentKind = 'system' | 'template' | 'user'
+type AgentKind = 'system' | 'user'
 
 const permissionLabelKeys: Record<PermissionMode, string> = {
   safe: 'agents.permissionExplore',
@@ -28,7 +29,6 @@ const permissionLabelKeys: Record<PermissionMode, string> = {
 
 function kindColor(kind: AgentKind): string {
   if (kind === 'user') return 'bg-success/10 text-success'
-  if (kind === 'template') return 'bg-info/10 text-info'
   return 'bg-foreground/10 text-foreground/50'
 }
 
@@ -53,6 +53,9 @@ export default function AgentsHomePage() {
   )
   const [expanded, setExpanded] = React.useState(false)
   const [activeKindFilter, setActiveKindFilter] = React.useState<AgentKind | 'all'>('all')
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false)
+  const [createPopoverOpen, setCreatePopoverOpen] = React.useState(false)
+  const [createPrompt, setCreatePrompt] = React.useState('')
 
   const visibleAgents = React.useMemo(
     () => agentProfiles.filter(agent => agent.visibility !== 'internal'),
@@ -61,20 +64,28 @@ export default function AgentsHomePage() {
 
   const kindCounts = React.useMemo(() => ({
     system: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'system').length,
-    template: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'template').length,
     user: visibleAgents.filter(agent => getAgentProfileKind(agent) === 'user').length,
   }), [visibleAgents])
 
   const filterItems = [
     { key: 'all', label: t('common.all'), count: visibleAgents.length, active: activeKindFilter === 'all', onClick: () => { setActiveKindFilter('all'); setExpanded(false) } },
-    { key: 'user', label: t('agents.filterUser'), count: kindCounts.user, active: activeKindFilter === 'user', onClick: () => { setActiveKindFilter('user'); setExpanded(false) } },
-    { key: 'template', label: t('agents.filterTemplates'), count: kindCounts.template, active: activeKindFilter === 'template', onClick: () => { setActiveKindFilter('template'); setExpanded(false) } },
     { key: 'system', label: t('agents.filterSystem'), count: kindCounts.system, active: activeKindFilter === 'system', onClick: () => { setActiveKindFilter('system'); setExpanded(false) } },
+    { key: 'user', label: t('agents.filterUser'), count: kindCounts.user, active: activeKindFilter === 'user', onClick: () => { setActiveKindFilter('user'); setExpanded(false) } },
   ]
 
   const filteredAgents = React.useMemo(() => (
     activeKindFilter === 'all' ? visibleAgents : visibleAgents.filter(agent => getAgentProfileKind(agent) === activeKindFilter)
   ), [activeKindFilter, visibleAgents])
+
+  const openCreatePopover = React.useCallback((prompt = '') => {
+    setCreatePrompt(prompt)
+    setCreatePopoverOpen(true)
+  }, [])
+
+  const handleTemplateSelect = React.useCallback((template: AgentTemplate) => {
+    setTemplateDialogOpen(false)
+    openCreatePopover(t(template.promptKey))
+  }, [openCreatePopover, t])
 
 
   const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
@@ -171,7 +182,25 @@ export default function AgentsHomePage() {
     <div className="flex h-full min-h-0 flex-col">
       <PanelHeader
         title={t('sidebar.agents')}
-        actions={activeWorkspace ? <CreateAgentButton workspaceRootPath={activeWorkspace.rootPath} /> : undefined}
+        actions={activeWorkspace ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTemplateDialogOpen(true)}
+              className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{t('agents.templates')}</span>
+            </button>
+            <CreateAgentButton
+              workspaceRootPath={activeWorkspace.rootPath}
+              open={createPopoverOpen}
+              onOpenChange={setCreatePopoverOpen}
+              defaultValue={createPrompt}
+              onClick={() => setCreatePrompt('')}
+            />
+          </div>
+        ) : undefined}
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -191,9 +220,32 @@ export default function AgentsHomePage() {
 
           <div className="flex min-w-0 flex-col border-t border-foreground/5 pt-4 pb-6">
             {filteredAgents.length === 0 ? (
-              <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
-                {t('agents.noAgentsConfigured')}
-              </div>
+              kindCounts.user === 0 ? (
+                <div className="flex flex-col items-center rounded-[18px] border border-dashed border-foreground/10 bg-background/35 px-5 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-foreground/[0.04] text-muted-foreground">
+                    <Bot className="h-6 w-6" />
+                  </div>
+                  <div className="mt-5 text-sm font-semibold text-foreground">{t('agents.createFirstAgent')}</div>
+                  <div className="mt-2 max-w-md text-sm leading-5 text-muted-foreground">{t('agents.createFirstAgentDescription')}</div>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    {AGENT_TEMPLATES.slice(0, 3).map(template => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => handleTemplateSelect(template)}
+                        className="inline-flex h-8 items-center gap-2 rounded-[9px] border border-foreground/8 bg-background px-3 text-xs font-medium text-foreground shadow-minimal transition-colors hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      >
+                        <span aria-hidden="true">{template.icon}</span>
+                        <span>{t(template.titleKey)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
+                  {t('agents.noAgentsConfigured')}
+                </div>
+              )
             ) : (
               <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
                 {visibleItems.map(renderAgentCard)}
@@ -227,6 +279,11 @@ export default function AgentsHomePage() {
           </div>
         </div>
       </div>
+      <AgentTemplatesDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        onSelectTemplate={handleTemplateSelect}
+      />
     </div>
   )
 }

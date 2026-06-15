@@ -39,6 +39,10 @@ function uniqueId(existing: Set<string>, base: string): string {
   return id
 }
 
+function isLegacyTemplateProfile(profile: Partial<AgentProfile>): boolean {
+  return String(profile.kind) === 'template' || profile.id === 'code-reviewer' || profile.id === 'researcher'
+}
+
 function normalizeProfile(profile: AgentProfile): AgentProfile {
   const kind = getAgentProfileKind(profile)
   return {
@@ -57,7 +61,9 @@ function readProfilesFile(workspaceRootPath: string): AgentProfilesFile {
 
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf-8')) as Partial<AgentProfilesFile>
-    const profiles = Array.isArray(parsed.profiles) ? parsed.profiles.map(normalizeProfile) : []
+    const profiles = Array.isArray(parsed.profiles)
+      ? parsed.profiles.filter(profile => !isLegacyTemplateProfile(profile)).map(normalizeProfile)
+      : []
     const existingIds = new Set(profiles.map(p => p.id))
     for (const seed of createSeedAgentProfiles()) {
       if (!existingIds.has(seed.id)) profiles.push(seed)
