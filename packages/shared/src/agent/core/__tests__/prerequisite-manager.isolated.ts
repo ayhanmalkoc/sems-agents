@@ -34,6 +34,10 @@ function rightDockDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'right-dock-tools.md'));
 }
 
+function agentsDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'agents-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -112,6 +116,24 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(docsPath);
 
       const result = manager.checkPrerequisites('mcp__session__browser_tool');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches agents tools and blocks until agents docs are read', () => {
+      const docsPath = agentsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('agents');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches session agents tools and blocks until agents docs are read', () => {
+      const docsPath = agentsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('mcp__session__agents');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
     });
@@ -314,6 +336,18 @@ describe('PrerequisiteManager', () => {
 
       // Different tool from same source — same guide path, already rejected once
       expect(manager.checkPrerequisites('mcp__linear__listIssues').allowed).toBe(true);
+    });
+
+
+    it('does not bypass strict agents prerequisite after repeated rejections', () => {
+      const docsPath = agentsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      expect(manager.checkPrerequisites('agents').allowed).toBe(false);
+      expect(manager.checkPrerequisites('agents').allowed).toBe(false);
+
+      manager.trackReadTool({ file_path: docsPath });
+      expect(manager.checkPrerequisites('agents').allowed).toBe(true);
     });
 
     it('does not bypass strict browser prerequisite after repeated rejections', () => {

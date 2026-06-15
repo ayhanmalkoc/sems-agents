@@ -164,6 +164,10 @@ export const RightDockToolSchema = z.object({
   command: z.string().describe('Right dock command: status, open, close, tabs, open browser, open files, open terminal, select <tabId>, close-tab <tabId>.'),
 });
 
+export const AgentsToolSchema = z.object({
+  command: z.string().describe('Agents command: status, list, show <agentId>, create <json>, update <agentId> <json>, duplicate <agentId> <name>, delete <agentId>.'),
+});
+
 export const SpawnSessionSchema = z.object({
   help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
   prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
@@ -444,6 +448,19 @@ Commands:
 - \`select <tabId>\` â€” activate a tab
 - \`close-tab <tabId>\` â€” close a tab`,
 
+  agents: `Manage workspace agent profiles.
+
+Use this when the user asks to list, inspect, create, update, duplicate, or delete workspace agents.
+
+Commands:
+- \`status\` — summarize agent profile availability and count
+- \`list\` — list workspace agent profiles
+- \`show <agentId>\` — inspect one profile
+- \`create <json>\` — create one user agent profile
+- \`update <agentId> <json>\` — update one user agent profile
+- \`duplicate <agentId> <name>\` — create a user copy
+- \`delete <agentId>\` — delete one user agent profile`,
+
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via prompt instructions
@@ -570,6 +587,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Single CLI-like tool that handles all browser actions via command string.
   { name: 'browser_tool', description: TOOL_DESCRIPTIONS.browser_tool, inputSchema: BrowserToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   { name: 'right_dock', description: TOOL_DESCRIPTIONS.right_dock, inputSchema: RightDockToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
+  { name: 'agents', description: TOOL_DESCRIPTIONS.agents, inputSchema: AgentsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   // Session self-management tools (registry â€” use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },

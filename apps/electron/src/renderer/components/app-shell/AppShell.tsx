@@ -1196,14 +1196,19 @@ function AppShellContent({
     return cleanup
   }, [activeWorkspaceId])
 
-  React.useEffect(() => {
+  const refreshAgentProfiles = React.useCallback(async () => {
     if (!activeWorkspaceId) return
-    window.electronAPI.listAgentProfiles(activeWorkspaceId).then((profiles) => {
+    try {
+      const profiles = await window.electronAPI.listAgentProfiles(activeWorkspaceId)
       setAgentProfiles(profiles || [])
-    }).catch(err => {
+    } catch (err) {
       console.error('[Chat] Failed to load agent profiles:', err)
-    })
+    }
   }, [activeWorkspaceId])
+
+  React.useEffect(() => {
+    void refreshAgentProfiles()
+  }, [refreshAgentProfiles])
 
   React.useEffect(() => {
     const cleanup = window.electronAPI.onAgentProfilesChanged((workspaceId) => {
@@ -1880,6 +1885,7 @@ function AppShellContent({
     localMcpEnabled,
     skills,
     agentProfiles,
+    refreshAgentProfiles,
     activeSessionWorkingDirectory,
     labels: displayLabelConfigs,
     onSessionLabelsChange: handleSessionLabelsChange,
@@ -1902,7 +1908,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isOnlyMainPanel, isRightDockOpen, toggleRightDock, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, localMcpEnabled, skills, agentProfiles, refreshAgentProfiles, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, isOnlyMainPanel, isRightDockOpen, toggleRightDock, isAutoCompact, handleChatMatchInfoChange, chatMatchInfo, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {

@@ -409,11 +409,11 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       filePath: `${location}/agent-profiles.json`,
       context:
         'The user wants to create a new agent profile. ' +
-        'Agent profiles are stored in agent-profiles.json as reusable workspace agents. ' +
-        'Create exactly one new profile with kind "user" and visibility "user-selectable". ' +
-        'Do not modify system or template agents. Generate a unique lowercase id slug. ' +
+        'Read ~/.craft-agent/docs/agents-tools.md first, then use the agents tool to create exactly one workspace agent profile. ' +
+        'Create kind "user" and visibility "user-selectable". Do not modify system agents. ' +
         'Allowed fields include: id, kind, name, description, icon, color, systemPrompt, model, llmConnection, thinkingLevel, permissionMode, enabledSourceSlugs, skillSlugs, delegationMode, delegationAllowedAgentIds, visibility. ' +
-        'Use only existing source/skill/agent ids when referencing them. Confirm clearly when done.',
+        'Use only existing source/skill/agent ids when referencing them. Confirm clearly when done. ' +
+        'agent-profiles.json is reference/fallback only; prefer agents tool over direct file edits.',
     },
     example: 'Create a safe research agent',
     overridePlaceholder: 'What kind of agent should I create?',
@@ -433,9 +433,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         filePath: `${workspaceRoot}/agent-profiles.json`,
         context:
           `The user wants to improve the agent profile with id "${agentId || 'selected'}". ` +
-          'Only edit that one selected agent profile. ' +
-          'This context is used for editable user and template agents. ' +
-          'Do not delete agents. Keep the profile schema valid, preserve the existing kind, and preserve unrelated profiles. Confirm clearly when done.',
+          'Read ~/.craft-agent/docs/agents-tools.md first, then use the agents tool to update only that selected user agent profile. ' +
+          'Do not delete agents. Preserve unrelated profiles and keep the schema valid. Confirm clearly when done. ' +
+          'agent-profiles.json is reference/fallback only; prefer agents tool over direct file edits.',
       },
       example: 'Make this agent better at code review',
       overridePlaceholder: 'How should I improve this agent?',
@@ -682,6 +682,8 @@ export interface EditPopoverProps {
   open?: boolean
   /** Callback when open state changes (for controlled mode) */
   onOpenChange?: (open: boolean) => void
+  /** Callback fired when an inline edit run transitions from processing to idle. */
+  onInlineComplete?: () => void
   /**
    * When true, prevents the popover from closing when clicking outside.
    * Useful for context menu triggered popovers where focus management is tricky.
@@ -775,6 +777,7 @@ export function EditPopover({
   displayLabel,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  onInlineComplete,
   modal = false,
   defaultValue = '',
   inlineExecution = false,
@@ -842,6 +845,22 @@ export function EditPopover({
 
   // Track processing state for close prevention and backdrop
   const isProcessing = displaySession.isProcessing
+  const wasProcessingRef = useRef(false)
+
+  useEffect(() => {
+    if (!open || !inlineSessionId) {
+      wasProcessingRef.current = false
+      return
+    }
+    if (isProcessing) {
+      wasProcessingRef.current = true
+      return
+    }
+    if (wasProcessingRef.current) {
+      wasProcessingRef.current = false
+      onInlineComplete?.()
+    }
+  }, [inlineSessionId, isProcessing, onInlineComplete, open])
 
   // Use existing escape interrupt context for double-ESC flow
   // This shows the "Press Esc again to interrupt" overlay in the input field

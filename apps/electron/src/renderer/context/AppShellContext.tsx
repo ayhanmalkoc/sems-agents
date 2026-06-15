@@ -62,6 +62,8 @@ export interface AppShellContextType {
   skills?: LoadedSkill[]
   /** Workspace-scoped agent profiles. */
   agentProfiles?: AgentProfile[]
+  /** Reload workspace-scoped agent profiles after config edits. */
+  refreshAgentProfiles?: () => Promise<void>
   /** Working directory of the active session — needed for project-level skill resolution */
   activeSessionWorkingDirectory?: string
   /** All label configs (tree) for label menu and badge display */

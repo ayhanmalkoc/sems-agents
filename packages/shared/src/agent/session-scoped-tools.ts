@@ -35,6 +35,7 @@ import { createLLMTool, type LLMQueryRequest, type LLMQueryResult } from './llm-
 import { createSpawnSessionTool, type SpawnSessionFn } from './spawn-session-tool.ts';
 import { createBrowserTools, type BrowserPaneFns } from './browser-tools.ts';
 import { createRightDockTool, type RightDockFns } from './right-dock-tools.ts';
+import { createAgentsTool, type AgentsFns } from './agents-tools.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 
@@ -57,6 +58,7 @@ export type {
 // Re-export browser pane types for session manager wiring
 export type { BrowserPaneFns } from './browser-tools.ts';
 export type { RightDockFns } from './right-dock-tools.ts';
+export type { AgentsFns } from './agents-tools.ts';
 
 // ============================================================
 // Session-Scoped Tool Callbacks (re-exported from dedicated registry module)
@@ -81,6 +83,7 @@ export const CLAUDE_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'spawn_session',
   'browser_tool',
   'right_dock',
+  'agents',
 ]);
 
 /**
@@ -312,6 +315,15 @@ export function getSessionScopedTools(
         getRightDockFns: () => {
           const callbacks = getSessionScopedToolCallbacks(sessionId);
           return callbacks?.rightDockFns;
+        },
+      }),
+    );
+
+    tools.push(
+      createAgentsTool({
+        getAgentsFns: () => {
+          const callbacks = getSessionScopedToolCallbacks(sessionId);
+          return callbacks?.agentsFns;
         },
       }),
     );

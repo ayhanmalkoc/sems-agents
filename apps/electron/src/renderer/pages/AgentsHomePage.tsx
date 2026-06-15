@@ -15,7 +15,7 @@ import { useAppShellContext } from '@/context/AppShellContext'
 import { CHAT_LAYOUT } from '@/config/layout'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
-import { getAgentProfileKind } from '@craft-agent/shared/agent-profiles/types'
+import { cloneAgentProfileInput, getAgentProfileKind } from '@craft-agent/shared/agent-profiles/types'
 import type { AgentProfile, PermissionMode } from '../../shared/types'
 
 type AgentKind = 'system' | 'user'
@@ -91,13 +91,10 @@ export default function AgentsHomePage() {
   const handleDuplicateAgent = React.useCallback(async (agent: AgentProfile) => {
     if (!activeWorkspaceId) return
     try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        ...agent,
-        id: undefined,
-        kind: 'user',
-        name: t('agents.copyName', { name: agent.name }),
-        visibility: 'user-selectable',
-      })
+      const created = await window.electronAPI.createAgentProfile(
+        activeWorkspaceId,
+        cloneAgentProfileInput(agent, t('agents.copyName', { name: agent.name })),
+      )
       toast.success(t('agents.agentDuplicated'))
       navigate(routes.view.agents(created.id))
     } catch (err) {

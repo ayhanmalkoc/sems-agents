@@ -36,6 +36,27 @@ export function getAgentProfileKind(profile: Pick<AgentProfile, 'id' | 'kind'>):
     ?? (profile.id === DEFAULT_AGENT_PROFILE_ID ? 'system' : 'user')
 }
 
+
+export function cloneAgentProfileInput(agent: AgentProfile, name: string): CreateAgentProfileInput {
+  return {
+    kind: 'user',
+    name,
+    description: agent.description,
+    icon: agent.icon,
+    color: agent.color,
+    llmConnection: agent.llmConnection,
+    model: agent.model,
+    thinkingLevel: agent.thinkingLevel,
+    enabledSourceSlugs: agent.enabledSourceSlugs,
+    skillSlugs: agent.skillSlugs,
+    systemPrompt: agent.systemPrompt,
+    delegationAllowedAgentIds: agent.delegationAllowedAgentIds,
+    delegationMode: agent.delegationMode,
+    visibility: 'user-selectable',
+    permissionMode: agent.permissionMode,
+  }
+}
+
 export function createDefaultAgentProfile(now = Date.now()): AgentProfile {
   return {
     id: DEFAULT_AGENT_PROFILE_ID,

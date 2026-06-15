@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Bot, Copy, Save, Trash2 } from 'lucide-react'
+import { Bot, Copy, LayoutTemplate, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopo
 import { useAppShellContext } from '@/context/AppShellContext'
 import { AgentMenu } from '@/components/app-shell/AgentMenu'
 import { CreateAgentButton } from '@/components/app-shell/CreateAgentButton'
+import { AgentTemplatesDialog, type AgentTemplate } from '@/components/app-shell/AgentTemplatesDialog'
 import { ResourceBreadcrumbTitle } from '@/components/ui/ResourceBreadcrumbTitle'
 import { Info_Page, Info_Section, Info_Table } from '@/components/info'
 import { navigate, routes } from '@/lib/navigate'
@@ -95,10 +96,14 @@ export interface AgentInfoPageProps {
 
 export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgent, onDeleteAgent }: AgentInfoPageProps) {
   const { t } = useTranslation()
-  const { activeWorkspaceId, workspaces, agentProfiles = [], llmConnections = [], enabledSources = [], skills = [] } = useAppShellContext()
+  const { activeWorkspaceId, workspaces, agentProfiles = [], llmConnections = [], enabledSources = [], skills = [], refreshAgentProfiles } = useAppShellContext()
   const activeWorkspace = activeWorkspaceId ? workspaces.find(workspace => workspace.id === activeWorkspaceId) : undefined
   const profile = agentProfiles.find(agent => agent.id === agentId)
   const [draft, setDraft] = React.useState<DraftState | null>(profile ? draftFromProfile(profile) : null)
+  const [editPopoverOpen, setEditPopoverOpen] = React.useState(false)
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false)
+  const [createPopoverOpen, setCreatePopoverOpen] = React.useState(false)
+  const [createPrompt, setCreatePrompt] = React.useState('')
 
   React.useEffect(() => {
     setDraft(profile ? draftFromProfile(profile) : null)
@@ -125,6 +130,22 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
     profile.thinkingLevel ? t('agents.thinkLevel', { level: profile.thinkingLevel }) : t('agents.defaultThinking'),
   ].join(' · ')
   const updateDraft = <K extends keyof DraftState>(key: K, value: DraftState[K]) => setDraft(prev => prev ? { ...prev, [key]: value } : prev)
+  const handleEditPopoverOpenChange = React.useCallback((nextOpen: boolean) => {
+    setEditPopoverOpen(nextOpen)
+    if (!nextOpen) void refreshAgentProfiles?.()
+  }, [refreshAgentProfiles])
+  const handleCreatePopoverOpenChange = React.useCallback((nextOpen: boolean) => {
+    setCreatePopoverOpen(nextOpen)
+    if (!nextOpen) void refreshAgentProfiles?.()
+  }, [refreshAgentProfiles])
+  const openCreatePopover = React.useCallback((prompt = '') => {
+    setCreatePrompt(prompt)
+    setCreatePopoverOpen(true)
+  }, [])
+  const handleTemplateSelect = React.useCallback((template: AgentTemplate) => {
+    setTemplateDialogOpen(false)
+    openCreatePopover(t(template.promptKey))
+  }, [openCreatePopover, t])
 
   const saveAgent = async () => {
     if (!activeWorkspaceId || !canEdit || !draft.name.trim()) return
@@ -160,7 +181,25 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
       <Info_Page.Header
         title={profile.name}
         titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.agents')} currentLabel={profile.name} onRootClick={() => navigate(routes.view.agents())} />}
-        actions={activeWorkspace ? <CreateAgentButton workspaceRootPath={activeWorkspace.rootPath} /> : undefined}
+        actions={activeWorkspace ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTemplateDialogOpen(true)}
+              className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{t('agents.templates')}</span>
+            </button>
+            <CreateAgentButton
+              workspaceRootPath={activeWorkspace.rootPath}
+              open={createPopoverOpen}
+              onOpenChange={handleCreatePopoverOpenChange}
+              defaultValue={createPrompt}
+              onClick={() => setCreatePrompt('')}
+            />
+          </div>
+        ) : undefined}
         titleMenu={
           <AgentMenu
             agent={profile}
@@ -177,7 +216,7 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
         <Info_Section
           title={t('agents.overview')}
           description={!canEdit ? t('agents.readOnly') : undefined}
-          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicate')}</Button> : activeWorkspace ? <EditPopover trigger={<EditButton />} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
+          actions={!canEdit ? <Button variant="outline" size="sm" onClick={() => onDuplicateAgent?.(profile)}><Copy className="mr-1.5 h-3.5 w-3.5" />{t('agents.duplicate')}</Button> : activeWorkspace ? <EditPopover open={editPopoverOpen} onOpenChange={handleEditPopoverOpenChange} onInlineComplete={refreshAgentProfiles} trigger={<EditButton />} {...getEditConfig('edit-agent', `${activeWorkspace.rootPath}::${profile.id}`)} /> : undefined}
         >
           <div className="grid gap-3 p-4 sm:grid-cols-2">
             <Field label={t('common.name')}><input className={inputClass(!canEdit)} value={draft.name} readOnly={!canEdit} onChange={e => updateDraft('name', e.target.value)} /></Field>
@@ -237,6 +276,12 @@ export default function AgentInfoPage({ agentId, onAgentChanged, onDuplicateAgen
           </div>
         )}
       </Info_Page.Content>
+
+      <AgentTemplatesDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        onSelectTemplate={handleTemplateSelect}
+      />
     </Info_Page>
   )
 }

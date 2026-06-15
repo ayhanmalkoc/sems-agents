@@ -51,6 +51,7 @@ import { SendResourceToWorkspaceDialog, type SendResourceType } from './SendReso
 import { navigate, routes } from '@/lib/navigate'
 import { toast } from 'sonner'
 import type { AgentProfile } from '../../../shared/types'
+import { cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles/types'
 
 export interface MainContentPanelProps {
   /** Whether both sidebar and navigator are hidden (focus mode / CMD+.) */
@@ -255,13 +256,10 @@ export function MainContentPanel({
   const duplicateAgent = useCallback(async (agent: AgentProfile) => {
     if (!activeWorkspaceId) return
     try {
-      const created = await window.electronAPI.createAgentProfile(activeWorkspaceId, {
-        ...agent,
-        id: undefined,
-        kind: 'user',
-        name: `${agent.name} Copy`,
-        visibility: 'user-selectable',
-      })
+      const created = await window.electronAPI.createAgentProfile(
+        activeWorkspaceId,
+        cloneAgentProfileInput(agent, `${agent.name} Copy`),
+      )
       toast.success('Agent duplicated')
       navigate(routes.view.agents(created.id))
     } catch (err) {

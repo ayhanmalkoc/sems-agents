@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -39,7 +39,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile } from '@craft-agent/shared/agent-profiles'
+import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 import {
   // Session persistence functions
   listSessions as listStoredSessions,
@@ -3839,6 +3839,32 @@ export class SessionManager implements ISessionManager {
               return result.status
             },
           } satisfies RightDockFns,
+          agentsFns: {
+            status: async () => ({ available: true, profiles: listAgentProfiles(managed.workspace.rootPath) }),
+            list: async () => listAgentProfiles(managed.workspace.rootPath),
+            show: async (agentId) => getAgentProfile(managed.workspace.rootPath, agentId),
+            create: async (input) => {
+              const profile = saveAgentProfile(managed.workspace.rootPath, { ...input, kind: 'user' })
+              this.broadcastAgentProfilesChanged(workspaceId)
+              return profile
+            },
+            update: async (agentId, updates) => {
+              const profile = updateAgentProfile(managed.workspace.rootPath, agentId, updates)
+              this.broadcastAgentProfilesChanged(workspaceId)
+              return profile
+            },
+            duplicate: async (agentId, name) => {
+              const existing = getAgentProfile(managed.workspace.rootPath, agentId)
+              if (!existing) throw new Error(`Agent profile "${agentId}" not found`)
+              const profile = saveAgentProfile(managed.workspace.rootPath, cloneAgentProfileInput(existing, name))
+              this.broadcastAgentProfilesChanged(workspaceId)
+              return profile
+            },
+            delete: async (agentId) => {
+              deleteAgentProfile(managed.workspace.rootPath, agentId)
+              this.broadcastAgentProfilesChanged(workspaceId)
+            },
+          } satisfies AgentsFns,
         })
       }
 

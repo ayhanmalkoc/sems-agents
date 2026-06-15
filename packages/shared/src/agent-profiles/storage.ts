@@ -40,7 +40,7 @@ function uniqueId(existing: Set<string>, base: string): string {
 }
 
 function isLegacyTemplateProfile(profile: Partial<AgentProfile>): boolean {
-  return String(profile.kind) === 'template' || profile.id === 'code-reviewer' || profile.id === 'researcher'
+  return String(profile.kind) === 'template'
 }
 
 function normalizeProfile(profile: AgentProfile): AgentProfile {

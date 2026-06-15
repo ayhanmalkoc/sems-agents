@@ -54,6 +54,9 @@ const BROWSER_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', '
 /** Global right dock tools docs path required before right dock usage. */
 const RIGHT_DOCK_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'right-dock-tools.md'));
 
+/** Global agents tools docs path required before workspace agent management. */
+const AGENTS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'agents-tools.md'));
+
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
     return getBrowserToolEnabled();
@@ -104,6 +107,18 @@ const RULES: PrerequisiteRule[] = [
     },
     blockMessage:
       'You must read the source guide before using this tool. Please read the file at {filePath} first, then retry.',
+  },
+
+  // Built-in agents tool: require agents-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'agents' || toolName === 'mcp__session__agents',
+    resolveRequiredPath: () => {
+      return existsSync(AGENTS_TOOLS_DOC_PATH) ? AGENTS_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the agents tools guide before managing workspace agents. Please read the file at {filePath} first, then retry.',
+    strict: true,
   },
 
   // Built-in right dock tool: require right-dock-tools.md first.

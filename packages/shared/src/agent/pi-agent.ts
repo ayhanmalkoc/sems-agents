@@ -102,6 +102,7 @@ import { extractWorkspaceSlug } from '../utils/workspace.ts';
 // LLM tool types
 import { LLM_QUERY_TIMEOUT_MS, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
+import { executeAgentsCommand } from './agents-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
@@ -115,6 +116,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'spawn_session',
   'browser_tool',
   'right_dock',
+  'agents',
 ]);
 
 /**
@@ -1559,6 +1561,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Right dock controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeRightDockCommand(String(args.command ?? 'status'), rightDockFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'agents') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const agentsFns = callbacks?.agentsFns;
+        if (!agentsFns) {
+          return { content: 'Agent profile controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeAgentsCommand(String(args.command ?? 'status'), agentsFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
 
