@@ -7,7 +7,7 @@
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { PauseCircle, AlertCircle, Hash } from 'lucide-react'
+import { LayoutTemplate, PauseCircle, AlertCircle, Hash } from 'lucide-react'
 import {
   Info_Page,
   Info_Section,
@@ -26,6 +26,7 @@ import { AutomationMenu } from './AutomationMenu'
 import { AutomationActionRow } from './AutomationActionRow'
 import { AutomationTestPanel } from './AutomationTestPanel'
 import { AutomationEventTimeline } from './AutomationEventTimeline'
+import { AutomationTemplatesDialog, type AutomationTemplate } from './AutomationTemplatesDialog'
 import { PhaseBadge } from './PhaseBadge'
 import { getEventDisplayName, getPermissionDisplayName, flattenConditions, type AutomationListItem, type ExecutionEntry, type TestResult } from './types'
 import { describeCron, computeNextRuns } from './utils'
@@ -46,6 +47,20 @@ export interface AutomationInfoPageProps {
   className?: string
 }
 
+function getAutomationDetailEditConfig(workspaceRoot: string, automation: AutomationListItem) {
+  const config = getEditConfig('automation-config', workspaceRoot)
+  return {
+    ...config,
+    context: {
+      ...config.context,
+      context:
+        `${config.context.context} ` +
+        `The user is currently viewing the automation named "${automation.name}" with id "${automation.id}" and event "${automation.event}". ` +
+        'When the user refers to this automation, the current automation, or asks to edit without naming another automation, target this automation entry.',
+    },
+  }
+}
+
 export function AutomationInfoPage({
   automation,
   executions = [],
@@ -60,6 +75,23 @@ export function AutomationInfoPage({
   const { t } = useTranslation()
   const workspace = useActiveWorkspace()
   const nextRuns = automation.cron ? computeNextRuns(automation.cron) : []
+  const automationEditConfig = React.useMemo(
+    () => workspace?.rootPath ? getAutomationDetailEditConfig(workspace.rootPath, automation) : null,
+    [automation, workspace?.rootPath],
+  )
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false)
+  const [createPopoverOpen, setCreatePopoverOpen] = React.useState(false)
+  const [createPrompt, setCreatePrompt] = React.useState('')
+
+  const openCreatePopover = React.useCallback((prompt = '') => {
+    setCreatePrompt(prompt)
+    setCreatePopoverOpen(true)
+  }, [])
+
+  const handleTemplateSelect = React.useCallback((template: AutomationTemplate) => {
+    setTemplateDialogOpen(false)
+    openCreatePopover(t(template.promptKey))
+  }, [openCreatePopover, t])
 
   // Lightweight per-mount fetch — mirrors the pattern used in MessagingSettingsPage.
   // Only fired when the matcher actually declares a topic to avoid unnecessary IPC.
@@ -83,7 +115,7 @@ export function AutomationInfoPage({
   const editActions = workspace?.rootPath ? (
     <EditPopover
       trigger={<EditButton />}
-      {...getEditConfig('automation-config', workspace.rootPath)}
+      {...(automationEditConfig ?? getEditConfig('automation-config', workspace.rootPath))}
       secondaryAction={{ label: t('automations.editFile'), filePath: `${workspace.rootPath}/automations.json` }}
     />
   ) : undefined
@@ -94,10 +126,23 @@ export function AutomationInfoPage({
         title={automation.name}
         titleNode={<ResourceBreadcrumbTitle rootLabel={t('sidebar.automations')} currentLabel={automation.name} onRootClick={() => navigate(routes.view.automations())} />}
         actions={workspace ? (
-          <EditPopover
-            trigger={<AIAssistedButton label={t('common.create')} data-tutorial="add-automation-button" />}
-            {...getEditConfig('automation-config', workspace.rootPath)}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTemplateDialogOpen(true)}
+              className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{t('automations.templates')}</span>
+            </button>
+            <EditPopover
+              open={createPopoverOpen}
+              onOpenChange={setCreatePopoverOpen}
+              defaultValue={createPrompt}
+              trigger={<AIAssistedButton label={t('common.create')} data-tutorial="add-automation-button" onClick={() => setCreatePrompt('')} />}
+              {...(automationEditConfig ?? getEditConfig('automation-config', workspace.rootPath))}
+            />
+          </div>
         ) : undefined}
         titleMenu={
           <AutomationMenu
@@ -283,6 +328,12 @@ export function AutomationInfoPage({
           </div>
         </Info_Section>
       </Info_Page.Content>
+
+      <AutomationTemplatesDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        onSelectTemplate={handleTemplateSelect}
+      />
     </Info_Page>
   )
 }

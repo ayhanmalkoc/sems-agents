@@ -813,6 +813,7 @@ export function EditPopover({
 
   // Session ID for inline execution (created on first message)
   const [inlineSessionId, setInlineSessionId] = useState<string | null>(null)
+  const [draftValue, setDraftValue] = useState(defaultValue)
 
   // Get session data from Jotai atom (same as main chat - includes optimistic updates)
   // Pass empty string when no session yet - atom returns null for unknown IDs
@@ -997,9 +998,10 @@ export function EditPopover({
   useEffect(() => {
     if (open) {
       setCurrentModel(model || 'haiku')
+      setDraftValue(defaultValue)
       resetInlineSession()
     }
-  }, [open, model, resetInlineSession])
+  }, [defaultValue, open, model, resetInlineSession])
 
   // Handle sending message from ChatDisplay (inline mode)
   // Creates hidden session on first message, then uses App context for sending
@@ -1114,6 +1116,8 @@ export function EditPopover({
                   compactMode={true}
                   placeholder={placeholder}
                   emptyStateLabel={displayLabel || context.label}
+                  inputValue={draftValue}
+                  onInputChange={setDraftValue}
                 />
               </div>
             </div>

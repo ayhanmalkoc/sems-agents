@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ListTodo, MoreHorizontal, Search, X } from 'lucide-react'
+import { LayoutTemplate, ListTodo, MoreHorizontal, Search, X } from 'lucide-react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -15,6 +15,7 @@ import { StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
 import { DropdownMenuProvider } from '@/components/ui/menu-context'
 import { AutomationAvatar } from '@/components/automations/AutomationAvatar'
 import { AutomationMenu } from '@/components/automations/AutomationMenu'
+import { AUTOMATION_TEMPLATES, AutomationTemplatesDialog, type AutomationTemplate } from '@/components/automations/AutomationTemplatesDialog'
 import { automationsAtom } from '@/atoms/automations'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { automationSelection } from '@/hooks/useEntitySelection'
@@ -33,6 +34,7 @@ import { formatShortRelativeTime } from '@/components/automations/utils'
 import type { NavigationState } from '../../shared/types'
 
 type AutomationKindFilter = 'all' | 'scheduled' | 'app' | 'agent'
+
 
 const automationFilterToKind: Record<NonNullable<AutomationListFilter['kind']>, AutomationKindFilter> = {
   all: 'all',
@@ -104,6 +106,9 @@ export default function AutomationsHomePage({ navState }: AutomationsHomePagePro
   const [sendDialogOpen, setSendDialogOpen] = React.useState(false)
   const [sendResourceId, setSendResourceId] = React.useState<string | null>(null)
   const [sendResourceLabel, setSendResourceLabel] = React.useState('')
+  const [templateDialogOpen, setTemplateDialogOpen] = React.useState(false)
+  const [createPopoverOpen, setCreatePopoverOpen] = React.useState(false)
+  const [createPrompt, setCreatePrompt] = React.useState('')
 
   const {
     select: selectAutomation,
@@ -175,6 +180,16 @@ export default function AutomationsHomePage({ navState }: AutomationsHomePagePro
     setSendResourceLabel(automation.name)
     setSendDialogOpen(true)
   }, [])
+
+  const openCreatePopover = React.useCallback((prompt = '') => {
+    setCreatePrompt(prompt)
+    setCreatePopoverOpen(true)
+  }, [])
+
+  const handleTemplateSelect = React.useCallback((template: AutomationTemplate) => {
+    setTemplateDialogOpen(false)
+    openCreatePopover(t(template.promptKey))
+  }, [openCreatePopover, t])
 
   const handleDuplicateAutomationClick = React.useCallback(async (automation: AutomationListItem) => {
     if (!onDuplicateAutomation) return
@@ -256,10 +271,23 @@ export default function AutomationsHomePage({ navState }: AutomationsHomePagePro
       <PanelHeader
         title={t('sidebar.automations')}
         actions={activeWorkspace ? (
-          <EditPopover
-            trigger={<AIAssistedButton label={t('common.create')} data-tutorial="add-automation-button" />}
-            {...getEditConfig('automation-config', activeWorkspace.rootPath)}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTemplateDialogOpen(true)}
+              className="header-icon-btn titlebar-no-drag inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-foreground/6 bg-background px-3 text-xs font-medium leading-none text-foreground transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{t('automations.templates')}</span>
+            </button>
+            <EditPopover
+              open={createPopoverOpen}
+              onOpenChange={setCreatePopoverOpen}
+              defaultValue={createPrompt}
+              trigger={<AIAssistedButton label={t('common.create')} data-tutorial="add-automation-button" onClick={() => setCreatePrompt('')} />}
+              {...getEditConfig('automation-config', activeWorkspace.rootPath)}
+            />
+          </div>
         ) : undefined}
       />
 
@@ -315,9 +343,30 @@ export default function AutomationsHomePage({ navState }: AutomationsHomePagePro
               </div>
             )}
             {filteredAutomations.length === 0 ? (
-              <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
-                {searchQuery.trim().length >= 2 ? t('automations.noAutomationsFound') : t('automations.noAutomationsConfigured')}
-              </div>
+              automations.length === 0 && searchQuery.trim().length < 2 ? (
+                <div className="flex flex-col items-center rounded-[18px] border border-dashed border-foreground/10 bg-background/35 px-5 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-foreground/[0.04] text-2xl">⚡</div>
+                  <div className="mt-5 text-sm font-semibold text-foreground">{t('automations.createFirstAutomation')}</div>
+                  <div className="mt-2 max-w-md text-sm leading-5 text-muted-foreground">{t('automations.createFirstAutomationDescription')}</div>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    {AUTOMATION_TEMPLATES.slice(0, 3).map(template => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => handleTemplateSelect(template)}
+                        className="inline-flex h-8 items-center gap-2 rounded-[9px] border border-foreground/8 bg-background px-3 text-xs font-medium text-foreground shadow-minimal transition-colors hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      >
+                        <span aria-hidden="true">{template.icon}</span>
+                        <span>{t(template.titleKey)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[14px] border border-dashed border-foreground/10 bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
+                  {searchQuery.trim().length >= 2 ? t('automations.noAutomationsFound') : t('automations.noAutomationsConfigured')}
+                </div>
+              )
             ) : (
               <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
                 {visibleItems.map(renderAutomationCard)}
@@ -351,6 +400,12 @@ export default function AutomationsHomePage({ navState }: AutomationsHomePagePro
           </div>
         </div>
       </div>
+
+      <AutomationTemplatesDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        onSelectTemplate={handleTemplateSelect}
+      />
 
       {sendResourceId && (
         <SendResourceToWorkspaceDialog
