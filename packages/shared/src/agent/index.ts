@@ -26,6 +26,7 @@ export {
   type BrowserPaneFns,
   type RightDockFns,
   type AgentsFns,
+  type AutomationsFns,
   // Auth request types (unified auth flow)
   type AuthRequest,
   type AuthRequestType,

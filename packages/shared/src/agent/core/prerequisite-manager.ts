@@ -57,6 +57,9 @@ const RIGHT_DOCK_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs'
 /** Global agents tools docs path required before workspace agent management. */
 const AGENTS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'agents-tools.md'));
 
+/** Global automations tools docs path required before workspace automation management. */
+const AUTOMATIONS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'automations-tools.md'));
+
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
     return getBrowserToolEnabled();
@@ -107,6 +110,18 @@ const RULES: PrerequisiteRule[] = [
     },
     blockMessage:
       'You must read the source guide before using this tool. Please read the file at {filePath} first, then retry.',
+  },
+
+  // Built-in automations tool: require automations-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'automations' || toolName === 'mcp__session__automations',
+    resolveRequiredPath: () => {
+      return existsSync(AUTOMATIONS_TOOLS_DOC_PATH) ? AUTOMATIONS_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the automations tools guide before managing workspace automations. Please read the file at {filePath} first, then retry.',
+    strict: true,
   },
 
   // Built-in agents tool: require agents-tools.md first.

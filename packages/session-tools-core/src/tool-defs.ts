@@ -168,6 +168,10 @@ export const AgentsToolSchema = z.object({
   command: z.string().describe('Agents command: status, list, show <agentId>, create <json>, update <agentId> <json>, duplicate <agentId> <name>, delete <agentId>.'),
 });
 
+export const AutomationsToolSchema = z.object({
+  command: z.string().describe('Automations command: status, list, show <automationId>, create <json>, update <automationId> <json>, duplicate <automationId> <name>, delete <automationId>, enable <automationId>, disable <automationId>, test <automationId>, history <automationId>, replay <automationId> <runId>.'),
+});
+
 export const SpawnSessionSchema = z.object({
   help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
   prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
@@ -461,6 +465,23 @@ Commands:
 - \`duplicate <agentId> <name>\` — create a user copy
 - \`delete <agentId>\` — delete one user agent profile`,
 
+  automations: `Manage workspace automations.
+
+Use this when the user asks to list, inspect, create, update, duplicate, enable, disable, test, replay, or view history for workspace automations.
+
+Commands:
+- \`status\` — summarize automation availability and count
+- \`list\` — list workspace automations
+- \`show <automationId>\` — inspect one automation
+- \`create <json>\` — create one automation matcher
+- \`update <automationId> <json>\` — update one automation matcher
+- \`duplicate <automationId> <name>\` — create a copy
+- \`delete <automationId>\` — delete one automation
+- \`enable <automationId>\` / \`disable <automationId>\` — change enabled state
+- \`test <automationId>\` — run configured actions manually
+- \`history <automationId>\` — show recent runs
+- \`replay <automationId> <runId>\` — replay webhook actions`,
+
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via prompt instructions
@@ -588,6 +609,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'browser_tool', description: TOOL_DESCRIPTIONS.browser_tool, inputSchema: BrowserToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   { name: 'right_dock', description: TOOL_DESCRIPTIONS.right_dock, inputSchema: RightDockToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   { name: 'agents', description: TOOL_DESCRIPTIONS.agents, inputSchema: AgentsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'automations', description: TOOL_DESCRIPTIONS.automations, inputSchema: AutomationsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   // Session self-management tools (registry â€” use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },

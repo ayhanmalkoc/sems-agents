@@ -38,6 +38,10 @@ function agentsDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'agents-tools.md'));
 }
 
+function automationsDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'automations-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -116,6 +120,24 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(docsPath);
 
       const result = manager.checkPrerequisites('mcp__session__browser_tool');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches automations tools and blocks until automations docs are read', () => {
+      const docsPath = automationsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('automations');
+      expect(result.allowed).toBe(false);
+      expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches session automations tools and blocks until automations docs are read', () => {
+      const docsPath = automationsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      const result = manager.checkPrerequisites('mcp__session__automations');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
     });
@@ -338,6 +360,17 @@ describe('PrerequisiteManager', () => {
       expect(manager.checkPrerequisites('mcp__linear__listIssues').allowed).toBe(true);
     });
 
+
+    it('does not bypass strict automations prerequisite after repeated rejections', () => {
+      const docsPath = automationsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      expect(manager.checkPrerequisites('automations').allowed).toBe(false);
+      expect(manager.checkPrerequisites('automations').allowed).toBe(false);
+
+      manager.trackReadTool({ file_path: docsPath });
+      expect(manager.checkPrerequisites('automations').allowed).toBe(true);
+    });
 
     it('does not bypass strict agents prerequisite after repeated rejections', () => {
       const docsPath = agentsDocPath();

@@ -36,6 +36,7 @@ import { createSpawnSessionTool, type SpawnSessionFn } from './spawn-session-too
 import { createBrowserTools, type BrowserPaneFns } from './browser-tools.ts';
 import { createRightDockTool, type RightDockFns } from './right-dock-tools.ts';
 import { createAgentsTool, type AgentsFns } from './agents-tools.ts';
+import { createAutomationsTool, type AutomationsFns } from './automations-tools.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 
@@ -59,6 +60,7 @@ export type {
 export type { BrowserPaneFns } from './browser-tools.ts';
 export type { RightDockFns } from './right-dock-tools.ts';
 export type { AgentsFns } from './agents-tools.ts';
+export type { AutomationsFns } from './automations-tools.ts';
 
 // ============================================================
 // Session-Scoped Tool Callbacks (re-exported from dedicated registry module)
@@ -84,6 +86,7 @@ export const CLAUDE_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'browser_tool',
   'right_dock',
   'agents',
+  'automations',
 ]);
 
 /**
@@ -324,6 +327,15 @@ export function getSessionScopedTools(
         getAgentsFns: () => {
           const callbacks = getSessionScopedToolCallbacks(sessionId);
           return callbacks?.agentsFns;
+        },
+      }),
+    );
+
+    tools.push(
+      createAutomationsTool({
+        getAutomationsFns: () => {
+          const callbacks = getSessionScopedToolCallbacks(sessionId);
+          return callbacks?.automationsFns;
         },
       }),
     );

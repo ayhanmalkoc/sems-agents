@@ -103,6 +103,7 @@ import { extractWorkspaceSlug } from '../utils/workspace.ts';
 import { LLM_QUERY_TIMEOUT_MS, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { executeAgentsCommand } from './agents-tools.ts';
+import { executeAutomationsCommand } from './automations-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
@@ -117,6 +118,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'browser_tool',
   'right_dock',
   'agents',
+  'automations',
 ]);
 
 /**
@@ -1571,6 +1573,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Agent profile controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeAgentsCommand(String(args.command ?? 'status'), agentsFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'automations') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const automationsFns = callbacks?.automationsFns;
+        if (!automationsFns) {
+          return { content: 'Automation controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeAutomationsCommand(String(args.command ?? 'status'), automationsFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
 

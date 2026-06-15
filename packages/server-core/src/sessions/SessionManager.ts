@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -40,6 +40,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
+
 import {
   // Session persistence functions
   listSessions as listStoredSessions,
@@ -103,6 +104,87 @@ import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAtta
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
 import { resizeImageForAPI, resizeIconBuffer } from '@craft-agent/server-core/services'
 export { sanitizeForTitle }
+
+type AutomationsConfigJson = { version?: number; automations?: Record<string, Record<string, unknown>[]>; [key: string]: unknown }
+type AutomationToolItemServer = Record<string, unknown> & { id: string; event: string; matcherIndex: number; enabled: boolean; actions: import('@craft-agent/shared/automations').AutomationAction[] }
+
+const automationToolConfigMutexes = new Map<string, Promise<void>>()
+
+function withAutomationToolConfigMutex<T>(workspaceRootPath: string, fn: () => Promise<T>): Promise<T> {
+  const prev = automationToolConfigMutexes.get(workspaceRootPath) ?? Promise.resolve()
+  const next = prev.then(fn, fn)
+  automationToolConfigMutexes.set(workspaceRootPath, next.then(() => {}, () => {}))
+  return next
+}
+
+async function readAutomationsToolConfig(workspaceRootPath: string): Promise<AutomationsConfigJson> {
+  const { resolveAutomationsConfigPath } = await import('@craft-agent/shared/automations/resolve-config-path')
+  const configPath = resolveAutomationsConfigPath(workspaceRootPath)
+  try {
+    return JSON.parse(await readFile(configPath, 'utf-8')) as AutomationsConfigJson
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { version: 1, automations: {} }
+    }
+    throw error
+  }
+}
+
+async function writeAutomationsToolConfig(workspaceRootPath: string, config: AutomationsConfigJson): Promise<void> {
+  const { resolveAutomationsConfigPath } = await import('@craft-agent/shared/automations/resolve-config-path')
+  const { validateAutomationsConfig } = await import('@craft-agent/shared/automations/validation')
+  const nextConfig = { ...config, version: typeof config.version === 'number' ? config.version : 1, automations: config.automations ?? {} }
+  const validation = validateAutomationsConfig(nextConfig)
+  if (!validation.valid) throw new Error(`Invalid automations config: ${validation.errors.join('; ')}`)
+  const configPath = resolveAutomationsConfigPath(workspaceRootPath)
+  await mkdir(dirname(configPath), { recursive: true })
+  await writeFile(configPath, JSON.stringify(nextConfig, null, 2) + '\n', 'utf-8')
+}
+
+function flattenAutomationsToolConfig(config: AutomationsConfigJson): AutomationToolItemServer[] {
+  const items: AutomationToolItemServer[] = []
+  let fallbackIndex = 0
+  const eventMap = config.automations ?? {}
+  for (const [event, matchers] of Object.entries(eventMap)) {
+    if (!Array.isArray(matchers)) continue
+    for (let matcherIndex = 0; matcherIndex < matchers.length; matcherIndex++) {
+      const matcher = matchers[matcherIndex]
+      const actions = Array.isArray(matcher.actions) ? matcher.actions as import('@craft-agent/shared/automations').AutomationAction[] : []
+      if (actions.length === 0) continue
+      items.push({
+        ...matcher,
+        id: String(matcher.id ?? `${event}-${fallbackIndex}`),
+        event,
+        matcherIndex,
+        enabled: matcher.enabled !== false,
+        actions,
+      })
+      fallbackIndex++
+    }
+  }
+  return items
+}
+
+function findAutomationToolItem(config: AutomationsConfigJson, automationId: string): AutomationToolItemServer | undefined {
+  return flattenAutomationsToolConfig(config).find((item) => item.id === automationId)
+}
+
+async function mutateAutomationToolConfig<T>(workspaceRootPath: string, mutate: (config: AutomationsConfigJson, genId: () => string) => T | Promise<T>): Promise<T> {
+  return withAutomationToolConfigMutex(workspaceRootPath, async () => {
+    const { generateShortId } = await import('@craft-agent/shared/automations/resolve-config-path')
+    const config = await readAutomationsToolConfig(workspaceRootPath)
+    config.automations ??= {}
+    const result = await mutate(config, generateShortId)
+    for (const matchers of Object.values(config.automations)) {
+      if (!Array.isArray(matchers)) continue
+      for (const matcher of matchers) {
+        if (!matcher.id) matcher.id = generateShortId()
+      }
+    }
+    await writeAutomationsToolConfig(workspaceRootPath, config)
+    return result
+  })
+}
 
 // Module-level platform ref — set once during init via setSessionPlatform()
 let _platform: PlatformServices | null = null
@@ -3865,6 +3947,177 @@ export class SessionManager implements ISessionManager {
               this.broadcastAgentProfilesChanged(workspaceId)
             },
           } satisfies AgentsFns,
+          automationsFns: {
+            status: async () => {
+              const config = await readAutomationsToolConfig(managed.workspace.rootPath)
+              return { available: true, automations: flattenAutomationsToolConfig(config) }
+            },
+            list: async () => flattenAutomationsToolConfig(await readAutomationsToolConfig(managed.workspace.rootPath)),
+            show: async (automationId) => findAutomationToolItem(await readAutomationsToolConfig(managed.workspace.rootPath), automationId),
+            create: async (input) => {
+              const event = String(input.event ?? '')
+              if (!event) throw new Error('create requires an event field')
+              const { event: _event, matcherIndex: _matcherIndex, enabled: _enabled, ...matcherInput } = input as unknown as Record<string, unknown>
+              const item = await mutateAutomationToolConfig(managed.workspace.rootPath, (config, genId) => {
+                config.automations ??= {}
+                const matchers = config.automations[event] ?? []
+                config.automations[event] = matchers
+                const matcher = { ...matcherInput, id: typeof matcherInput.id === 'string' ? matcherInput.id : genId() }
+                matchers.push(matcher)
+                return findAutomationToolItem(config, String(matcher.id))!
+              })
+              this.broadcastAutomationsChanged(workspaceId)
+              return item
+            },
+            update: async (automationId, updates) => {
+              const item = await mutateAutomationToolConfig(managed.workspace.rootPath, (config) => {
+                const current = findAutomationToolItem(config, automationId)
+                if (!current) throw new Error(`Automation "${automationId}" not found`)
+                const nextEvent = typeof updates.event === 'string' ? updates.event : current.event
+                const { event: _event, matcherIndex: _matcherIndex, enabled: _enabled, id: _id, ...matcherUpdates } = updates as unknown as Record<string, unknown>
+                const source = config.automations?.[current.event]?.[current.matcherIndex]
+                if (!source) throw new Error(`Automation "${automationId}" not found`)
+                const updated = { ...source, ...matcherUpdates, id: source.id ?? current.id }
+                if (nextEvent !== current.event) {
+                  config.automations![current.event]!.splice(current.matcherIndex, 1)
+                  if (config.automations![current.event]!.length === 0) delete config.automations![current.event]
+                  const target = config.automations![nextEvent] ?? []
+                  config.automations![nextEvent] = target
+                  target.push(updated)
+                } else {
+                  config.automations![current.event]![current.matcherIndex] = updated
+                }
+                return findAutomationToolItem(config, String(updated.id))!
+              })
+              this.broadcastAutomationsChanged(workspaceId)
+              return item
+            },
+            duplicate: async (automationId, name) => {
+              const item = await mutateAutomationToolConfig(managed.workspace.rootPath, (config, genId) => {
+                const current = findAutomationToolItem(config, automationId)
+                if (!current) throw new Error(`Automation "${automationId}" not found`)
+                const source = config.automations?.[current.event]?.[current.matcherIndex]
+                if (!source) throw new Error(`Automation "${automationId}" not found`)
+                const clone = JSON.parse(JSON.stringify(source)) as Record<string, unknown>
+                clone.id = genId()
+                clone.name = name
+                config.automations![current.event]!.splice(current.matcherIndex + 1, 0, clone)
+                return findAutomationToolItem(config, String(clone.id))!
+              })
+              this.broadcastAutomationsChanged(workspaceId)
+              return item
+            },
+            delete: async (automationId) => {
+              await mutateAutomationToolConfig(managed.workspace.rootPath, (config) => {
+                const current = findAutomationToolItem(config, automationId)
+                if (!current) throw new Error(`Automation "${automationId}" not found`)
+                const matchers = config.automations?.[current.event]
+                if (!matchers) throw new Error(`Automation "${automationId}" not found`)
+                matchers.splice(current.matcherIndex, 1)
+                if (matchers.length === 0) delete config.automations![current.event]
+              })
+              this.broadcastAutomationsChanged(workspaceId)
+            },
+            setEnabled: async (automationId, enabled) => {
+              const item = await mutateAutomationToolConfig(managed.workspace.rootPath, (config) => {
+                const current = findAutomationToolItem(config, automationId)
+                if (!current) throw new Error(`Automation "${automationId}" not found`)
+                const matcher = config.automations?.[current.event]?.[current.matcherIndex]
+                if (!matcher) throw new Error(`Automation "${automationId}" not found`)
+                if (enabled) delete matcher.enabled
+                else matcher.enabled = false
+                return findAutomationToolItem(config, automationId)!
+              })
+              this.broadcastAutomationsChanged(workspaceId)
+              return item
+            },
+            test: async (automationId) => {
+              const item = findAutomationToolItem(await readAutomationsToolConfig(managed.workspace.rootPath), automationId)
+              if (!item) throw new Error(`Automation "${automationId}" not found`)
+              const actions = item.actions ?? []
+              const { parsePromptReferences } = await import('@craft-agent/shared/automations')
+              const { executeWebhookRequest, createWebhookHistoryEntry } = await import('@craft-agent/shared/automations/webhook-utils')
+              const runMetadata = { event: item.event as import('@craft-agent/shared/automations').AutomationEvent, triggerSummary: `${item.event}: manual test`, matcherSummary: 'Manual test run', conditionSummary: 'Not evaluated in manual test' }
+              const results = []
+              for (const action of actions) {
+                const start = Date.now()
+                if (action.type === 'webhook') {
+                  const result = await executeWebhookRequest(action as unknown as import('@craft-agent/shared/automations').WebhookAction)
+                  results.push({ type: 'webhook' as const, success: result.success, url: result.url, statusCode: result.statusCode, error: result.error, duration: result.durationMs ?? Date.now() - start })
+                  try {
+                    await appendAutomationHistoryEntry(managed.workspace.rootPath, createWebhookHistoryEntry({ matcherId: automationId, ok: result.success, metadata: runMetadata, method: (action.method as string | undefined), url: result.url, statusCode: result.statusCode, durationMs: result.durationMs ?? 0, error: result.error, responseBody: result.responseBody }))
+                  } catch (error) {
+                    sessionLog.warn('[Automations] Failed to write tool test webhook history:', error)
+                  }
+                  continue
+                }
+                try {
+                  const references = parsePromptReferences(String(action.prompt ?? ''))
+                  const { sessionId } = await this.executePromptAutomation({
+                    workspaceId,
+                    workspaceRootPath: managed.workspace.rootPath,
+                    prompt: String(action.prompt ?? ''),
+                    labels: item.labels as string[] | undefined,
+                    permissionMode: item.permissionMode as PermissionMode | undefined,
+                    mentions: references.mentions,
+                    llmConnection: action.llmConnection as string | undefined,
+                    model: action.model as string | undefined,
+                    thinkingLevel: action.thinkingLevel as import('@craft-agent/shared/agent/thinking-levels').ThinkingLevel | undefined,
+                    automationName: item.name as string | undefined,
+                    telegramTopic: item.telegramTopic as string | undefined,
+                  })
+                  results.push({ type: 'prompt' as const, success: true, sessionId, duration: Date.now() - start })
+                  try {
+                    await appendAutomationHistoryEntry(managed.workspace.rootPath, createPromptHistoryEntry({ matcherId: automationId, ok: true, metadata: runMetadata, sessionId, prompt: String(action.prompt ?? '') }))
+                  } catch (error) {
+                    sessionLog.warn('[Automations] Failed to write tool test prompt history:', error)
+                  }
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error)
+                  results.push({ type: 'prompt' as const, success: false, stderr: message, duration: Date.now() - start })
+                  try {
+                    await appendAutomationHistoryEntry(managed.workspace.rootPath, createPromptHistoryEntry({ matcherId: automationId, ok: false, metadata: runMetadata, error: message, prompt: String(action.prompt ?? '') }))
+                  } catch (historyError) {
+                    sessionLog.warn('[Automations] Failed to write tool test prompt failure history:', historyError)
+                  }
+                }
+              }
+              return { actions: results }
+            },
+            history: async (automationId) => {
+              const { AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER } = await import('@craft-agent/shared/automations/constants')
+              const historyPath = join(managed.workspace.rootPath, 'automations-history.jsonl')
+              try {
+                const content = await readFile(historyPath, 'utf-8')
+                return content.trim().split('\n').filter(Boolean)
+                  .map(line => { try { return JSON.parse(line) } catch { return null } })
+                  .filter((entry): entry is import('@craft-agent/shared/agent/automations-tools').AutomationHistoryEntry => entry?.id === automationId)
+                  .slice(-AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER)
+                  .reverse()
+              } catch {
+                return []
+              }
+            },
+            replay: async (automationId) => {
+              const item = findAutomationToolItem(await readAutomationsToolConfig(managed.workspace.rootPath), automationId)
+              if (!item) throw new Error(`Automation "${automationId}" not found`)
+              const webhookActions = (item.actions ?? []).filter(action => action.type === 'webhook')
+              if (webhookActions.length === 0) throw new Error('No webhook actions to replay')
+              const { executeWebhookRequest, createWebhookHistoryEntry } = await import('@craft-agent/shared/automations/webhook-utils')
+              const runMetadata = { event: item.event as import('@craft-agent/shared/automations').AutomationEvent, triggerSummary: `${item.event}: manual replay`, matcherSummary: 'Manual replay run', conditionSummary: 'Not evaluated in manual replay' }
+              const results = await Promise.all(webhookActions.map(action => executeWebhookRequest(action as unknown as import('@craft-agent/shared/automations').WebhookAction)))
+              for (let index = 0; index < results.length; index++) {
+                const result = results[index]!
+                const action = webhookActions[index]!
+                try {
+                  await appendAutomationHistoryEntry(managed.workspace.rootPath, createWebhookHistoryEntry({ matcherId: automationId, ok: result.success, metadata: runMetadata, method: (action.method as string | undefined), url: result.url, statusCode: result.statusCode, durationMs: result.durationMs ?? 0, error: result.error, responseBody: result.responseBody }))
+                } catch (error) {
+                  sessionLog.warn('[Automations] Failed to write tool replay history:', error)
+                }
+              }
+              return { results }
+            },
+          } satisfies AutomationsFns,
         })
       }
 

@@ -15,6 +15,7 @@ import type { SpawnSessionFn } from './spawn-session-tool.ts';
 import type { BrowserPaneFns } from './browser-tools.ts';
 import type { RightDockFns } from './right-dock-tools.ts';
 import type { AgentsFns } from './agents-tools.ts';
+import type { AutomationsFns } from './automations-tools.ts';
 import type { AuthRequest } from '@craft-agent/session-tools-core';
 import { debug } from '../utils/debug.ts';
 
@@ -58,6 +59,9 @@ export interface SessionScopedToolCallbacks {
 
   /** Workspace agent profile management functions. */
   agentsFns?: AgentsFns;
+
+  /** Workspace automation management functions. */
+  automationsFns?: AutomationsFns;
 
   /** Set labels on a session (defaults to current). */
   setSessionLabelsFn?: (sessionId: string | undefined, labels: string[]) => void | Promise<void>;

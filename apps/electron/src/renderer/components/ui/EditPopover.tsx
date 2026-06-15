@@ -589,10 +589,10 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       label: 'Automation Configuration',
       filePath: `${location}/automations.json`,
       context:
-        'The user is editing automations.json which configures automations. ' +
-        'Structure: { version: 2, automations: { EventName: [{ name?, matcher?, cron?, timezone?, permissionMode?, labels?, actions: [...] }] } }. ' +
-        'Each event maps to an array of matcher entries. Each matcher has an actions array ({ type: "prompt", prompt }). ' +
-        'Read ~/.craft-agent/docs/automations.md for full format reference. ' +
+        'The user wants to create or edit workspace automations. ' +
+        'Read ~/.craft-agent/docs/automations-tools.md first, then use the automations tool for normal create/update/duplicate/delete/enable/disable/test/history/replay work. ' +
+        'Use the existing automation model: event matcher entries with optional matcher/cron/timezone/conditions and prompt/webhook actions. ' +
+        'automations.json is reference/fallback only; prefer automations tool over direct file edits. ' +
         'After editing, confirm clearly what changed.',
     },
     example: 'Change the cron schedule to every 30 minutes',
