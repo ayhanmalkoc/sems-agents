@@ -105,6 +105,7 @@ import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { executeAgentsCommand } from './agents-tools.ts';
 import { executeAutomationsCommand } from './automations-tools.ts';
 import { executeResourcesCommand } from './resources-tools.ts';
+import { executeMemoryCommand } from './memory-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
@@ -121,6 +122,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'agents',
   'automations',
   'resources',
+  'memory',
 ]);
 
 /**
@@ -1598,6 +1600,15 @@ export class PiAgent extends BaseAgent {
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
 
+      if (toolName === 'memory') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const memoryFns = callbacks?.memoryFns;
+        if (!memoryFns) {
+          return { content: 'Memory controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeMemoryCommand(String(args.command ?? 'status'), memoryFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
       const def = SESSION_TOOL_REGISTRY.get(toolName);
       if (!def) {
         return { content: `Unknown session tool: ${toolName}`, isError: true };

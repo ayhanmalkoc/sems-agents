@@ -32,6 +32,7 @@ import {
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
+  isMemoryNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { agentSelection, sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
@@ -43,6 +44,7 @@ import ResourcesHomePage from '@/pages/ResourcesHomePage'
 import AgentInfoPage from '@/pages/AgentInfoPage'
 import AgentsHomePage from '@/pages/AgentsHomePage'
 import AutomationsHomePage from '@/pages/AutomationsHomePage'
+import MemoryHomePage from '@/pages/MemoryHomePage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'
@@ -321,6 +323,14 @@ export function MainContentPanel({
       </Panel>
     )
   }
+  if (isMemoryNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <MemoryHomePage />
+      </Panel>
+    )
+  }
+
   // Sources navigator - show source info, multi-select panel, or empty state
   if (isSourcesNavigation(navState)) {
     if (isSourceMultiSelectActive) {

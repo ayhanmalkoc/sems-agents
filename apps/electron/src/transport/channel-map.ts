@@ -410,6 +410,14 @@ export const CHANNEL_MAP = {
   exportResources: invoke(RPC_CHANNELS.resources.EXPORT),
   importResources: invoke(RPC_CHANNELS.resources.IMPORT),
 
+  // Memory
+  getMemories: invoke(RPC_CHANNELS.memory.GET),
+  getMemorySuggestions: invoke(RPC_CHANNELS.memory.GET_SUGGESTIONS),
+  searchMemories: invoke(RPC_CHANNELS.memory.SEARCH),
+  deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
+  approveMemorySuggestion: invoke(RPC_CHANNELS.memory.APPROVE),
+  rejectMemorySuggestion: invoke(RPC_CHANNELS.memory.REJECT),
+
   // Messaging gateway
   getMessagingConfig: invoke(RPC_CHANNELS.messaging.GET_CONFIG),
   updateMessagingConfig: invoke(RPC_CHANNELS.messaging.UPDATE_CONFIG),

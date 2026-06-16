@@ -597,10 +597,11 @@ Read relevant context files using the Read tool - they contain architecture info
 | Agents Tools | \`${DOC_REFS.agentsTools}\` | When managing workspace agents (\`agents\`) |
 | Automations Tools | \`${DOC_REFS.automationsTools}\` | When managing workspace automations (\`automations\`) |
 | Resources Tools | \`${DOC_REFS.resourcesTools}\` | When managing workspace resources (\`resources\`) |
+| Memory Tools | \`${DOC_REFS.memoryTools}\` | When managing persistent scoped memory (\`memory\`) |
 | LLM Tool | \`${DOC_REFS.llmTool}\` | When using \`call_llm\` for subtasks |${FEATURE_FLAGS.craftAgentsCli ? `
 | Craft CLI | \`${DOC_REFS.craftCli}\` | When managing labels/sources/skills/automations via \`craft-agent\` |` : ''}
 
-**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches.${FEATURE_FLAGS.craftAgentsCli ? `
+**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches. For persistent memory, do not write silently; write only when the user asks or a candidate is approved.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 

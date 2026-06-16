@@ -24,6 +24,7 @@ import {
   Layers,
   ListTodo,
   Bot,
+  Brain,
   Info,
   MailOpen,
   PanelRight,
@@ -115,6 +116,7 @@ import {
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
+  isMemoryNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -860,7 +862,7 @@ function AppShellContent({
   const navState = useNavigationState()
   const isRightDockVisible = isRightDockOpen && isSessionsNavigation(navState)
 
-  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
+  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isMemoryNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
     ? 0
     : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))
   const store = useStore()
@@ -2002,6 +2004,10 @@ function AppShellContent({
     navigate(routes.view.skills())
   }, [])
 
+  const handleMemoryClick = useCallback(() => {
+    navigate(routes.view.memory())
+  }, [])
+
   // Handlers for automations view
   const handleAutomationsClick = useCallback(() => {
     navigate(routes.view.automations())
@@ -2657,6 +2663,7 @@ function AppShellContent({
                     { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
                     { id: "nav:agents", title: t("sidebar.agents"), label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
+                    { id: "nav:memory", title: "Memory", icon: Brain, variant: isMemoryNavigation(navState) ? "default" : "ghost", onClick: handleMemoryClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),
@@ -3481,7 +3488,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isMemoryNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

@@ -66,6 +66,9 @@ const RESOURCES_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs',
 /** Global session tools docs path required before mutating session management. */
 const SESSION_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'session-tools.md'));
 
+/** Global memory tools docs path required before persistent memory management. */
+const MEMORY_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'memory-tools.md'));
+
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
     return getBrowserToolEnabled();
@@ -192,6 +195,17 @@ const RULES: PrerequisiteRule[] = [
     strict: true,
   },
 
+  // Built-in memory tool: require memory-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'memory' || toolName === 'mcp__session__memory',
+    resolveRequiredPath: () => {
+      return existsSync(MEMORY_TOOLS_DOC_PATH) ? MEMORY_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the memory tools guide before managing persistent memory. Please read the file at {filePath} first, then retry.',
+    strict: true,
+  },
   // Built-in right dock tool: require right-dock-tools.md first.
   {
     toolMatcher: (toolName: string) =>

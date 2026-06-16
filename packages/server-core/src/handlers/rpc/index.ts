@@ -24,6 +24,7 @@ import { registerSystemCoreHandlers } from './system'
 import { registerTransferHandlers } from './transfer'
 import { registerWorkspaceCoreHandlers } from './workspace'
 import { registerMessagingHandlers } from './messaging'
+import { registerMemoryHandlers } from './memory'
 
 export function registerCoreRpcHandlers(
   server: RpcServer,
@@ -49,4 +50,5 @@ export function registerCoreRpcHandlers(
   registerTransferHandlers(server)
   registerWorkspaceCoreHandlers(server, deps)
   registerMessagingHandlers(server, deps)
+  registerMemoryHandlers(server, deps)
 }

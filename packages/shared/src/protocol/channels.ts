@@ -408,6 +408,14 @@ export const RPC_CHANNELS = {
     EXPORT: 'resources:export',
     IMPORT: 'resources:import',
   },
+  memory: {
+    GET: 'memory:get',
+    GET_SUGGESTIONS: 'memory:getSuggestions',
+    SEARCH: 'memory:search',
+    DELETE: 'memory:delete',
+    APPROVE: 'memory:approve',
+    REJECT: 'memory:reject',
+  },
   messaging: {
     // WhatsApp subprocess → Gateway (subprocess invokes on server)
     WA_REGISTER: 'messaging:wa:register',

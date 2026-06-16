@@ -711,6 +711,14 @@ export interface ElectronAPI {
   exportResources(workspaceId: string, options: ExportResourcesOptions): Promise<ExportResult>
   importResources(workspaceId: string, bundle: ResourceBundle, mode: ResourceImportMode): Promise<ResourceImportResult>
 
+  // Memory
+  getMemories(workspaceId: string): Promise<unknown[]>
+  getMemorySuggestions(workspaceId: string): Promise<unknown[]>
+  searchMemories(workspaceId: string, query: string): Promise<unknown[]>
+  deleteMemory(workspaceId: string, memoryId: string): Promise<void>
+  approveMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
+  rejectMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
+
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{
     enabled: boolean
@@ -910,6 +918,11 @@ export interface AutomationsNavigationState {
   rightSidebar?: RightSidebarPanel
 }
 
+export interface MemoryNavigationState {
+  navigator: 'memory'
+  rightSidebar?: RightSidebarPanel
+}
+
 /**
  * Unified navigation state
  */
@@ -920,6 +933,7 @@ export type NavigationState =
   | SettingsNavigationState
   | SkillsNavigationState
   | AutomationsNavigationState
+  | MemoryNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -944,6 +958,10 @@ export const isSkillsNavigation = (
 export const isAutomationsNavigation = (
   state: NavigationState
 ): state is AutomationsNavigationState => state.navigator === 'automations'
+
+export const isMemoryNavigation = (
+  state: NavigationState
+): state is MemoryNavigationState => state.navigator === 'memory'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -976,6 +994,7 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     }
     return 'automations'
   }
+  if (state.navigator === 'memory') return 'memory'
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
@@ -1033,6 +1052,9 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
     }
     return { navigator: 'automations', details: null }
   }
+
+  // Handle memory
+  if (key === 'memory') return { navigator: 'memory' }
 
   // Handle settings
   if (key === 'settings') return { navigator: 'settings', subpage: null }

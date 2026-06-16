@@ -17,6 +17,7 @@ import type { RightDockFns } from './right-dock-tools.ts';
 import type { AgentsFns } from './agents-tools.ts';
 import type { AutomationsFns } from './automations-tools.ts';
 import type { ResourcesFns } from './resources-tools.ts';
+import type { MemoryFns } from './memory-tools.ts';
 import type { AuthRequest } from '@craft-agent/session-tools-core';
 import { debug } from '../utils/debug.ts';
 
@@ -66,6 +67,9 @@ export interface SessionScopedToolCallbacks {
 
   /** Workspace resource management functions. */
   resourcesFns?: ResourcesFns;
+
+  /** Persistent workspace memory management functions. */
+  memoryFns?: MemoryFns;
 
   /** Set labels on a session (defaults to current). */
   setSessionLabelsFn?: (sessionId: string | undefined, labels: string[]) => void | Promise<void>;

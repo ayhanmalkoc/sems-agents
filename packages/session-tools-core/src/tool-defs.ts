@@ -179,7 +179,11 @@ export const AutomationsToolSchema = z.object({
 });
 
 export const ResourcesToolSchema = z.object({
-  command: z.string().describe('Resources command: status, list, list sources, list skills, show source <slug>, show skill <slug>, create-source <json>, delete-source <slug>, delete-skill <slug>, test-source <slug>, list-tools <sourceSlug>, export, import <bundlePath>.'),
+  command: z.string().describe('Resources command: status, list [all|sources|skills], show source|skill <slug>, create-source <json>, delete-source <slug>, delete-skill <slug>, test-source <slug>, list-tools <slug>, export, import <path>.'),
+});
+
+export const MemoryToolSchema = z.object({
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>.'),
 });
 
 export const SessionsToolSchema = z.object({
@@ -540,6 +544,22 @@ Commands:
 - \`export\` - export workspace resources to a bundle
 - \`import <bundlePath>\` - import a resource bundle`,
 
+  memory: `Manage persistent scoped workspace memory.
+
+Use this when the user asks to remember durable information, inspect/search memory, or review memory suggestions.
+
+Commands:
+- \`status\` - summarize memory availability and counts
+- \`list\` - list approved memories
+- \`show <memoryId>\` - inspect one memory
+- \`search <query>\` - search approved memories
+- \`create <json>\` - create approved memory with source trace
+- \`update <memoryId> <json>\` - update one memory
+- \`delete <memoryId>\` - delete one memory
+- \`suggest-from-session <sessionId>\` - create a pending candidate
+- \`approve <suggestionId>\` - promote candidate to memory
+- \`reject <suggestionId>\` - reject candidate`,
+
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via prompt instructions
@@ -715,6 +735,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'agents', description: TOOL_DESCRIPTIONS.agents, inputSchema: AgentsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'automations', description: TOOL_DESCRIPTIONS.automations, inputSchema: AutomationsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'resources', description: TOOL_DESCRIPTIONS.resources, inputSchema: ResourcesToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'memory', description: TOOL_DESCRIPTIONS.memory, inputSchema: MemoryToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'sessions', description: TOOL_DESCRIPTIONS.sessions, inputSchema: SessionsToolSchema, executionMode: 'registry', safeMode: 'block', handler: handleSessionsTool },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },

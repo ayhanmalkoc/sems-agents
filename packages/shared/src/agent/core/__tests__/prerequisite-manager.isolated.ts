@@ -50,6 +50,10 @@ function sessionToolsDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'session-tools.md'));
 }
 
+function memoryDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'memory-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -184,6 +188,17 @@ describe('PrerequisiteManager', () => {
       const result = manager.checkPrerequisites('mcp__session__agents');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches memory tools and blocks until memory docs are read', () => {
+      const docsPath = memoryDocPath();
+      mockExistsPaths.add(docsPath);
+
+      for (const toolName of ['memory', 'mcp__session__memory']) {
+        const result = manager.checkPrerequisites(toolName);
+        expect(result.allowed).toBe(false);
+        expect(result.blockReason).toContain(docsPath);
+      }
     });
 
     it('matches sessions domain tool and blocks until session docs are read', () => {
