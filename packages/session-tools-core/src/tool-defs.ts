@@ -44,6 +44,7 @@ import { handleDeleteSession } from './handlers/delete-session.ts';
 import { handleGetSessionInfo } from './handlers/get-session-info.ts';
 import { handleListSessions } from './handlers/list-sessions.ts';
 import { handleSendAgentMessage } from './handlers/send-agent-message.ts';
+import { handleSessionsTool } from './handlers/sessions-tool.ts';
 import { handleListMessagingChannels, handleUnbindMessagingChannel } from './handlers/messaging.ts';
 
 // ============================================================
@@ -181,6 +182,10 @@ export const ResourcesToolSchema = z.object({
   command: z.string().describe('Resources command: status, list, list sources, list skills, show source <slug>, show skill <slug>, create-source <json>, delete-source <slug>, delete-skill <slug>, test-source <slug>, list-tools <sourceSlug>, export, import <bundlePath>.'),
 });
 
+export const SessionsToolSchema = z.object({
+  command: z.string().describe('Sessions command: status, list, show <sessionId>, spawn <json>, rename <sessionId> <name>, labels <sessionId> <json-array>, status-set <sessionId> <status>, agent <sessionId> <agentId>, archive <sessionId> <true|false>, pin <sessionId> <true|false>, delete <sessionId> --confirm, message <sessionId> <message>.'),
+});
+
 export const SpawnSessionSchema = z.object({
   help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
   prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
@@ -236,7 +241,7 @@ export const DeleteSessionSchema = z.object({
 });
 
 export const GetSessionInfoSchema = z.object({
-  sessionId: z.string().optional().describe('Session ID to query. Omit to get info about the current session.'),
+  sessionId: z.string().optional().describe('Session ID to query. Omit to get info about the current session. If your client requires a value, pass an empty string.'),
 });
 
 export const ListSessionsSchema = z.object({
@@ -545,7 +550,13 @@ Put text/content directly in the 'prompt' parameter. Do NOT pass inline text via
 Only use 'attachments' for existing file paths on disk - the tool loads file content automatically.
 For large files (>2000 lines), use {path, startLine, endLine} to select a portion.`,
 
-  spawn_session: `Create a new session that runs independently with its own prompt, connection, model, and sources.
+  sessions: `Canonical session management tool. Manage workspace chat/session lifecycle and metadata with commands like status, list, show, spawn, rename, labels, status-set, agent, archive, pin, delete, and message.
+
+Prefer this tool for new session management work. Legacy single-purpose session tools remain available for compatibility.`,
+
+  spawn_session: `Legacy compatibility tool. Prefer \`sessions spawn <json>\` for new work.
+
+Create a new session that runs independently with its own prompt, connection, model, and sources.
 
 Use this to delegate tasks to parallel sessions — research, analysis, drafts, or any work that benefits from separate context.
 
@@ -563,47 +574,67 @@ Only use 'attachments' for existing file paths on disk — the tool reads them a
 
 Use this to share anything that would help improve the product — issues you hit, ideas for better tools, suggestions for improved workflows, or patterns you notice. Write in markdown with as much detail as possible. This is your direct line to the developers.`,
 
-  set_session_labels: `Set labels on the current session or a specific session by ID. Replaces all existing labels.
+  set_session_labels: `Legacy compatibility tool. Prefer \`sessions labels <sessionId> <json-array>\` for new work.
+
+Set labels on the current session or a specific session by ID. Replaces all existing labels.
 
 Use this to tag sessions for filtering or to trigger label-based automations (LabelAdd/LabelRemove events).
 Pass an empty array to clear all labels. Omit sessionId to target the current session.`,
 
-  set_session_status: `Set the status of the current session or a specific session by ID (e.g., "todo", "in_progress", "done").
+  set_session_status: `Legacy compatibility tool. Prefer \`sessions status-set <sessionId> <status>\` for new work.
+
+Set the status of the current session or a specific session by ID (e.g., "todo", "in_progress", "done").
 
 Use this to signal completion or trigger status-based automations (SessionStatusChange events).
 Omit sessionId to target the current session.`,
 
-  set_session_agent: `Set the workspace agent profile on the current session or a specific session by ID.
+  set_session_agent: `Legacy compatibility tool. Prefer \`sessions agent <sessionId> <agentId>\` for new work.
+
+Set the workspace agent profile on the current session or a specific session by ID.
 
 Use this when the user asks to switch which workspace agent owns a chat/session. Omit sessionId to target the current session.`,
 
-  rename_session: `Rename the current session or a specific session by ID.
+  rename_session: `Legacy compatibility tool. Prefer \`sessions rename <sessionId> <name>\` for new work.
+
+Rename the current session or a specific session by ID.
 
 Use a clear, non-empty name. Omit sessionId to target the current session.`,
 
-  archive_session: `Archive or unarchive the current session or a specific session by ID.
+  archive_session: `Legacy compatibility tool. Prefer \`sessions archive <sessionId> <true|false>\` for new work.
+
+Archive or unarchive the current session or a specific session by ID.
 
 Set archived=true to archive; archived=false to restore. Omit sessionId to target the current session.`,
 
-  pin_session: `Pin or unpin the current session or a specific session by ID.
+  pin_session: `Legacy compatibility tool. Prefer \`sessions pin <sessionId> <true|false>\` for new work.
+
+Pin or unpin the current session or a specific session by ID.
 
 Set pinned=true to pin; pinned=false to unpin. Omit sessionId to target the current session.`,
 
-  delete_session: `Permanently delete a specific session by ID.
+  delete_session: `Legacy compatibility tool. Prefer \`sessions delete <sessionId> --confirm\` for new work.
+
+Permanently delete a specific session by ID.
 
 Requires an explicit sessionId and confirm=true. This tool has no current-session default and does not support bulk deletion.`,
 
-  get_session_info: `Get metadata about the current session or a specific session by ID.
+  get_session_info: `Legacy compatibility tool. Prefer \`sessions show <sessionId>\` for new work.
+
+Get metadata about the current session or a specific session by ID.
 
 Returns labels, status, name, permission mode, and other details.
-Call with no arguments to introspect your own session state.`,
+Call with no arguments to introspect your own session state. If your client requires a sessionId field, pass an empty string.`,
 
-  list_sessions: `List sessions in the workspace. Returns total count + paginated results.
+  list_sessions: `Legacy compatibility tool. Prefer \`sessions list\` for new work.
+
+List sessions in the workspace. Returns total count + paginated results.
 
 Use filters (status, label, search) to narrow results instead of fetching everything. Default limit is 20 sessions.
 Use get_session_info for full details on a specific session (list-then-detail pattern).`,
 
-  send_agent_message: `Send a message to another session. The message is delivered with your session ID so the target can reply back.
+  send_agent_message: `Legacy compatibility tool. Prefer \`sessions message <sessionId> <message>\` for new work.
+
+Send a message to another session. The message is delivered with your session ID so the target can reply back.
 
 Use this to coordinate with spawned sessions, send follow-up instructions, or relay information between sessions.
 Use list_sessions to find session IDs, or use the sessionId returned by spawn_session.
@@ -684,6 +715,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'agents', description: TOOL_DESCRIPTIONS.agents, inputSchema: AgentsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'automations', description: TOOL_DESCRIPTIONS.automations, inputSchema: AutomationsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'resources', description: TOOL_DESCRIPTIONS.resources, inputSchema: ResourcesToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'sessions', description: TOOL_DESCRIPTIONS.sessions, inputSchema: SessionsToolSchema, executionMode: 'registry', safeMode: 'block', handler: handleSessionsTool },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },

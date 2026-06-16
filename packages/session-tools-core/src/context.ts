@@ -310,6 +310,9 @@ export interface SessionToolContext {
   // Session Self-Management (for set_session_labels, etc.)
   // ============================================================
 
+  /** Spawn a new independent session. Injected by backend. */
+  spawnSession?(input: Record<string, unknown>): Promise<unknown>;
+
   /** Set labels on a session. Defaults to current session if no ID given. Injected by backend. */
   setSessionLabels?(sessionId: string | undefined, labels: string[]): void | Promise<void>;
 

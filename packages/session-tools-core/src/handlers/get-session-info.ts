@@ -15,9 +15,10 @@ export async function handleGetSessionInfo(
   }
 
   try {
-    const info = ctx.getSessionInfo(args.sessionId);
+    const sessionId = args.sessionId?.trim() || undefined;
+    const info = ctx.getSessionInfo(sessionId);
     if (!info) {
-      return errorResponse(`Session not found: ${args.sessionId ?? ctx.sessionId}`);
+      return errorResponse(`Session not found: ${sessionId ?? ctx.sessionId}`);
     }
     return successResponse(JSON.stringify(info, null, 2));
   } catch (error) {

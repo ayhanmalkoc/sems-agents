@@ -55,6 +55,29 @@ describe('session mutation tools', () => {
     expect(calls).toEqual([[undefined, true], [undefined, false]]);
   });
 
+
+  it('legacy optional sessionId handlers treat empty string as current session', async () => {
+    const calls: Array<[string, string | undefined]> = [];
+    const ctx = {
+      setSessionAgent: (sessionId) => calls.push(['agent', sessionId]),
+      renameSession: (sessionId) => calls.push(['rename', sessionId]),
+      archiveSession: (sessionId) => calls.push(['archive', sessionId]),
+      pinSession: (sessionId) => calls.push(['pin', sessionId]),
+    } satisfies Partial<SessionToolContext>;
+
+    await handleSetSessionAgent(ctx as SessionToolContext, { sessionId: ' ', agentId: 'default' });
+    await handleRenameSession(ctx as SessionToolContext, { sessionId: '', name: 'Current' });
+    await handleArchiveSession(ctx as SessionToolContext, { sessionId: ' ', archived: false });
+    await handlePinSession(ctx as SessionToolContext, { sessionId: '', pinned: true });
+
+    expect(calls).toEqual([
+      ['agent', undefined],
+      ['rename', undefined],
+      ['archive', undefined],
+      ['pin', undefined],
+    ]);
+  });
+
   it('delete_session requires explicit target and confirmation', async () => {
     const calls: string[] = [];
     const ctx = { deleteSession: (sessionId) => calls.push(sessionId) } satisfies Partial<SessionToolContext>;

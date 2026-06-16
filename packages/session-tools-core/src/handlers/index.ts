@@ -82,3 +82,6 @@ export { handleGetSessionInfo } from './get-session-info.ts';
 export type { GetSessionInfoArgs } from './get-session-info.ts';
 export { handleListSessions } from './list-sessions.ts';
 export type { ListSessionsArgs } from './list-sessions.ts';
+
+export { handleSessionsTool } from './sessions-tool.ts';
+export type { SessionsToolArgs } from './sessions-tool.ts';

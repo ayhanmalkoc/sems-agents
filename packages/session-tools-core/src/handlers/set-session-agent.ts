@@ -21,8 +21,9 @@ export async function handleSetSessionAgent(
   }
 
   try {
-    await ctx.setSessionAgent(args.sessionId, agentId);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.setSessionAgent(sessionId, agentId);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(`Agent set to "${agentId}" on ${target}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

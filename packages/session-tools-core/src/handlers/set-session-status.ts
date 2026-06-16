@@ -29,8 +29,9 @@ export async function handleSetSessionStatus(
       status = resolved;
     }
 
-    await ctx.setSessionStatus(args.sessionId, status);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.setSessionStatus(sessionId, status);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(`Status set to "${status}" on ${target}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

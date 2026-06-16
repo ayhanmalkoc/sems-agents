@@ -60,6 +60,7 @@ describe('session tool filtering helpers', () => {
 
     expect(blocked.has('source_oauth_trigger')).toBe(true);
     expect(blocked.has('source_credential_prompt')).toBe(true);
+    expect(blocked.has('sessions')).toBe(true);
     expect(blocked.has('spawn_session')).toBe(true);
     expect(blocked.has('set_session_agent')).toBe(true);
     expect(blocked.has('rename_session')).toBe(true);
@@ -76,6 +77,7 @@ describe('session tool filtering helpers', () => {
     expect(allowedPrefixed.has('mcp__session__call_llm')).toBe(true);
     expect(allowedPrefixed.has('mcp__session__script_sandbox')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__source_oauth_trigger')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__sessions')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__spawn_session')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__set_session_agent')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__rename_session')).toBe(true);

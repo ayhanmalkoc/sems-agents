@@ -35,8 +35,9 @@ export async function handleSetSessionLabels(
       labels = resolved;
     }
 
-    await ctx.setSessionLabels(args.sessionId, labels);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.setSessionLabels(sessionId, labels);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(
       labels.length === 0
         ? `Labels cleared on ${target}.`

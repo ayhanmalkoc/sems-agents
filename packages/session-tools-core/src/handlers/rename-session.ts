@@ -21,8 +21,9 @@ export async function handleRenameSession(
   }
 
   try {
-    await ctx.renameSession(args.sessionId, name);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.renameSession(sessionId, name);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(`Renamed ${target} to "${name}".`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

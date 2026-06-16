@@ -68,6 +68,7 @@ describe('Pi session self-management regression (#511)', () => {
     const setStatusCalled: Array<[string | undefined, string]> = [];
 
     registerSessionScopedToolCallbacks(sessionId, {
+      spawnSessionFn: async (input) => ({ sessionId: String(input.name ?? 'spawned'), status: 'started' as const, name: String(input.name ?? 'spawned') }),
       setSessionLabelsFn: (sid, labels) => { setLabelsCalled.push([sid, labels]); },
       setSessionStatusFn: (sid, status) => { setStatusCalled.push([sid, status]); },
       getSessionInfoFn: (sid) => makeSessionInfo({ id: sid ?? sessionId }),
@@ -77,6 +78,7 @@ describe('Pi session self-management regression (#511)', () => {
     });
 
     // All 6 properties should now be defined
+    expect(ctx.spawnSession).toBeDefined();
     expect(ctx.setSessionLabels).toBeDefined();
     expect(ctx.setSessionStatus).toBeDefined();
     expect(ctx.getSessionInfo).toBeDefined();
@@ -85,6 +87,9 @@ describe('Pi session self-management regression (#511)', () => {
     expect(ctx.resolveStatus).toBeDefined();
 
     // Verify they actually work
+    const spawned = await ctx.spawnSession!({ name: 'spawn callback' });
+    expect(spawned).toMatchObject({ sessionId: 'spawn callback', status: 'started' });
+
     await ctx.setSessionLabels!(undefined, ['bug', 'urgent']);
     expect(setLabelsCalled).toEqual([[undefined, ['bug', 'urgent']]]);
 

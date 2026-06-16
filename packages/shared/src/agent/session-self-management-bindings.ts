@@ -37,6 +37,14 @@ export function attachSessionSelfManagementBindings(
   // Direct pass-through bindings — signatures match, no wrapping needed.
   // Each getter resolves fresh from the registry on every access.
 
+  Object.defineProperty(context, 'spawnSession', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.spawnSessionFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
   Object.defineProperty(context, 'setSessionLabels', {
     get() {
       return getSessionScopedToolCallbacks(sessionId)?.setSessionLabelsFn;

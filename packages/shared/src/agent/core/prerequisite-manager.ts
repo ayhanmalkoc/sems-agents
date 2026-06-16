@@ -155,6 +155,18 @@ const RULES: PrerequisiteRule[] = [
   },
 
 
+  // Built-in sessions domain tool: require session-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'sessions' || toolName === 'mcp__session__sessions',
+    resolveRequiredPath: () => {
+      return existsSync(SESSION_TOOLS_DOC_PATH) ? SESSION_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the session tools guide before managing sessions. Please read the file at {filePath} first, then retry.',
+    strict: true,
+  },
+
   // Built-in session mutation tools: require session-tools.md first.
   {
     toolMatcher: (toolName: string) => {

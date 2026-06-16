@@ -16,8 +16,9 @@ export async function handleArchiveSession(
   }
 
   try {
-    await ctx.archiveSession(args.sessionId, args.archived);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.archiveSession(sessionId, args.archived);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(args.archived ? `Archived ${target}.` : `Unarchived ${target}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

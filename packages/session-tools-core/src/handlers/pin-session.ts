@@ -16,8 +16,9 @@ export async function handlePinSession(
   }
 
   try {
-    await ctx.pinSession(args.sessionId, args.pinned);
-    const target = args.sessionId ? `session ${args.sessionId}` : 'current session';
+    const sessionId = args.sessionId?.trim() || undefined;
+    await ctx.pinSession(sessionId, args.pinned);
+    const target = sessionId ? `session ${sessionId}` : 'current session';
     return successResponse(args.pinned ? `Pinned ${target}.` : `Unpinned ${target}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

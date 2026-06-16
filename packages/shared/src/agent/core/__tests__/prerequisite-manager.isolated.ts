@@ -186,6 +186,17 @@ describe('PrerequisiteManager', () => {
       expect(result.blockReason).toContain(docsPath);
     });
 
+    it('matches sessions domain tool and blocks until session docs are read', () => {
+      const docsPath = sessionToolsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      for (const toolName of ['sessions', 'mcp__session__sessions']) {
+        const result = manager.checkPrerequisites(toolName);
+        expect(result.allowed).toBe(false);
+        expect(result.blockReason).toContain(docsPath);
+      }
+    });
+
     it('matches mutating session tools and blocks until session docs are read', () => {
       const docsPath = sessionToolsDocPath();
       mockExistsPaths.add(docsPath);
