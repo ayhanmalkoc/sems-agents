@@ -71,6 +71,16 @@ export interface SessionScopedToolCallbacks {
   setSessionLabelsFn?: (sessionId: string | undefined, labels: string[]) => void | Promise<void>;
   /** Set status on a session (defaults to current). */
   setSessionStatusFn?: (sessionId: string | undefined, status: string) => void | Promise<void>;
+  /** Set the workspace agent profile on a session (defaults to current). */
+  setSessionAgentFn?: (sessionId: string | undefined, agentId: string) => void | Promise<void>;
+  /** Rename a session (defaults to current). */
+  renameSessionFn?: (sessionId: string | undefined, name: string) => void | Promise<void>;
+  /** Archive/unarchive a session (defaults to current). */
+  archiveSessionFn?: (sessionId: string | undefined, archived: boolean) => void | Promise<void>;
+  /** Pin/unpin a session (defaults to current). */
+  pinSessionFn?: (sessionId: string | undefined, pinned: boolean) => void | Promise<void>;
+  /** Permanently delete an explicit session. */
+  deleteSessionFn?: (sessionId: string) => void | Promise<void>;
   /** Get detailed info about a session (defaults to current). */
   getSessionInfoFn?: (sessionId?: string) => import('@craft-agent/session-tools-core').SessionInfo | null;
   /** List sessions in the workspace with pagination. */

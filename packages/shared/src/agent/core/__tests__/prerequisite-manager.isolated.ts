@@ -46,6 +46,10 @@ function resourcesDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'resources-tools.md'));
 }
 
+function sessionToolsDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'session-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -180,6 +184,35 @@ describe('PrerequisiteManager', () => {
       const result = manager.checkPrerequisites('mcp__session__agents');
       expect(result.allowed).toBe(false);
       expect(result.blockReason).toContain(docsPath);
+    });
+
+    it('matches mutating session tools and blocks until session docs are read', () => {
+      const docsPath = sessionToolsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      for (const toolName of ['set_session_agent', 'rename_session', 'archive_session', 'pin_session', 'delete_session']) {
+        const result = manager.checkPrerequisites(toolName);
+        expect(result.allowed).toBe(false);
+        expect(result.blockReason).toContain(docsPath);
+      }
+    });
+
+    it('does not block read-only session tools with session docs rule', () => {
+      mockExistsPaths.add(sessionToolsDocPath());
+
+      expect(manager.checkPrerequisites('list_sessions').allowed).toBe(true);
+      expect(manager.checkPrerequisites('get_session_info').allowed).toBe(true);
+    });
+
+    it('matches MCP mutating session tools and blocks until session docs are read', () => {
+      const docsPath = sessionToolsDocPath();
+      mockExistsPaths.add(docsPath);
+
+      for (const toolName of ['mcp__session__set_session_agent', 'mcp__session__rename_session', 'mcp__session__archive_session', 'mcp__session__pin_session', 'mcp__session__delete_session']) {
+        const result = manager.checkPrerequisites(toolName);
+        expect(result.allowed).toBe(false);
+        expect(result.blockReason).toContain(docsPath);
+      }
     });
 
     it('matches right dock tools and blocks until right dock docs are read', () => {

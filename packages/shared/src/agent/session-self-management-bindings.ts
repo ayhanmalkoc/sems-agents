@@ -53,6 +53,46 @@ export function attachSessionSelfManagementBindings(
     enumerable: true,
   });
 
+  Object.defineProperty(context, 'setSessionAgent', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.setSessionAgentFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
+  Object.defineProperty(context, 'renameSession', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.renameSessionFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
+  Object.defineProperty(context, 'archiveSession', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.archiveSessionFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
+  Object.defineProperty(context, 'pinSession', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.pinSessionFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
+  Object.defineProperty(context, 'deleteSession', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.deleteSessionFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
   Object.defineProperty(context, 'listSessions', {
     get() {
       return getSessionScopedToolCallbacks(sessionId)?.listSessionsFn;

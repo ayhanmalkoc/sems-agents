@@ -61,6 +61,11 @@ describe('session tool filtering helpers', () => {
     expect(blocked.has('source_oauth_trigger')).toBe(true);
     expect(blocked.has('source_credential_prompt')).toBe(true);
     expect(blocked.has('spawn_session')).toBe(true);
+    expect(blocked.has('set_session_agent')).toBe(true);
+    expect(blocked.has('rename_session')).toBe(true);
+    expect(blocked.has('archive_session')).toBe(true);
+    expect(blocked.has('pin_session')).toBe(true);
+    expect(blocked.has('delete_session')).toBe(true);
   });
 
   it('safe-mode helpers support MCP prefixing', () => {
@@ -72,5 +77,10 @@ describe('session tool filtering helpers', () => {
     expect(allowedPrefixed.has('mcp__session__script_sandbox')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__source_oauth_trigger')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__spawn_session')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__set_session_agent')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__rename_session')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__archive_session')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__pin_session')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__delete_session')).toBe(true);
   });
 });

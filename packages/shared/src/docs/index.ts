@@ -124,6 +124,7 @@ export const DOC_REFS = {
   agentsTools: `${APP_ROOT}/docs/agents-tools.md`,
   automationsTools: `${APP_ROOT}/docs/automations-tools.md`,
   resourcesTools: `${APP_ROOT}/docs/resources-tools.md`,
+  sessionTools: `${APP_ROOT}/docs/session-tools.md`,
   craftCli: `${APP_ROOT}/docs/craft-cli.md`,
   docsDir: `${APP_ROOT}/docs/`,
 } as const;

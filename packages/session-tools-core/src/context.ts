@@ -316,6 +316,21 @@ export interface SessionToolContext {
   /** Set status on a session. Defaults to current session if no ID given. Injected by backend. */
   setSessionStatus?(sessionId: string | undefined, status: string): void | Promise<void>;
 
+  /** Set the agent profile on a session. Defaults to current session if no ID given. Injected by backend. */
+  setSessionAgent?(sessionId: string | undefined, agentId: string): void | Promise<void>;
+
+  /** Rename a session. Defaults to current session if no ID given. Injected by backend. */
+  renameSession?(sessionId: string | undefined, name: string): void | Promise<void>;
+
+  /** Archive or unarchive a session. Defaults to current session if no ID given. Injected by backend. */
+  archiveSession?(sessionId: string | undefined, archived: boolean): void | Promise<void>;
+
+  /** Pin or unpin a session. Defaults to current session if no ID given. Injected by backend. */
+  pinSession?(sessionId: string | undefined, pinned: boolean): void | Promise<void>;
+
+  /** Permanently delete an explicit session. No current-session default. Injected by backend. */
+  deleteSession?(sessionId: string): void | Promise<void>;
+
   /** Get detailed info about a session. Defaults to current session if no ID given. Injected by backend. */
   getSessionInfo?(sessionId?: string): SessionInfo | null;
 

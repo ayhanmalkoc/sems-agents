@@ -63,6 +63,9 @@ const AUTOMATIONS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs
 /** Global resources tools docs path required before workspace resource management. */
 const RESOURCES_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'resources-tools.md'));
 
+/** Global session tools docs path required before mutating session management. */
+const SESSION_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'session-tools.md'));
+
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
     return getBrowserToolEnabled();
@@ -148,6 +151,32 @@ const RULES: PrerequisiteRule[] = [
     },
     blockMessage:
       'You must read the agents tools guide before managing workspace agents. Please read the file at {filePath} first, then retry.',
+    strict: true,
+  },
+
+
+  // Built-in session mutation tools: require session-tools.md first.
+  {
+    toolMatcher: (toolName: string) => {
+      const names = new Set([
+        'set_session_agent',
+        'rename_session',
+        'archive_session',
+        'pin_session',
+        'delete_session',
+        'mcp__session__set_session_agent',
+        'mcp__session__rename_session',
+        'mcp__session__archive_session',
+        'mcp__session__pin_session',
+        'mcp__session__delete_session',
+      ]);
+      return names.has(toolName);
+    },
+    resolveRequiredPath: () => {
+      return existsSync(SESSION_TOOLS_DOC_PATH) ? SESSION_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the session tools guide before managing sessions. Please read the file at {filePath} first, then retry.',
     strict: true,
   },
 

@@ -28,6 +28,11 @@ describe('session tool safe-mode classification', () => {
       'mcp__session__source_credential_prompt',
       'mcp__session__spawn_session',
       'mcp__session__update_user_preferences',
+      'mcp__session__set_session_agent',
+      'mcp__session__rename_session',
+      'mcp__session__archive_session',
+      'mcp__session__pin_session',
+      'mcp__session__delete_session',
     ] as const;
 
     for (const toolName of blockedTools) {

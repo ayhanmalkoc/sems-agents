@@ -36,6 +36,11 @@ import { handleRenderTemplate } from './handlers/render-template.ts';
 import { handleSendDeveloperFeedback } from './handlers/send-developer-feedback.ts';
 import { handleSetSessionLabels } from './handlers/set-session-labels.ts';
 import { handleSetSessionStatus } from './handlers/set-session-status.ts';
+import { handleSetSessionAgent } from './handlers/set-session-agent.ts';
+import { handleRenameSession } from './handlers/rename-session.ts';
+import { handleArchiveSession } from './handlers/archive-session.ts';
+import { handlePinSession } from './handlers/pin-session.ts';
+import { handleDeleteSession } from './handlers/delete-session.ts';
 import { handleGetSessionInfo } from './handlers/get-session-info.ts';
 import { handleListSessions } from './handlers/list-sessions.ts';
 import { handleSendAgentMessage } from './handlers/send-agent-message.ts';
@@ -203,6 +208,31 @@ export const SetSessionLabelsSchema = z.object({
 export const SetSessionStatusSchema = z.object({
   sessionId: z.string().optional().describe('Session ID to update. Omit to update the current session.'),
   status: z.string().describe('Status to set (e.g., "todo", "in_progress", "done")'),
+});
+
+export const SetSessionAgentSchema = z.object({
+  sessionId: z.string().optional().describe('Session ID to update. Omit to update the current session.'),
+  agentId: z.string().describe('Workspace agent profile ID to set on the session'),
+});
+
+export const RenameSessionSchema = z.object({
+  sessionId: z.string().optional().describe('Session ID to rename. Omit to rename the current session.'),
+  name: z.string().describe('New session name'),
+});
+
+export const ArchiveSessionSchema = z.object({
+  sessionId: z.string().optional().describe('Session ID to update. Omit to update the current session.'),
+  archived: z.boolean().describe('True to archive, false to unarchive'),
+});
+
+export const PinSessionSchema = z.object({
+  sessionId: z.string().optional().describe('Session ID to update. Omit to update the current session.'),
+  pinned: z.boolean().describe('True to pin, false to unpin'),
+});
+
+export const DeleteSessionSchema = z.object({
+  sessionId: z.string().describe('Session ID to permanently delete. Required; current-session default is not supported.'),
+  confirm: z.literal(true).describe('Required destructive confirmation. Must be true.'),
 });
 
 export const GetSessionInfoSchema = z.object({
@@ -543,6 +573,26 @@ Pass an empty array to clear all labels. Omit sessionId to target the current se
 Use this to signal completion or trigger status-based automations (SessionStatusChange events).
 Omit sessionId to target the current session.`,
 
+  set_session_agent: `Set the workspace agent profile on the current session or a specific session by ID.
+
+Use this when the user asks to switch which workspace agent owns a chat/session. Omit sessionId to target the current session.`,
+
+  rename_session: `Rename the current session or a specific session by ID.
+
+Use a clear, non-empty name. Omit sessionId to target the current session.`,
+
+  archive_session: `Archive or unarchive the current session or a specific session by ID.
+
+Set archived=true to archive; archived=false to restore. Omit sessionId to target the current session.`,
+
+  pin_session: `Pin or unpin the current session or a specific session by ID.
+
+Set pinned=true to pin; pinned=false to unpin. Omit sessionId to target the current session.`,
+
+  delete_session: `Permanently delete a specific session by ID.
+
+Requires an explicit sessionId and confirm=true. This tool has no current-session default and does not support bulk deletion.`,
+
   get_session_info: `Get metadata about the current session or a specific session by ID.
 
 Returns labels, status, name, permission mode, and other details.
@@ -637,6 +687,11 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },
+  { name: 'set_session_agent', description: TOOL_DESCRIPTIONS.set_session_agent, inputSchema: SetSessionAgentSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionAgent },
+  { name: 'rename_session', description: TOOL_DESCRIPTIONS.rename_session, inputSchema: RenameSessionSchema, executionMode: 'registry', safeMode: 'block', handler: handleRenameSession },
+  { name: 'archive_session', description: TOOL_DESCRIPTIONS.archive_session, inputSchema: ArchiveSessionSchema, executionMode: 'registry', safeMode: 'block', handler: handleArchiveSession },
+  { name: 'pin_session', description: TOOL_DESCRIPTIONS.pin_session, inputSchema: PinSessionSchema, executionMode: 'registry', safeMode: 'block', handler: handlePinSession },
+  { name: 'delete_session', description: TOOL_DESCRIPTIONS.delete_session, inputSchema: DeleteSessionSchema, executionMode: 'registry', safeMode: 'block', handler: handleDeleteSession },
   { name: 'get_session_info', description: TOOL_DESCRIPTIONS.get_session_info, inputSchema: GetSessionInfoSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleGetSessionInfo },
   { name: 'list_sessions', description: TOOL_DESCRIPTIONS.list_sessions, inputSchema: ListSessionsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleListSessions },
   // Inter-session messaging

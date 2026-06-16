@@ -4553,6 +4553,31 @@ export class SessionManager implements ISessionManager {
         setSessionStatusFn: async (sessionId: string | undefined, status: string) => {
           await this.setSessionStatus(sessionId ?? managed.id, status as SessionStatus)
         },
+        setSessionAgentFn: async (sessionId: string | undefined, agentId: string) => {
+          await this.setSessionAgentProfile(sessionId ?? managed.id, agentId)
+        },
+        renameSessionFn: async (sessionId: string | undefined, name: string) => {
+          await this.renameSession(sessionId ?? managed.id, name)
+        },
+        archiveSessionFn: async (sessionId: string | undefined, archived: boolean) => {
+          const targetId = sessionId ?? managed.id
+          if (archived) {
+            await this.archiveSession(targetId)
+          } else {
+            await this.unarchiveSession(targetId)
+          }
+        },
+        pinSessionFn: async (sessionId: string | undefined, pinned: boolean) => {
+          const targetId = sessionId ?? managed.id
+          if (pinned) {
+            await this.flagSession(targetId)
+          } else {
+            await this.unflagSession(targetId)
+          }
+        },
+        deleteSessionFn: async (sessionId: string) => {
+          await this.deleteSession(sessionId)
+        },
         getSessionInfoFn: (sessionId?: string) => {
           const targetId = sessionId ?? managed.id
           const session = this.sessions.get(targetId)
