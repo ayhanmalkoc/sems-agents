@@ -23,6 +23,8 @@ export interface DiffViewerPreferences {
   disableBackground?: boolean;
 }
 
+export type MemoryAutomationMode = 'auto' | 'review' | 'off';
+
 export interface UserPreferences {
   name?: string;
   timezone?: string;
@@ -33,8 +35,10 @@ export interface UserPreferences {
   diffViewer?: DiffViewerPreferences;
   // Whether to include Co-Authored-By trailer on git commits (default: true)
   includeCoAuthoredBy?: boolean;
-  // Whether completed sessions should enqueue reviewable memory suggestions (default: true)
+  // Legacy: false disables automatic memory suggestions
   autoSuggestMemories?: boolean;
+  // Automatic memory behavior after completed sessions (default: review)
+  memoryAutomationMode?: MemoryAutomationMode;
   openTarget?: {
     defaultTargetId?: string;
   };
@@ -90,6 +94,13 @@ export function updatePreferences(updates: Partial<UserPreferences>): UserPrefer
   };
   savePreferences(updated);
   return updated;
+}
+
+
+export function resolveMemoryAutomationMode(prefs: UserPreferences = loadPreferences()): MemoryAutomationMode {
+  if (prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off') return prefs.memoryAutomationMode;
+  if (prefs.autoSuggestMemories === false) return 'off';
+  return 'review';
 }
 
 export function getPreferencesPath(): string {

@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { CreateMemoryInput, CreateMemorySuggestionInput, MemoryRecord, MemoryStatusSnapshot, MemorySuggestion, UpdateMemoryInput } from '../memory/types.ts'
+import type { CreateMemoryInput, CreateWorkingMemoryInput, MemoryHygieneItem, MemoryRecord, MemoryStatusSnapshot, MemorySuggestion, UpdateMemoryInput, WorkingMemoryNote, WorkingMemoryScope } from '../memory/types.ts'
 
 type ToolResult = {
   content: Array<{ type: 'text'; text: string }>
@@ -15,6 +15,13 @@ export interface MemoryFns {
   create: (input: CreateMemoryInput) => Promise<MemoryRecord>
   update: (memoryId: string, updates: UpdateMemoryInput) => Promise<MemoryRecord>
   delete: (memoryId: string) => Promise<void>
+  hygiene: () => Promise<MemoryHygieneItem[]>
+  merge: (targetId: string, sourceId: string) => Promise<{ target: MemoryRecord; source: MemoryRecord }>
+  markStale: (memoryId: string) => Promise<MemoryRecord>
+  refresh: (memoryId: string, updates: UpdateMemoryInput) => Promise<MemoryRecord>
+  workingList: () => Promise<WorkingMemoryNote[]>
+  workingAdd: (input: CreateWorkingMemoryInput) => Promise<WorkingMemoryNote>
+  workingClear: (scope: WorkingMemoryScope) => Promise<number>
   suggestFromSession: (sessionId: string) => Promise<MemorySuggestion | MemorySuggestion[]>
   approve: (suggestionId: string) => Promise<{ suggestion: MemorySuggestion; memory: MemoryRecord }>
   reject: (suggestionId: string) => Promise<MemorySuggestion>
@@ -22,7 +29,7 @@ export interface MemoryFns {
 }
 
 const MemorySchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>, working-list, working-add <json>, working-clear <session|day>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -32,21 +39,41 @@ function parseJsonPayload<T>(value: string, label: string): T {
   try { return JSON.parse(value) as T } catch (error) { throw new Error(`Invalid JSON payload: ${error instanceof Error ? error.message : String(error)}`) }
 }
 function formatMemory(memory: MemoryRecord): string {
-  const parts = [memory.id, `type=${memory.type}`, `scope=${memory.scope}`, `title=${JSON.stringify(memory.title)}`, `sourceSessionId=${memory.sourceSessionId}`]
+  const content = memory.content.length > 240 ? `${memory.content.slice(0, 237)}...` : memory.content
+  const parts = [memory.id, `type=${memory.type}`, `scope=${memory.scope}`, `status=${memory.status ?? 'active'}`, `confidence=${memory.confidence ?? 'n/a'}`, `title=${JSON.stringify(memory.title)}`, `sourceSessionId=${memory.sourceSessionId}`]
   if (memory.tags?.length) parts.push(`tags=${memory.tags.join(',')}`)
   if (memory.agentProfileId) parts.push(`agentProfileId=${memory.agentProfileId}`)
   if (memory.sessionId) parts.push(`sessionId=${memory.sessionId}`)
-  return `- ${parts.join(' ')}\n  ${memory.content}`
+  if (memory.supersedes?.length) parts.push(`supersedes=${memory.supersedes.join(',')}`)
+  return `- ${parts.join(' ')}\n  ${content}`
 }
 function formatSuggestion(suggestion: MemorySuggestion): string {
-  const parts = [suggestion.id, `status=${suggestion.status}`, `type=${suggestion.type}`, `scope=${suggestion.scope}`, `title=${JSON.stringify(suggestion.title)}`]
+  const content = suggestion.content.length > 240 ? `${suggestion.content.slice(0, 237)}...` : suggestion.content
+  const parts = [suggestion.id, `status=${suggestion.status}`, `type=${suggestion.type}`, `scope=${suggestion.scope}`, `confidence=${suggestion.confidence ?? 'n/a'}`, `title=${JSON.stringify(suggestion.title)}`]
   if (suggestion.memoryId) parts.push(`memoryId=${suggestion.memoryId}`)
-  return `- ${parts.join(' ')}\n  ${suggestion.content}`
+  return `- ${parts.join(' ')}\n  ${content}`
 }
 function formatSuggestions(suggestions: MemorySuggestion[]): string {
   if (suggestions.length === 0) return 'No strong memory candidates found'
   return suggestions.map(formatSuggestion).join('\n')
 }
+
+function formatHygiene(items: MemoryHygieneItem[]): string {
+  if (items.length === 0) return 'Memory hygiene: no issues found'
+  return ['Memory hygiene:', ...items.map(item => `- ${item.kind} memoryId=${item.memoryId}${item.relatedMemoryId ? ` relatedMemoryId=${item.relatedMemoryId}` : ''} reason=${JSON.stringify(item.reason)}`)].join('\n')
+}
+function formatWorkingNote(note: WorkingMemoryNote): string {
+  const parts = [note.id, `scope=${note.scope}`, `title=${JSON.stringify(note.title)}`, `sourceSessionId=${note.sourceSessionId}`]
+  if (note.sessionId) parts.push(`sessionId=${note.sessionId}`)
+  if (note.day) parts.push(`day=${note.day}`)
+  if (note.tags?.length) parts.push(`tags=${note.tags.join(',')}`)
+  return `- ${parts.join(' ')}\n  ${note.content}`
+}
+function formatWorkingNotes(notes: WorkingMemoryNote[]): string {
+  if (notes.length === 0) return 'Working memory: none'
+  return ['Working memory:', ...notes.map(formatWorkingNote)].join('\n')
+}
+
 function formatMemories(memories: MemoryRecord[]): string {
   if (memories.length === 0) return 'Memories: none'
   return ['Memories:', ...memories.map(formatMemory)].join('\n')
@@ -88,6 +115,38 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       const memory = await fns.update(memoryId, parseJsonPayload<UpdateMemoryInput>(payload, 'update'))
       return success(`Updated memory ${memory.id}\n${formatMemory(memory)}`)
     }
+    if (verb === 'hygiene') return success(formatHygiene(await fns.hygiene()))
+    if (verb === 'merge') {
+      const [targetId, sourceId] = rest
+      if (!targetId || !sourceId) return failure('merge requires target and source memory ids')
+      const result = await fns.merge(targetId, sourceId)
+      return success(`Merged source ${result.source.id} into target ${result.target.id}\n${formatMemory(result.target)}\n${formatMemory(result.source)}`)
+    }
+    if (verb === 'mark-stale') {
+      const memoryId = rest[0]
+      if (!memoryId) return failure('mark-stale requires a memory id')
+      const memory = await fns.markStale(memoryId)
+      return success(`Marked memory stale ${memory.id}\n${formatMemory(memory)}`)
+    }
+    if (verb === 'refresh') {
+      const memoryId = rest[0]
+      if (!memoryId) return failure('refresh requires a memory id')
+      const payload = trimmed.slice(rawVerb.length).trim().slice(memoryId.length).trim()
+      const memory = await fns.refresh(memoryId, parseJsonPayload<UpdateMemoryInput>(payload, 'refresh'))
+      return success(`Refreshed memory ${memory.id}\n${formatMemory(memory)}`)
+    }
+    if (verb === 'working-list') return success(formatWorkingNotes(await fns.workingList()))
+    if (verb === 'working-add') {
+      const input = parseJsonPayload<CreateWorkingMemoryInput>(trimmed.slice(rawVerb.length).trim(), 'working-add')
+      const note = await fns.workingAdd(input)
+      return success(`Added working memory ${note.id}\n${formatWorkingNote(note)}`)
+    }
+    if (verb === 'working-clear') {
+      const scope = rest[0] as WorkingMemoryScope | undefined
+      if (scope !== 'session' && scope !== 'day') return failure('working-clear requires scope: session or day')
+      const count = await fns.workingClear(scope)
+      return success(`Cleared ${count} working memory note${count === 1 ? '' : 's'} for scope ${scope}`)
+    }
     if (verb === 'delete') {
       const memoryId = rest[0]
       if (!memoryId) return failure('delete requires a memory id')
@@ -125,7 +184,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
 }
 
 export function createMemoryTool(options: { getMemoryFns: () => MemoryFns | undefined }) {
-  return tool('memory', 'Manage persistent scoped workspace memory: list, inspect, search, create/update/delete approved memories, suggest candidates, approve, and reject.', MemorySchema.shape, async (args) => {
+  return tool('memory', 'Manage persistent scoped workspace memory: retrieval, suggestions, hygiene, working notes, approvals, and deletion.', MemorySchema.shape, async (args) => {
     const fns = options.getMemoryFns()
     if (!fns) return failure('Memory controls are not available. This tool requires the desktop app.')
     return executeMemoryCommand(String(args.command ?? 'status'), fns)

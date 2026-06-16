@@ -411,10 +411,12 @@ export const RPC_CHANNELS = {
   memory: {
     GET: 'memory:get',
     GET_SUGGESTIONS: 'memory:getSuggestions',
+    GET_WORKING: 'memory:getWorking',
     SEARCH: 'memory:search',
     DELETE: 'memory:delete',
     APPROVE: 'memory:approve',
     REJECT: 'memory:reject',
+    CLEAR_WORKING: 'memory:clearWorking',
     CHANGED: 'memory:changed',
   },
   messaging: {

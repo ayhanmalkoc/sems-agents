@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { executeMemoryCommand, type MemoryFns } from '../memory-tools.ts'
-import type { MemoryRecord, MemorySuggestion } from '../../memory/index.ts'
+import type { MemoryRecord, MemorySuggestion, WorkingMemoryNote } from '../../memory/index.ts'
 
 const memory: MemoryRecord = {
   id: 'mem-1',
@@ -19,6 +19,16 @@ const suggestion: MemorySuggestion = {
   status: 'pending',
 }
 
+const workingNote: WorkingMemoryNote = {
+  id: 'work-1',
+  scope: 'session',
+  title: 'Working note',
+  content: 'Temporary context.',
+  sourceSessionId: 'session-1',
+  createdBy: 'test',
+  createdAt: '2026-06-16T00:00:00.000Z',
+}
+
 function fns(): MemoryFns {
   return {
     status: async () => ({ available: true, memories: 1, suggestions: 1, pendingSuggestions: 1 }),
@@ -28,6 +38,13 @@ function fns(): MemoryFns {
     create: async (input) => ({ ...memory, ...input, id: input.id ?? 'mem-created' }),
     update: async (_id, updates) => ({ ...memory, ...updates }),
     delete: async () => {},
+    hygiene: async () => [],
+    merge: async () => ({ target: { ...memory, supersedes: ['mem-2'] }, source: { ...memory, id: 'mem-2', status: 'stale' } }),
+    markStale: async () => ({ ...memory, status: 'stale' }),
+    refresh: async (_id, updates) => ({ ...memory, ...updates, status: 'active' }),
+    workingList: async () => [workingNote],
+    workingAdd: async (input) => ({ ...workingNote, ...input, id: input.id ?? 'work-created' }),
+    workingClear: async () => 1,
     suggestFromSession: async () => suggestion,
     approve: async () => ({ suggestion: { ...suggestion, status: 'approved', memoryId: memory.id }, memory }),
     reject: async () => ({ ...suggestion, status: 'rejected' }),
@@ -47,6 +64,13 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('create {"type":"project_decision","scope":"workspace","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Created memory')
     expect((await executeMemoryCommand('update mem-1 {"title":"Next"}', fns())).content[0].text).toContain('Next')
     expect((await executeMemoryCommand('delete mem-1', fns())).content[0].text).toContain('Deleted memory mem-1')
+    expect((await executeMemoryCommand('hygiene', fns())).content[0].text).toContain('Memory hygiene')
+    expect((await executeMemoryCommand('merge mem-1 mem-2', fns())).content[0].text).toContain('Merged source')
+    expect((await executeMemoryCommand('mark-stale mem-1', fns())).content[0].text).toContain('stale')
+    expect((await executeMemoryCommand('refresh mem-1 {"content":"Fresh"}', fns())).content[0].text).toContain('Refreshed memory')
+    expect((await executeMemoryCommand('working-list', fns())).content[0].text).toContain('Working memory')
+    expect((await executeMemoryCommand('working-add {"scope":"session","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Added working memory')
+    expect((await executeMemoryCommand('working-clear session', fns())).content[0].text).toContain('Cleared 1')
     expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created 1 memory suggestion')
     expect((await executeMemoryCommand('approve sug-1', fns())).content[0].text).toContain('Approved suggestion')
     expect((await executeMemoryCommand('reject sug-1', fns())).content[0].text).toContain('Rejected suggestion')

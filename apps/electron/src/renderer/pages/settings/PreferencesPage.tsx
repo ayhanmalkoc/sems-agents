@@ -21,7 +21,7 @@ import {
   SettingsCard,
   SettingsInput,
   SettingsTextarea,
-  SettingsToggle,
+  SettingsSegmentedControl,
 } from '@/components/settings'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
@@ -37,7 +37,7 @@ interface PreferencesFormState {
   city: string
   country: string
   notes: string
-  autoSuggestMemories: boolean
+  memoryAutomationMode: 'auto' | 'review' | 'off'
 }
 
 const emptyFormState: PreferencesFormState = {
@@ -46,7 +46,7 @@ const emptyFormState: PreferencesFormState = {
   city: '',
   country: '',
   notes: '',
-  autoSuggestMemories: true,
+  memoryAutomationMode: 'review',
 }
 
 // Parse JSON to form state
@@ -59,7 +59,7 @@ function parsePreferences(json: string): PreferencesFormState {
       city: prefs.location?.city || '',
       country: prefs.location?.country || '',
       notes: prefs.notes || '',
-      autoSuggestMemories: prefs.autoSuggestMemories !== false,
+      memoryAutomationMode: prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off' ? prefs.memoryAutomationMode : (prefs.autoSuggestMemories === false ? 'off' : 'review'),
     }
   } catch {
     return emptyFormState
@@ -86,7 +86,8 @@ function serializePreferences(state: PreferencesFormState, base: Record<string, 
 
   if (state.notes) prefs.notes = state.notes
   else delete prefs.notes
-  prefs.autoSuggestMemories = state.autoSuggestMemories
+  prefs.memoryAutomationMode = state.memoryAutomationMode
+  delete prefs.autoSuggestMemories
   prefs.updatedAt = Date.now()
 
   return JSON.stringify(prefs, null, 2)
@@ -266,13 +267,20 @@ export default function PreferencesPage() {
             description="Control how Craft suggests durable learnings from completed chats."
           >
             <SettingsCard divided={false}>
-              <SettingsToggle
-                label="Auto-suggest memories"
-                description="Automatically add reviewable memory suggestions after completed sessions. Nothing is saved as approved memory until you approve it."
-                checked={formState.autoSuggestMemories}
-                onCheckedChange={(v) => updateField('autoSuggestMemories', v)}
-                inCard
-              />
+              <div className="px-4 py-3.5">
+                <div className="mb-2 text-sm font-medium text-foreground">Memory automation</div>
+                <div className="mb-3 text-xs text-muted-foreground">Choose how completed sessions update memory.</div>
+                <SettingsSegmentedControl
+                  value={formState.memoryAutomationMode}
+                  onValueChange={(v) => updateField('memoryAutomationMode', v as PreferencesFormState['memoryAutomationMode'])}
+                  options={[
+                    { value: 'auto', label: 'Auto-save' },
+                    { value: 'review', label: 'Review first' },
+                    { value: 'off', label: 'Off' },
+                  ]}
+                  size="sm"
+                />
+              </div>
             </SettingsCard>
           </SettingsSection>
 

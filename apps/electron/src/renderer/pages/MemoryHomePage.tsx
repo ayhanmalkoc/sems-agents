@@ -3,6 +3,7 @@ import { Brain, Check, ChevronDown, ChevronRight, Search, Trash2, X } from 'luci
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
+import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { Input } from '@/components/ui/input'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
@@ -22,9 +23,12 @@ type MemoryRecord = {
   updatedBy?: string
   agentProfileId?: string
   sessionId?: string
+  confidence?: string
+  status?: 'active' | 'stale'
+  supersedes?: string[]
 }
 
-type MemorySuggestion = MemoryRecord & {
+type MemorySuggestion = Omit<MemoryRecord, 'status'> & {
   status: 'pending' | 'approved' | 'rejected'
   reason?: string
   memoryId?: string
@@ -32,7 +36,20 @@ type MemorySuggestion = MemoryRecord & {
   decidedBy?: string
 }
 
-type Tab = 'memories' | 'suggestions'
+type WorkingMemoryNote = {
+  id: string
+  scope: 'session' | 'day'
+  title: string
+  content: string
+  tags?: string[]
+  sourceSessionId: string
+  createdAt: string
+  createdBy?: string
+  sessionId?: string
+  day?: string
+}
+
+type Tab = 'memories' | 'suggestions' | 'working'
 type Filters = { type: string; scope: string; sourceSessionId: string; status: string }
 
 const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', sourceSessionId: '', status: 'pending' }
@@ -73,6 +90,9 @@ function AuditDetails({ item }: { item: MemoryRecord | MemorySuggestion }) {
           {auditRow('sourceSessionId', item.sourceSessionId)}
           {auditRow('sessionId', item.sessionId)}
           {auditRow('agentProfileId', item.agentProfileId)}
+          {auditRow('confidence', item.confidence)}
+          {auditRow('status', item.status)}
+          {auditRow('supersedes', item.supersedes?.join(', '))}
           {auditRow('createdBy', item.createdBy)}
           {auditRow('createdAt', item.createdAt)}
           {auditRow('updatedBy', item.updatedBy)}
@@ -86,7 +106,7 @@ function AuditDetails({ item }: { item: MemoryRecord | MemorySuggestion }) {
   )
 }
 
-function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id: string) => void }) {
+function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -95,6 +115,8 @@ function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id:
             <h3 className="truncate text-sm font-medium text-foreground">{memory.title}</h3>
             {badge(memory.type)}
             {badge(memory.scope)}
+            {badge(memory.status ?? 'active')}
+            {memory.confidence && badge(memory.confidence)}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
@@ -103,9 +125,18 @@ function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id:
           </div>
           <AuditDetails item={memory} />
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 gap-1">
+          {workspaceRoot && (
+            <EditPopover
+              trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs">Edit</Button>}
+              onInlineComplete={onRefresh}
+              {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)}
+            />
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -123,6 +154,7 @@ function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: Memor
             {badge(suggestion.status)}
             {badge(suggestion.type)}
             {badge(suggestion.scope)}
+            {suggestion.confidence && badge(suggestion.confidence)}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{suggestion.content}</p>
           {suggestion.reason && <p className="mt-2 text-xs text-foreground/45">{suggestion.reason}</p>}
@@ -143,6 +175,24 @@ function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: Memor
   )
 }
 
+
+function WorkingCard({ note }: { note: WorkingMemoryNote }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="truncate text-sm font-medium text-foreground">{note.title}</h3>
+        {badge(note.scope)}
+        {note.day && badge(note.day)}
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{note.content}</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
+        <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(note.sourceSessionId))}>source: {note.sourceSessionId}</button>
+        {note.tags?.map(tag => <span key={tag}>#{tag}</span>)}
+      </div>
+    </div>
+  )
+}
+
 function selectOptions(values: string[]) {
   return ['all', ...Array.from(new Set(values.filter(Boolean))).sort()]
 }
@@ -156,24 +206,29 @@ function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters,
 }
 
 export default function MemoryHomePage() {
-  const { activeWorkspaceId } = useAppShellContext()
+  const { activeWorkspaceId, workspaces } = useAppShellContext()
   const [tab, setTab] = React.useState<Tab>('memories')
   const [query, setQuery] = React.useState('')
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS)
   const [memories, setMemories] = React.useState<MemoryRecord[]>([])
   const [suggestions, setSuggestions] = React.useState<MemorySuggestion[]>([])
+  const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
   const [loading, setLoading] = React.useState(false)
+  const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
+  const workspaceRoot = activeWorkspace?.rootPath ?? ''
 
   const refresh = React.useCallback(async () => {
     if (!activeWorkspaceId) return
     setLoading(true)
     try {
-      const [memoryRows, suggestionRows] = await Promise.all([
+      const [memoryRows, suggestionRows, workingRows] = await Promise.all([
         query.trim() ? window.electronAPI.searchMemories(activeWorkspaceId, query.trim()) : window.electronAPI.getMemories(activeWorkspaceId),
         window.electronAPI.getMemorySuggestions(activeWorkspaceId),
+        window.electronAPI.getWorkingMemoryNotes(activeWorkspaceId),
       ])
       setMemories(memoryRows as MemoryRecord[])
       setSuggestions(suggestionRows as MemorySuggestion[])
+      setWorkingNotes(workingRows as WorkingMemoryNote[])
     } catch (error) {
       toast.error('Failed to load memory', { description: error instanceof Error ? error.message : String(error) })
     } finally {
@@ -213,10 +268,17 @@ export default function MemoryHomePage() {
     }
   }
 
+  const clearWorking = async (scope: 'session' | 'day') => {
+    if (!activeWorkspaceId) return
+    const count = await window.electronAPI.clearWorkingMemoryNotes(activeWorkspaceId, scope)
+    toast.success(`Cleared ${count} ${scope} working note${count === 1 ? '' : 's'}`)
+    void refresh()
+  }
+
   const pendingCount = suggestions.filter(item => item.status === 'pending').length
   const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories'))
   const visibleSuggestions = suggestions.filter(suggestion => matchesFilters(suggestion, filters, 'suggestions'))
-  const activeRows = tab === 'memories' ? memories : suggestions
+  const activeRows = tab === 'memories' ? memories : tab === 'suggestions' ? suggestions : []
   const typeOptions = selectOptions(activeRows.map(item => item.type))
   const scopeOptions = selectOptions(activeRows.map(item => item.scope))
 
@@ -225,22 +287,38 @@ export default function MemoryHomePage() {
       <PanelHeader title="Memory" />
       <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
         <div className="rounded-3xl border border-border/70 bg-card/70 p-5">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-primary/10 p-2 text-primary"><Brain className="h-5 w-5" /></div>
-            <div>
-              <h2 className="text-base font-semibold text-foreground">Agent-managed memory</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-foreground/60">The agent can remember explicit instructions directly. Inferred learnings stay reviewable as scoped suggestions with audit history.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="rounded-2xl bg-primary/10 p-2 text-primary"><Brain className="h-5 w-5" /></div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Agent-managed memory</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-foreground/60">The agent can remember explicit instructions directly. Automatic memory can save or queue strong learnings based on preference.</p>
+              </div>
             </div>
+            {workspaceRoot && (
+              <EditPopover
+                trigger={<Button size="sm">Create</Button>}
+                onInlineComplete={refresh}
+                {...getEditConfig('memory-create', workspaceRoot)}
+              />
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2">
-            {(['memories', 'suggestions'] as Tab[]).map(item => (
+            {(['memories', 'suggestions', 'working'] as Tab[]).map(item => (
               <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)}>
-                {item === 'memories' ? `Memories (${memories.length})` : `Suggestions (${pendingCount})`}
+                {item === 'memories' ? `Memories (${memories.length})` : item === 'suggestions' ? `Suggestions (${pendingCount})` : `Working (${workingNotes.length})`}
               </Button>
             ))}
+            {tab === 'suggestions' && workspaceRoot && pendingCount > 0 && (
+              <EditPopover
+                trigger={<Button size="sm" variant="outline">Review</Button>}
+                onInlineComplete={refresh}
+                {...getEditConfig('memory-review', workspaceRoot)}
+              />
+            )}
           </div>
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-foreground/35" />
@@ -248,6 +326,7 @@ export default function MemoryHomePage() {
           </div>
         </div>
 
+        {tab !== 'working' && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-background/60 p-3">
           <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={filters.type} onChange={event => setFilters(value => ({ ...value, type: event.target.value }))}>
             {typeOptions.map(value => <option key={value} value={value}>type: {value}</option>)}
@@ -263,10 +342,21 @@ export default function MemoryHomePage() {
           <Input value={filters.sourceSessionId} onChange={event => setFilters(value => ({ ...value, sourceSessionId: event.target.value }))} placeholder="Filter source session" className="h-8 w-48 text-xs" />
           <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>Reset</Button>
         </div>
+        )}
+        {tab === 'working' && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-background/60 p-3">
+            <p className="text-xs text-foreground/50">Working memory is temporary session/day context. It never becomes curated memory automatically.</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>Clear session</Button>
+              <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>Clear day</Button>
+            </div>
+          </div>
+        )}
 
         <div className={cn('min-h-0 flex-1 space-y-3 overflow-auto', loading && 'opacity-60')}>
-          {tab === 'memories' && (visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} onDelete={deleteOne} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No curated memories match.</div>)}
+          {tab === 'memories' && (visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No curated memories match.</div>)}
           {tab === 'suggestions' && (visibleSuggestions.length ? visibleSuggestions.map(suggestion => <SuggestionCard key={suggestion.id} suggestion={suggestion} onApprove={approve} onReject={reject} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No memory suggestions match.</div>)}
+          {tab === 'working' && (workingNotes.length ? workingNotes.map(note => <WorkingCard key={note.id} note={note} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No working memory notes.</div>)}
         </div>
       </div>
     </div>

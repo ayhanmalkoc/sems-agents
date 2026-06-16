@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { approveMemorySuggestion, createMemory, createMemorySuggestion, deleteMemory, getMemoryAutoSuggestSessionState, getMemoryContentHash, loadMemories, loadMemoryAutoSuggestState, loadMemorySuggestions, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, updateMemory, updateMemoryAutoSuggestSessionState } from '../index.ts'
+import { addWorkingMemoryNote, approveMemorySuggestion, clearWorkingMemoryNotes, createMemory, createMemorySuggestion, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemoryOrSuggestion, loadMemories, loadMemoryAutoSuggestState, loadMemorySuggestions, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, updateMemory, updateMemoryAutoSuggestSessionState } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -68,6 +68,42 @@ describe('memory storage', () => {
     updateMemoryAutoSuggestSessionState(ws, { sessionId: 's1', lastScannedMessageId: 'm1', lastRunAt: '2026-06-16T00:00:00.000Z', contentHashes: [hash, hash] })
     expect(loadMemoryAutoSuggestState(ws)).toHaveLength(1)
     expect(getMemoryAutoSuggestSessionState(ws, 's1')?.contentHashes).toEqual([hash])
+  })
+
+
+
+  it('supports confidence status supersedes merge stale and refresh', () => {
+    const ws = tempWs()
+    const target = createMemory(ws, { ...base, id: 'target', confidence: 'high' })
+    const source = createMemory(ws, { ...base, id: 'source', title: 'Memory architecture copy' })
+    expect(loadMemories(ws).find(item => item.id === target.id)?.status).toBe('active')
+    const merged = mergeMemories(ws, target.id, source.id, 'test')
+    expect(merged.target.supersedes).toContain(source.id)
+    expect(merged.source.status).toBe('stale')
+    expect(markMemoryStale(ws, target.id, 'test').status).toBe('stale')
+    const refreshed = refreshMemory(ws, target.id, { content: 'Fresh content.', confidence: 'medium' })
+    expect(refreshed.status).toBe('active')
+    expect(refreshed.confidence).toBe('medium')
+  })
+
+  it('finds hygiene issues and similar existing records', () => {
+    const ws = tempWs()
+    const first = createMemory(ws, { ...base, id: 'm1' })
+    const duplicate = createMemory(ws, { ...base, id: 'm2' })
+    const stale = markMemoryStale(ws, first.id, 'test')
+    const items = findMemoryHygieneItems(loadMemories(ws))
+    expect(items.some(item => item.kind === 'duplicate' && item.memoryId === duplicate.id)).toBe(true)
+    expect(items.some(item => item.kind === 'stale' && item.memoryId === stale.id)).toBe(true)
+    expect(hasSimilarMemoryOrSuggestion(loadMemories(ws), [], { type: base.type, title: base.title, content: base.content, sourceSessionId: base.sourceSessionId })).toBe(true)
+  })
+
+  it('supports working memory add list and clear', () => {
+    const ws = tempWs()
+    const note = addWorkingMemoryNote(ws, { scope: 'session', title: 'Temporary task', content: 'Use this only today.', sourceSessionId: 'session-1', createdBy: 'test', createdAt: base.createdAt, sessionId: 'session-1' })
+    expect(note.id).toStartWith('work-')
+    expect(loadWorkingMemoryNotes(ws)).toHaveLength(1)
+    expect(clearWorkingMemoryNotes(ws, 'session')).toBe(1)
+    expect(loadWorkingMemoryNotes(ws)).toHaveLength(0)
   })
 
   it('approves and rejects suggestions', () => {

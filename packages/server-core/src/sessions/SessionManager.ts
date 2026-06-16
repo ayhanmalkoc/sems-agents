@@ -36,10 +36,11 @@ import {
   MODEL_REGISTRY,
   type Workspace,
   type WorkspaceInfo,
+  resolveMemoryAutomationMode,
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, type MemoryType } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, hasSimilarMemoryOrSuggestion, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryConfidence, type MemoryType } from '@craft-agent/shared/memory'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
 import {
@@ -111,9 +112,9 @@ type AutomationToolItemServer = Record<string, unknown> & { id: string; event: s
 
 const MEMORY_AUTO_SUGGEST_COOLDOWN_MS = 10 * 60 * 1000
 
-const MEMORY_CANDIDATE_RULES: Array<{ type: MemoryType; title: string; patterns: RegExp[] }> = [
+const MEMORY_CANDIDATE_RULES: Array<{ type: MemoryType; title: string; patterns: RegExp[]; strongPatterns?: RegExp[] }> = [
   { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararlaştırdık/i, /anlaştık/i, /\bdecision\b/i, /\bagreed\b/i] },
-  { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i] },
+  { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i], strongPatterns: [/bundan sonra/i, /tercih (ediyorum|ederim)/i, /I prefer/i, /don't want/i] },
   { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /çözüm/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i] },
   { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /süreç/i, /\bcommand\b/i] },
 ]
@@ -125,8 +126,38 @@ function extractMemoryCandidateText(message: Message): string | undefined {
   return text.slice(0, 800)
 }
 
-function classifyMemoryCandidate(text: string): { type: MemoryType; title: string } | undefined {
-  return MEMORY_CANDIDATE_RULES.find(rule => rule.patterns.some(pattern => pattern.test(text)))
+function classifyMemoryCandidate(text: string): { type: MemoryType; title: string; confidence: MemoryConfidence } | undefined {
+  const rule = MEMORY_CANDIDATE_RULES.find(item => item.patterns.some(pattern => pattern.test(text)))
+  if (!rule) return undefined
+  const confidence: MemoryConfidence = rule.strongPatterns?.some(pattern => pattern.test(text)) || text.length > 140 ? 'high' : 'medium'
+  return { type: rule.type, title: rule.title, confidence }
+}
+
+function curateMemoryCandidateContent(text: string): string {
+  const cleaned = text.replace(/^(tamam|evet|peki|�imdi|ok)[,\s]+/i, '').trim()
+  const sentence = cleaned.split(/(?<=[.!?])\s+/).find(part => part.length >= 24) ?? cleaned
+  return sentence.slice(0, 360).trim()
+}
+
+function buildMemoryCandidates(messages: Message[], sessionId: string, sessionName?: string): Array<{ type: MemoryType; title: string; content: string; confidence: MemoryConfidence; hash: string }> {
+  const seen = new Set<string>()
+  return messages
+    .slice(-30)
+    .map(extractMemoryCandidateText)
+    .filter((text): text is string => Boolean(text))
+    .map(text => ({ text: curateMemoryCandidateContent(text), classification: classifyMemoryCandidate(text) }))
+    .filter((candidate): candidate is { text: string; classification: { type: MemoryType; title: string; confidence: MemoryConfidence } } => Boolean(candidate.classification) && candidate.text.length >= 24)
+    .filter(candidate => {
+      const key = `${candidate.classification.type}:${candidate.text.toLowerCase().slice(0, 120)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .map(candidate => {
+      const title = `${candidate.classification.title}: ${sessionName ?? sessionId}`
+      return { type: candidate.classification.type, title, content: candidate.text, confidence: candidate.classification.confidence, hash: getMemoryContentHash({ type: candidate.classification.type, title, content: candidate.text, sourceSessionId: sessionId }) }
+    })
+    .slice(0, 3)
 }
 
 const automationToolConfigMutexes = new Map<string, Promise<void>>()
@@ -4162,29 +4193,48 @@ export class SessionManager implements ISessionManager {
               deleteMemory(managed.workspace.rootPath, memoryId)
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
             },
+            hygiene: async () => findMemoryHygieneItems(loadMemories(managed.workspace.rootPath)),
+            merge: async (targetId, sourceId) => {
+              const result = mergeMemories(managed.workspace.rootPath, targetId, sourceId, 'memory tool')
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
+              return result
+            },
+            markStale: async (memoryId) => {
+              const memory = markMemoryStale(managed.workspace.rootPath, memoryId, 'memory tool')
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
+              return memory
+            },
+            refresh: async (memoryId, updates) => {
+              const memory = refreshMemory(managed.workspace.rootPath, memoryId, { ...updates, updatedBy: updates.updatedBy ?? 'memory tool' })
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
+              return memory
+            },
+            workingList: async () => loadWorkingMemoryNotes(managed.workspace.rootPath),
+            workingAdd: async (input) => {
+              const note = addWorkingMemoryNote(managed.workspace.rootPath, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/working-notes.json')
+              return note
+            },
+            workingClear: async (scope) => {
+              const count = clearWorkingMemoryNotes(managed.workspace.rootPath, scope)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/working-notes.json')
+              return count
+            },
             suggestFromSession: async (sessionId) => {
               const target = this.sessions.get(sessionId)
               if (!target) throw new Error(`Session not found: ${sessionId}`)
-              const seen = new Set<string>()
-              const candidates = target.messages
-                .map(extractMemoryCandidateText)
-                .filter((text): text is string => Boolean(text))
-                .map(text => ({ text, classification: classifyMemoryCandidate(text) }))
-                .filter((candidate): candidate is { text: string; classification: { type: MemoryType; title: string } } => Boolean(candidate.classification))
-                .filter(candidate => {
-                  const key = `${candidate.classification.type}:${candidate.text.toLowerCase().slice(0, 120)}`
-                  if (seen.has(key)) return false
-                  seen.add(key)
-                  return true
-                })
-                .slice(0, 3)
+              const memories = loadMemories(managed.workspace.rootPath)
+              const existingSuggestions = loadMemorySuggestions(managed.workspace.rootPath)
+              const candidates = buildMemoryCandidates(target.messages, sessionId, target.name)
+                .filter(candidate => !hasSimilarMemoryOrSuggestion(memories, existingSuggestions, { type: candidate.type, title: candidate.title, content: candidate.content, sourceSessionId: sessionId }))
               if (candidates.length === 0) return []
               const createdAt = new Date().toISOString()
               const suggestions = candidates.map(candidate => createMemorySuggestion(managed.workspace.rootPath, {
-                type: candidate.classification.type,
+                type: candidate.type,
                 scope: 'session',
-                title: `${candidate.classification.title}: ${target.name ?? sessionId}`,
-                content: candidate.text,
+                title: candidate.title,
+                content: candidate.content,
+                confidence: candidate.confidence,
                 reason: 'Detected from session language; review before approval.',
                 sourceSessionId: sessionId,
                 createdBy: 'memory tool',
@@ -6910,7 +6960,8 @@ export class SessionManager implements ISessionManager {
   private maybeAutoSuggestMemory(managed: ManagedSession, lastFinalAssistantMessageId: string | undefined): void {
     if (!lastFinalAssistantMessageId) return
     if (managed.systemPromptPreset === 'mini') return
-    if (loadPreferences().autoSuggestMemories === false) return
+    const memoryAutomationMode = resolveMemoryAutomationMode(loadPreferences())
+    if (memoryAutomationMode === 'off') return
 
     const workspaceRoot = managed.workspace.rootPath
     const previous = getMemoryAutoSuggestSessionState(workspaceRoot, managed.id)
@@ -6918,25 +6969,12 @@ export class SessionManager implements ISessionManager {
     const lastRunMs = previous?.lastRunAt ? Date.parse(previous.lastRunAt) : 0
     if (lastRunMs && Date.now() - lastRunMs < MEMORY_AUTO_SUGGEST_COOLDOWN_MS) return
 
-    const seen = new Set<string>()
     const previousHashes = new Set(previous?.contentHashes ?? [])
-    const candidates = managed.messages
-      .slice(-30)
-      .map(extractMemoryCandidateText)
-      .filter((text): text is string => Boolean(text))
-      .map(text => ({ text, classification: classifyMemoryCandidate(text) }))
-      .filter((candidate): candidate is { text: string; classification: { type: MemoryType; title: string } } => Boolean(candidate.classification))
-      .filter(candidate => {
-        const key = `${candidate.classification.type}:${candidate.text.toLowerCase().slice(0, 120)}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-      .map(candidate => {
-        const title = `${candidate.classification.title}: ${managed.name ?? managed.id}`
-        return { ...candidate, title, hash: getMemoryContentHash({ type: candidate.classification.type, title, content: candidate.text, sourceSessionId: managed.id }) }
-      })
+    const memories = loadMemories(workspaceRoot)
+    const suggestions = loadMemorySuggestions(workspaceRoot)
+    const candidates = buildMemoryCandidates(managed.messages, managed.id, managed.name)
       .filter(candidate => !previousHashes.has(candidate.hash))
+      .filter(candidate => !hasSimilarMemoryOrSuggestion(memories, suggestions, { type: candidate.type, title: candidate.title, content: candidate.content, sourceSessionId: managed.id }))
       .slice(0, 3)
 
     const now = new Date().toISOString()
@@ -6947,21 +6985,36 @@ export class SessionManager implements ISessionManager {
 
     const nextHashes = new Set(previousHashes)
     for (const candidate of candidates) {
-      createMemorySuggestion(workspaceRoot, {
-        type: candidate.classification.type,
-        scope: 'session',
-        title: candidate.title,
-        content: candidate.text,
-        reason: 'Automatically suggested from completed session; review before approval.',
-        sourceSessionId: managed.id,
-        createdBy: 'auto memory suggestion',
-        createdAt: now,
-        sessionId: managed.id,
-      })
+      if (memoryAutomationMode === 'auto') {
+        createMemory(workspaceRoot, {
+          type: candidate.type,
+          scope: 'session',
+          title: candidate.title,
+          content: candidate.content,
+          confidence: candidate.confidence,
+          sourceSessionId: managed.id,
+          createdBy: 'auto memory',
+          createdAt: now,
+          sessionId: managed.id,
+        })
+      } else {
+        createMemorySuggestion(workspaceRoot, {
+          type: candidate.type,
+          scope: 'session',
+          title: candidate.title,
+          content: candidate.content,
+          confidence: candidate.confidence,
+          reason: 'Automatically suggested from completed session; review before approval.',
+          sourceSessionId: managed.id,
+          createdBy: 'auto memory suggestion',
+          createdAt: now,
+          sessionId: managed.id,
+        })
+      }
       nextHashes.add(candidate.hash)
     }
     updateMemoryAutoSuggestSessionState(workspaceRoot, { sessionId: managed.id, lastScannedMessageId: lastFinalAssistantMessageId, lastRunAt: now, contentHashes: [...nextHashes] })
-    this.notifyConfigFileChange(workspaceRoot, 'memory/suggestions.json')
+    this.notifyConfigFileChange(workspaceRoot, memoryAutomationMode === 'auto' ? 'memory/memories.json' : 'memory/suggestions.json')
     this.notifyConfigFileChange(workspaceRoot, 'memory/auto-suggest-state.json')
   }
 

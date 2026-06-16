@@ -2,12 +2,13 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type MemoryRecord, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type CreateWorkingMemoryInput, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput, type WorkingMemoryJson, type WorkingMemoryNote, type WorkingMemoryScope } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
 const SUGGESTIONS_FILE = 'suggestions.json'
 const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
+const WORKING_NOTES_FILE = 'working-notes.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
 
 function nowIso(): string { return new Date().toISOString() }
@@ -17,6 +18,7 @@ export function getMemoryDir(workspaceRootPath: string): string { return join(wo
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
 export function getMemorySuggestionsPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SUGGESTIONS_FILE) }
 export function getMemoryAutoSuggestStatePath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), AUTO_SUGGEST_STATE_FILE) }
+export function getWorkingMemoryPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), WORKING_NOTES_FILE) }
 
 function ensureDir(path: string): void { mkdirSync(dirname(path), { recursive: true }) }
 function assertType(type: unknown): asserts type is MemoryType {
@@ -30,11 +32,29 @@ function requireText(value: unknown, field: string): string {
   if (!text) throw new Error(`${field} is required`)
   return text
 }
+function assertConfidence(confidence: unknown): asserts confidence is MemoryConfidence {
+  if (confidence !== undefined && confidence !== 'medium' && confidence !== 'high') throw new Error(`Invalid memory confidence: ${String(confidence)}`)
+}
+function assertRecordStatus(status: unknown): asserts status is MemoryRecordStatus {
+  if (status !== undefined && status !== 'active' && status !== 'stale') throw new Error(`Invalid memory status: ${String(status)}`)
+}
+function assertWorkingScope(scope: unknown): asserts scope is WorkingMemoryScope {
+  if (scope !== 'session' && scope !== 'day') throw new Error(`Invalid working memory scope: ${String(scope)}`)
+}
+function normalizeStringList(value: unknown, field: string): string[] | undefined {
+  if (value == null) return undefined
+  if (!Array.isArray(value)) throw new Error(`${field} must be an array`)
+  return Array.from(new Set(value.map(item => requireText(item, field))))
+}
 function normalizeTags(tags: unknown): string[] | undefined {
   if (tags == null) return undefined
   if (!Array.isArray(tags)) throw new Error('tags must be an array')
   return tags.map(tag => requireText(tag, 'tag'))
 }
+
+function normalizeMemoryComparable(text: string): string { return text.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 280) }
+function memorySimilarityKey(input: { type: MemoryType; title?: string; content: string }): string { return `${input.type}:${normalizeMemoryComparable(input.title ?? '')}:${normalizeMemoryComparable(input.content)}` }
+function memoryContentKey(input: { type: MemoryType; content: string }): string { return `${input.type}:${normalizeMemoryComparable(input.content)}` }
 
 function assertNoSecrets(...values: unknown[]): void {
   const text = values.flatMap(value => Array.isArray(value) ? value : [value]).filter(value => typeof value === 'string').join('\n')
@@ -49,7 +69,7 @@ function assertNoSecrets(...values: unknown[]): void {
 }
 
 export function validateMemoryInput(input: CreateMemoryInput): CreateMemoryInput {
-  assertType(input.type); assertScope(input.scope)
+  assertType(input.type); assertScope(input.scope); assertConfidence(input.confidence); assertRecordStatus(input.status)
   assertNoSecrets(input.title, input.content, input.tags)
   return {
     ...input,
@@ -59,6 +79,8 @@ export function validateMemoryInput(input: CreateMemoryInput): CreateMemoryInput
     createdBy: requireText(input.createdBy, 'createdBy'),
     createdAt: requireText(input.createdAt, 'createdAt'),
     tags: normalizeTags(input.tags),
+    status: input.status ?? 'active',
+    supersedes: normalizeStringList(input.supersedes, 'supersedes'),
   }
 }
 
@@ -144,17 +166,109 @@ export function updateMemory(workspaceRootPath: string, memoryId: string, update
   if (index < 0) throw new Error(`Memory not found: ${id}`)
   if (updates.type) assertType(updates.type)
   if (updates.scope) assertScope(updates.scope)
+  assertConfidence(updates.confidence)
+  assertRecordStatus(updates.status)
   const next: MemoryRecord = {
     ...memories[index],
     ...updates,
     title: updates.title === undefined ? memories[index].title : requireText(updates.title, 'title'),
     content: updates.content === undefined ? memories[index].content : requireText(updates.content, 'content'),
     tags: updates.tags === undefined ? memories[index].tags : normalizeTags(updates.tags),
+    supersedes: updates.supersedes === undefined ? memories[index].supersedes : normalizeStringList(updates.supersedes, 'supersedes'),
     updatedAt: nowIso(),
   }
   memories[index] = next
   saveMemories(workspaceRootPath, memories)
   return next
+}
+
+
+export function refreshMemory(workspaceRootPath: string, memoryId: string, updates: UpdateMemoryInput): MemoryRecord {
+  return updateMemory(workspaceRootPath, memoryId, { ...updates, status: 'active' })
+}
+
+export function markMemoryStale(workspaceRootPath: string, memoryId: string, updatedBy = 'memory tool'): MemoryRecord {
+  return updateMemory(workspaceRootPath, memoryId, { status: 'stale', updatedBy })
+}
+
+export function mergeMemories(workspaceRootPath: string, targetId: string, sourceId: string, updatedBy = 'memory tool'): { target: MemoryRecord; source: MemoryRecord } {
+  const target = loadMemories(workspaceRootPath).find(item => item.id === requireText(targetId, 'targetId'))
+  const source = loadMemories(workspaceRootPath).find(item => item.id === requireText(sourceId, 'sourceId'))
+  if (!target) throw new Error(`Memory not found: ${targetId}`)
+  if (!source) throw new Error(`Memory not found: ${sourceId}`)
+  if (target.id === source.id) throw new Error('targetId and sourceId must differ')
+  const nextTarget = updateMemory(workspaceRootPath, target.id, { supersedes: [...(target.supersedes ?? []), source.id], updatedBy })
+  const nextSource = updateMemory(workspaceRootPath, source.id, { status: 'stale', updatedBy })
+  return { target: nextTarget, source: nextSource }
+}
+
+export function findMemoryHygieneItems(memories: MemoryRecord[]): MemoryHygieneItem[] {
+  const items: MemoryHygieneItem[] = []
+  const seen = new Map<string, MemoryRecord>()
+  for (const memory of memories) {
+    const status = memory.status ?? 'active'
+    if (status === 'stale') items.push({ kind: 'stale', memoryId: memory.id, reason: 'Memory is marked stale.' })
+    const key = memorySimilarityKey(memory)
+    const existing = seen.get(key)
+    if (existing) items.push({ kind: 'duplicate', memoryId: memory.id, relatedMemoryId: existing.id, reason: 'Same type/title/content/source hash.' })
+    else seen.set(key, memory)
+  }
+  return items
+}
+
+function validateWorkingMemoryInput(input: CreateWorkingMemoryInput): CreateWorkingMemoryInput {
+  assertWorkingScope(input.scope)
+  assertNoSecrets(input.title, input.content, input.tags)
+  return {
+    ...input,
+    title: requireText(input.title, 'title'),
+    content: requireText(input.content, 'content'),
+    sourceSessionId: requireText(input.sourceSessionId, 'sourceSessionId'),
+    createdBy: requireText(input.createdBy, 'createdBy'),
+    createdAt: requireText(input.createdAt, 'createdAt'),
+    tags: normalizeTags(input.tags),
+    sessionId: input.sessionId,
+    day: input.day,
+  }
+}
+
+export function loadWorkingMemoryNotes(workspaceRootPath: string): WorkingMemoryNote[] {
+  const path = getWorkingMemoryPath(workspaceRootPath)
+  if (!existsSync(path)) return []
+  const data = readJsonFileSync<WorkingMemoryJson | WorkingMemoryNote[]>(path)
+  return Array.isArray(data) ? data : (Array.isArray(data.notes) ? data.notes : [])
+}
+
+export function saveWorkingMemoryNotes(workspaceRootPath: string, notes: WorkingMemoryNote[]): void {
+  const path = getWorkingMemoryPath(workspaceRootPath)
+  ensureDir(path)
+  atomicWriteFileSync(path, JSON.stringify({ version: 1, notes }, null, 2) + '\n')
+}
+
+export function addWorkingMemoryNote(workspaceRootPath: string, input: CreateWorkingMemoryInput): WorkingMemoryNote {
+  const valid = validateWorkingMemoryInput(input)
+  const notes = loadWorkingMemoryNotes(workspaceRootPath)
+  const note: WorkingMemoryNote = { ...valid, id: valid.id?.trim() || makeId('work') }
+  if (notes.some(item => item.id === note.id)) throw new Error(`Working memory note already exists: ${note.id}`)
+  notes.push(note)
+  saveWorkingMemoryNotes(workspaceRootPath, notes)
+  return note
+}
+
+export function clearWorkingMemoryNotes(workspaceRootPath: string, scope: WorkingMemoryScope): number {
+  assertWorkingScope(scope)
+  const notes = loadWorkingMemoryNotes(workspaceRootPath)
+  const next = notes.filter(note => note.scope !== scope)
+  saveWorkingMemoryNotes(workspaceRootPath, next)
+  return notes.length - next.length
+}
+
+export function hasSimilarMemoryOrSuggestion(memories: MemoryRecord[], suggestions: MemorySuggestion[], input: { type: MemoryType; title: string; content: string; sourceSessionId?: string }): boolean {
+  const contentKey = memoryContentKey(input)
+  const fullKey = memorySimilarityKey(input)
+  const memoryMatch = memories.some(memory => memoryContentKey(memory) === contentKey || memorySimilarityKey(memory) === fullKey)
+  const suggestionMatch = suggestions.some(suggestion => memoryContentKey(suggestion) === contentKey || memorySimilarityKey(suggestion) === fullKey)
+  return memoryMatch || suggestionMatch
 }
 
 export function deleteMemory(workspaceRootPath: string, memoryId: string): void {

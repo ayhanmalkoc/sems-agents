@@ -89,6 +89,9 @@ export type EditContextKey =
   | 'edit-views'
   | 'edit-tool-icons'
   | 'automation-config'
+  | 'memory-create'
+  | 'memory-edit'
+  | 'memory-review'
 
 /**
  * Full edit configuration including context for agent and example for UI.
@@ -602,6 +605,70 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
+
+  'memory-create': (location) => ({
+    context: {
+      label: 'Memory',
+      filePath: `${location}/memory/memories.json`,
+      context:
+        'The user wants to create or manage workspace memory using natural language. ' +
+        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
+        'For explicit durable facts or "remember this" requests, use memory create. ' +
+        'For temporary session/day context, use memory working-add. ' +
+        'For inferred learnings from a session, use memory suggest-from-session unless the user explicitly asks to save it. ' +
+        'Do not edit memory JSON files directly except as a last-resort fallback. ' +
+        'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
+        'Confirm clearly what changed.',
+    },
+    example: 'Remember that this workspace prefers short Turkish summaries',
+    overridePlaceholder: 'What should memory do?',
+    model: 'default',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
+  'memory-edit': (location) => {
+    const [workspaceRoot, memoryId = ''] = location.split('::')
+    return {
+      context: {
+        label: 'Memory',
+        filePath: `${workspaceRoot}/memory/memories.json`,
+        context:
+          `The user wants to edit workspace memory ${memoryId}. ` +
+          'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
+          'Use memory show to inspect the current record if needed. ' +
+          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, delete only when requested, or working-add for temporary notes. ' +
+          'Do not edit memory JSON files directly except as a last-resort fallback. ' +
+          'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
+          'Confirm clearly what changed.',
+      },
+      example: 'Mark this memory stale and create an updated version',
+      overridePlaceholder: 'How should this memory change?',
+      model: 'default' as const,
+      systemPromptPreset: 'mini' as const,
+      inlineExecution: true,
+    }
+  },
+
+  'memory-review': (location) => ({
+    context: {
+      label: 'Memory Suggestions',
+      filePath: `${location}/memory/suggestions.json`,
+      context:
+        'The user wants to review workspace memory suggestions. ' +
+        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
+        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. ' +
+        'Do not edit memory JSON files directly except as a last-resort fallback. ' +
+        'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
+        'Confirm clearly what changed.',
+    },
+    example: 'Review pending suggestions and approve only strong project decisions',
+    overridePlaceholder: 'How should suggestions be reviewed?',
+    model: 'default',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
 }
 
 /**

@@ -1,17 +1,21 @@
 # Memory Tools
 
-Use the `memory` tool to manage persistent, scoped Craft memory. Product rule: **the agent remembers; the user stays in control**.
+Use the `memory` tool to manage persistent, scoped workspace memory. Product rule: **the agent remembers; user control is a mode, not a bottleneck**.
 
 ## Product Policy
 
-Memory is agent-managed with user oversight.
+Memory is agent-managed with user oversight. When a task depends on prior project decisions, user preferences, workflows, or past error fixes, run `memory search <query>` before answering.
 
 - If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly.
-- If you infer a possible learning from a session, use `memory suggest-from-session <sessionId>` so it stays pending until reviewed.
-- Craft may also auto-suggest pending memory candidates after completed sessions when `autoSuggestMemories` is enabled. Auto-suggest never creates approved memory.
+- If you infer a possible learning from a session, use `memory suggest-from-session <sessionId>` unless the user explicitly asked to save it.
+- Automatic memory follows the workspace preference `memoryAutomationMode`:
+  - `auto` saves strong completed-session candidates directly as curated memory.
+  - `review` queues strong candidates as pending suggestions.
+  - `off` skips automatic memory.
+- Default is `review`. Legacy `autoSuggestMemories: false` maps to `off`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, create a suggestion instead of approved memory.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
-- Do not write memory silently. Use memory only when the user asks, or when a reviewable candidate is approved.
+- Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, hygiene, and working-memory changes.
 
 ## Commands
 
@@ -42,7 +46,7 @@ Memory is agent-managed with user oversight.
 - `agent_profile`
 - `session`
 
-V2 is workspace-first. Use `workspace`, `agent_profile`, or `session` unless the user explicitly asks for global user memory.
+Memory is workspace-first. Use `workspace`, `agent_profile`, or `session` unless the user explicitly asks for global user memory.
 
 ## Required Fields For Create
 
@@ -65,20 +69,20 @@ V2 is workspace-first. Use `workspace`, `agent_profile`, or `session` unless the
 
 Use suggestions when you think something may be worth remembering but the user has not explicitly approved it.
 
-- `suggest-from-session` and auto-suggest look for strong decision, preference, workflow, or error-resolution signals.
+- `suggest-from-session` and automatic memory look for strong decision, preference, workflow, or error-resolution signals.
 - It returns `No strong memory candidates found` when the session has no durable signal.
-- Pending candidates are not curated memory.
+- In `review` mode, pending candidates are not curated memory until approved. In `auto` mode, strong candidates are saved directly.
 - `approve` promotes a suggestion to memory with a fresh `mem-*` id.
 - `reject` keeps the audit trail but does not create memory.
 
-## Working Memory Design
+## Working Memory
 
-Working memory is a future lightweight layer for short-lived session/day notes. It must stay separate from curated memory.
+Working memory is a lightweight layer for short-lived session/day notes. It stays separate from curated memory.
 
-- Storage target: workspace-local `memory/working-notes.json` or per-session note files.
+- Storage target: workspace-local `memory/working-notes.json`.
 - Scope: session/day, not durable project knowledge.
 - Lifecycle: expires or rolls up into suggestions; never auto-promotes to curated memory.
-- V2 behavior: auto-suggest may write pending suggestions only; no curated auto-write, no prompt auto-injection, no vector provider.
+- V3 behavior: auto-suggest may write pending suggestions only; working notes never auto-promote; no curated auto-write, no prompt auto-injection, no vector provider.
 
 ## Safety
 
@@ -86,3 +90,12 @@ Working memory is a future lightweight layer for short-lived session/day notes. 
 - Keep memory compact and reusable.
 - Prefer decisions, preferences, workflows, and error resolutions over raw chat dumps.
 - If uncertain, create a suggestion instead of approved memory.
+
+
+## Hygiene
+
+Use `memory hygiene` when memory feels noisy, duplicated, or outdated. Use `merge` for duplicates and `mark-stale` for old facts. `delete` is still available but should be reserved for clearly unwanted records.
+
+## Retrieval Guidance
+
+Search memory before answering questions about prior decisions, established preferences, known workflows, recurring commands, or past bug fixes. Cite the memory id in your internal reasoning when useful, but keep user-facing answers natural.

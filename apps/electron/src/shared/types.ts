@@ -714,10 +714,12 @@ export interface ElectronAPI {
   // Memory
   getMemories(workspaceId: string): Promise<unknown[]>
   getMemorySuggestions(workspaceId: string): Promise<unknown[]>
+  getWorkingMemoryNotes(workspaceId: string): Promise<unknown[]>
   searchMemories(workspaceId: string, query: string): Promise<unknown[]>
   deleteMemory(workspaceId: string, memoryId: string): Promise<void>
   approveMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
   rejectMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
+  clearWorkingMemoryNotes(workspaceId: string, scope: 'session' | 'day'): Promise<number>
   onMemoryChanged(callback: (workspaceId: string) => void): () => void
 
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
