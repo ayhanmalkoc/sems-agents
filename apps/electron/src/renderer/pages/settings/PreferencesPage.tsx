@@ -46,7 +46,7 @@ const emptyFormState: PreferencesFormState = {
   city: '',
   country: '',
   notes: '',
-  memoryAutomationMode: 'review',
+  memoryAutomationMode: 'auto',
 }
 
 // Parse JSON to form state
@@ -59,7 +59,7 @@ function parsePreferences(json: string): PreferencesFormState {
       city: prefs.location?.city || '',
       country: prefs.location?.country || '',
       notes: prefs.notes || '',
-      memoryAutomationMode: prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off' ? prefs.memoryAutomationMode : (prefs.autoSuggestMemories === false ? 'off' : 'review'),
+      memoryAutomationMode: prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off' ? prefs.memoryAutomationMode : (prefs.autoSuggestMemories === false ? 'off' : 'auto'),
     }
   } catch {
     return emptyFormState

@@ -12,8 +12,8 @@ describe('preferences.memoryAutomationMode', () => {
     expect(resolveMemoryAutomationMode({ autoSuggestMemories: false })).toBe('off');
   });
 
-  it('defaults missing or legacy true preferences to review', () => {
-    expect(resolveMemoryAutomationMode({})).toBe('review');
-    expect(resolveMemoryAutomationMode({ autoSuggestMemories: true })).toBe('review');
+  it('defaults missing or legacy true preferences to auto', () => {
+    expect(resolveMemoryAutomationMode({})).toBe('auto');
+    expect(resolveMemoryAutomationMode({ autoSuggestMemories: true })).toBe('auto');
   });
 });

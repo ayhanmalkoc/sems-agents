@@ -100,7 +100,7 @@ export function updatePreferences(updates: Partial<UserPreferences>): UserPrefer
 export function resolveMemoryAutomationMode(prefs: UserPreferences = loadPreferences()): MemoryAutomationMode {
   if (prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off') return prefs.memoryAutomationMode;
   if (prefs.autoSuggestMemories === false) return 'off';
-  return 'review';
+  return 'auto';
 }
 
 export function getPreferencesPath(): string {

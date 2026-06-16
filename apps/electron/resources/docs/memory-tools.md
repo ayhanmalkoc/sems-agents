@@ -12,7 +12,7 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
   - `auto` saves strong completed-session candidates directly as curated memory.
   - `review` queues strong candidates as pending suggestions.
   - `off` skips automatic memory.
-- Default is `review`. Legacy `autoSuggestMemories: false` maps to `off`.
+- Default is `auto`. Legacy `autoSuggestMemories: false` maps to `off`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, create a suggestion instead of approved memory.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
 - Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, hygiene, and working-memory changes.
