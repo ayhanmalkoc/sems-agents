@@ -1222,13 +1222,13 @@ export function getValidateSteps(): ValidateStep[] {
       },
     },
     {
-      name: 'session-tools:set_session_labels',
+      name: 'session-tools:sessions labels',
       fn: async (client, ctx) => {
         if (!ctx.createdSessionId) return 'skipped (no session)'
         if (!ctx.e2eTestLabelId) return 'skipped (no e2e-test label)'
         const result = await waitForSendEvents(client, ctx.createdSessionId,
-          'Use the set_session_labels tool to set labels: ["e2e-test"] on the current session. Do NOT use any other tool.',
-          90_000, true, undefined, ctx.onEvent, 'set_session_labels')
+          `Use the sessions tool only. Run: sessions labels ${ctx.createdSessionId} [\"${ctx.e2eTestLabelId}\"]`,
+          90_000, true, undefined, ctx.onEvent, 'sessions')
         // Verify labels were actually applied
         const sessions = (await client.invoke('sessions:get', ctx.workspaceId)) as any[]
         const session = sessions?.find((s: any) => s.id === ctx.createdSessionId)
@@ -1238,21 +1238,21 @@ export function getValidateSteps(): ValidateStep[] {
       },
     },
     {
-      name: 'session-tools:get_session_info',
+      name: 'session-tools:sessions show',
       fn: async (client, ctx) => {
         if (!ctx.createdSessionId) return 'skipped (no session)'
         return await waitForSendEvents(client, ctx.createdSessionId,
-          'Use the get_session_info tool to get info about the current session. Do NOT use any other tool.',
-          90_000, true, undefined, ctx.onEvent, 'get_session_info')
+          `Use the sessions tool only. Run: sessions show ${ctx.createdSessionId}`,
+          90_000, true, undefined, ctx.onEvent, 'sessions')
       },
     },
     {
-      name: 'session-tools:list_sessions',
+      name: 'session-tools:sessions list',
       fn: async (client, ctx) => {
         if (!ctx.createdSessionId) return 'skipped (no session)'
         return await waitForSendEvents(client, ctx.createdSessionId,
-          'Use the list_sessions tool to list all sessions. Do NOT use any other tool.',
-          90_000, true, undefined, ctx.onEvent, 'list_sessions')
+          'Use the sessions tool only. Run: sessions list',
+          90_000, true, undefined, ctx.onEvent, 'sessions')
       },
     },
     // ----- Session branching -----

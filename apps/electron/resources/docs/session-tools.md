@@ -56,6 +56,8 @@ Session tools manage chat/session metadata, lifecycle, spawning, and session-to-
 
 ## Legacy Compatibility Tools
 
+Compatibility only: these older single-purpose tools remain available for old prompts, automations, and history rendering. Do not use them for new work unless a legacy prompt explicitly requires them.
+
 These tools still work for older prompts and automations, but new work should use `sessions`:
 
 - `spawn_session` → use `sessions spawn <json>`

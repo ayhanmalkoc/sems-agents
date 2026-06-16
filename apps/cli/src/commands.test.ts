@@ -341,15 +341,15 @@ describe('getValidateSteps', () => {
 
   it('includes session tool validation steps', () => {
     const names = getValidateSteps().map((s) => s.name)
-    expect(names).toContain('session-tools:set_session_labels')
-    expect(names).toContain('session-tools:get_session_info')
-    expect(names).toContain('session-tools:list_sessions')
+    expect(names).toContain('session-tools:sessions labels')
+    expect(names).toContain('session-tools:sessions show')
+    expect(names).toContain('session-tools:sessions list')
   })
 
   it('session tool steps come after tool use and before branching', () => {
     const names = getValidateSteps().map((s) => s.name)
     const toolUse = names.indexOf('send message + tool use')
-    const labels = names.indexOf('session-tools:set_session_labels')
+    const labels = names.indexOf('session-tools:sessions labels')
     const branch = names.indexOf('sessions:branch')
     expect(labels).toBeGreaterThan(toolUse)
     expect(branch).toBeGreaterThan(labels)
