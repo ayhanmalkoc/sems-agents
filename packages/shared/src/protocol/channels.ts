@@ -415,6 +415,7 @@ export const RPC_CHANNELS = {
     DELETE: 'memory:delete',
     APPROVE: 'memory:approve',
     REJECT: 'memory:reject',
+    CHANGED: 'memory:changed',
   },
   messaging: {
     // WhatsApp subprocess → Gateway (subprocess invokes on server)

@@ -70,3 +70,16 @@ export interface MemoryStatusSnapshot {
   pendingSuggestions: number
   reason?: string
 }
+
+
+export interface MemoryAutoSuggestSessionState {
+  sessionId: string
+  lastScannedMessageId?: string
+  lastRunAt?: string
+  contentHashes: string[]
+}
+
+export interface MemoryAutoSuggestStateJson {
+  version: 1
+  sessions: MemoryAutoSuggestSessionState[]
+}

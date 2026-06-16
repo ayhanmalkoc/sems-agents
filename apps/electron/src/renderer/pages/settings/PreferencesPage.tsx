@@ -21,6 +21,7 @@ import {
   SettingsCard,
   SettingsInput,
   SettingsTextarea,
+  SettingsToggle,
 } from '@/components/settings'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
@@ -36,6 +37,7 @@ interface PreferencesFormState {
   city: string
   country: string
   notes: string
+  autoSuggestMemories: boolean
 }
 
 const emptyFormState: PreferencesFormState = {
@@ -44,6 +46,7 @@ const emptyFormState: PreferencesFormState = {
   city: '',
   country: '',
   notes: '',
+  autoSuggestMemories: true,
 }
 
 // Parse JSON to form state
@@ -56,6 +59,7 @@ function parsePreferences(json: string): PreferencesFormState {
       city: prefs.location?.city || '',
       country: prefs.location?.country || '',
       notes: prefs.notes || '',
+      autoSuggestMemories: prefs.autoSuggestMemories !== false,
     }
   } catch {
     return emptyFormState
@@ -82,6 +86,7 @@ function serializePreferences(state: PreferencesFormState, base: Record<string, 
 
   if (state.notes) prefs.notes = state.notes
   else delete prefs.notes
+  prefs.autoSuggestMemories = state.autoSuggestMemories
   prefs.updatedAt = Date.now()
 
   return JSON.stringify(prefs, null, 2)
@@ -249,6 +254,23 @@ export default function PreferencesPage() {
                 value={formState.country}
                 onChange={(v) => updateField('country', v)}
                 placeholder={t("settings.preferences.countryPlaceholder")}
+                inCard
+              />
+            </SettingsCard>
+          </SettingsSection>
+
+
+          {/* Memory */}
+          <SettingsSection
+            title="Memory"
+            description="Control how Craft suggests durable learnings from completed chats."
+          >
+            <SettingsCard divided={false}>
+              <SettingsToggle
+                label="Auto-suggest memories"
+                description="Automatically add reviewable memory suggestions after completed sessions. Nothing is saved as approved memory until you approve it."
+                checked={formState.autoSuggestMemories}
+                onCheckedChange={(v) => updateField('autoSuggestMemories', v)}
                 inCard
               />
             </SettingsCard>

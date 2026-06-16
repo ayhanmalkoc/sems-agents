@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { approveMemorySuggestion, createMemory, createMemorySuggestion, deleteMemory, loadMemories, loadMemorySuggestions, rejectMemorySuggestion, searchMemories, updateMemory } from '../index.ts'
+import { approveMemorySuggestion, createMemory, createMemorySuggestion, deleteMemory, getMemoryAutoSuggestSessionState, getMemoryContentHash, loadMemories, loadMemoryAutoSuggestState, loadMemorySuggestions, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, updateMemory, updateMemoryAutoSuggestSessionState } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -42,6 +42,32 @@ describe('memory storage', () => {
   it('requires source trace fields', () => {
     const ws = tempWs()
     expect(() => createMemory(ws, { ...base, sourceSessionId: '' })).toThrow('sourceSessionId is required')
+  })
+
+  it('rejects secrets in create, update, suggestion, and approve paths', () => {
+    const ws = tempWs()
+    const error = 'Memory cannot store sensitive credentials or secrets.'
+    expect(() => createMemory(ws, { ...base, content: 'api_key=sk_secret_12345678901234567890' })).toThrow(error)
+    const memory = createMemory(ws, base)
+    expect(() => updateMemory(ws, memory.id, { content: 'password=supersecret123' })).toThrow(error)
+    expect(() => createMemorySuggestion(ws, { ...base, reason: 'Bearer abcdefghijklmnop1234567890' })).toThrow(error)
+    const suggestion = createMemorySuggestion(ws, { ...base, title: 'Safe suggestion' })
+    const suggestions = loadMemorySuggestions(ws)
+    suggestions[0] = { ...suggestion, content: '-----BEGIN PRIVATE KEY-----\nabc' }
+    // Direct file tampering should still be guarded on approval.
+    saveMemorySuggestions(ws, suggestions)
+    expect(() => approveMemorySuggestion(ws, suggestion.id, 'test')).toThrow(error)
+  })
+
+
+
+  it('stores auto-suggest state and stable content hashes', () => {
+    const ws = tempWs()
+    const hash = getMemoryContentHash({ type: 'workflow_learning', title: 'T', content: 'C', sourceSessionId: 's1' })
+    expect(hash).toBe(getMemoryContentHash({ type: 'workflow_learning', title: 'T', content: 'C', sourceSessionId: 's1' }))
+    updateMemoryAutoSuggestSessionState(ws, { sessionId: 's1', lastScannedMessageId: 'm1', lastRunAt: '2026-06-16T00:00:00.000Z', contentHashes: [hash, hash] })
+    expect(loadMemoryAutoSuggestState(ws)).toHaveLength(1)
+    expect(getMemoryAutoSuggestSessionState(ws, 's1')?.contentHashes).toEqual([hash])
   })
 
   it('approves and rejects suggestions', () => {

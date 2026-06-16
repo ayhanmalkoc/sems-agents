@@ -33,6 +33,8 @@ export interface UserPreferences {
   diffViewer?: DiffViewerPreferences;
   // Whether to include Co-Authored-By trailer on git commits (default: true)
   includeCoAuthoredBy?: boolean;
+  // Whether completed sessions should enqueue reviewable memory suggestions (default: true)
+  autoSuggestMemories?: boolean;
   openTarget?: {
     defaultTargetId?: string;
   };

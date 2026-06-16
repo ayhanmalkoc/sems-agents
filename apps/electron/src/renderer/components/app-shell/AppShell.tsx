@@ -1091,6 +1091,7 @@ function AppShellContent({
   // Skills state (workspace-scoped)
   const [skills, setSkills] = React.useState<LoadedSkill[]>([])
   const [agentProfiles, setAgentProfiles] = React.useState<import('../../../shared/types').AgentProfile[]>([])
+  const [pendingMemorySuggestions, setPendingMemorySuggestions] = React.useState(0)
   // Sync skills to atom for NavigationContext auto-selection
   const setSkillsAtom = useSetAtom(skillsAtom)
   React.useEffect(() => {
@@ -1211,6 +1212,36 @@ function AppShellContent({
   React.useEffect(() => {
     void refreshAgentProfiles()
   }, [refreshAgentProfiles])
+
+  const refreshPendingMemorySuggestions = React.useCallback(async () => {
+    if (!activeWorkspaceId) return
+    try {
+      const rows = await window.electronAPI.getMemorySuggestions(activeWorkspaceId)
+      setPendingMemorySuggestions((rows || []).filter((item) => (item as { status?: string }).status === 'pending').length)
+    } catch (err) {
+      console.error('[Chat] Failed to load memory suggestions:', err)
+    }
+  }, [activeWorkspaceId])
+
+  React.useEffect(() => {
+    void refreshPendingMemorySuggestions()
+  }, [refreshPendingMemorySuggestions])
+
+  React.useEffect(() => {
+    const cleanup = window.electronAPI.onMemoryChanged((workspaceId) => {
+      if (workspaceId !== activeWorkspaceId) return
+      void refreshPendingMemorySuggestions()
+    })
+    return cleanup
+  }, [activeWorkspaceId, refreshPendingMemorySuggestions])
+
+  React.useEffect(() => {
+    const cleanup = window.electronAPI.onSessionEvent((event) => {
+      if (event.type === 'complete') void refreshPendingMemorySuggestions()
+    })
+    return cleanup
+  }, [refreshPendingMemorySuggestions])
+
 
   React.useEffect(() => {
     const cleanup = window.electronAPI.onAgentProfilesChanged((workspaceId) => {
@@ -2663,7 +2694,7 @@ function AppShellContent({
                     { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
                     { id: "nav:agents", title: t("sidebar.agents"), label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
-                    { id: "nav:memory", title: "Memory", icon: Brain, variant: isMemoryNavigation(navState) ? "default" : "ghost", onClick: handleMemoryClick },
+                    { id: "nav:memory", title: "Memory", label: pendingMemorySuggestions ? String(pendingMemorySuggestions) : undefined, icon: Brain, variant: isMemoryNavigation(navState) ? "default" : "ghost", onClick: handleMemoryClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),

@@ -1,7 +1,7 @@
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { approveMemorySuggestion, deleteMemory, loadMemories, loadMemorySuggestions, rejectMemorySuggestion, searchMemories } from '@craft-agent/shared/memory'
-import type { RpcServer } from '@craft-agent/server-core/transport'
+import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
 export const HANDLED_CHANNELS = [
@@ -23,6 +23,7 @@ export function registerMemoryHandlers(server: RpcServer, deps: HandlerDeps): vo
   const changed = (workspaceId: string) => {
     deps.sessionManager.notifyConfigFileChange(workspaceRoot(workspaceId), 'memory/memories.json')
     deps.sessionManager.notifyConfigFileChange(workspaceRoot(workspaceId), 'memory/suggestions.json')
+    pushTyped(server, RPC_CHANNELS.memory.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
   }
 
   server.handle(RPC_CHANNELS.memory.GET, async (_ctx, workspaceId: string) => loadMemories(workspaceRoot(workspaceId)))

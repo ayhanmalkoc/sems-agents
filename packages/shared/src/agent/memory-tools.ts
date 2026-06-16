@@ -15,7 +15,7 @@ export interface MemoryFns {
   create: (input: CreateMemoryInput) => Promise<MemoryRecord>
   update: (memoryId: string, updates: UpdateMemoryInput) => Promise<MemoryRecord>
   delete: (memoryId: string) => Promise<void>
-  suggestFromSession: (sessionId: string) => Promise<MemorySuggestion>
+  suggestFromSession: (sessionId: string) => Promise<MemorySuggestion | MemorySuggestion[]>
   approve: (suggestionId: string) => Promise<{ suggestion: MemorySuggestion; memory: MemoryRecord }>
   reject: (suggestionId: string) => Promise<MemorySuggestion>
   listSuggestions?: () => Promise<MemorySuggestion[]>
@@ -42,6 +42,10 @@ function formatSuggestion(suggestion: MemorySuggestion): string {
   const parts = [suggestion.id, `status=${suggestion.status}`, `type=${suggestion.type}`, `scope=${suggestion.scope}`, `title=${JSON.stringify(suggestion.title)}`]
   if (suggestion.memoryId) parts.push(`memoryId=${suggestion.memoryId}`)
   return `- ${parts.join(' ')}\n  ${suggestion.content}`
+}
+function formatSuggestions(suggestions: MemorySuggestion[]): string {
+  if (suggestions.length === 0) return 'No strong memory candidates found'
+  return suggestions.map(formatSuggestion).join('\n')
 }
 function formatMemories(memories: MemoryRecord[]): string {
   if (memories.length === 0) return 'Memories: none'
@@ -93,8 +97,10 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
     if (verb === 'suggest-from-session') {
       const sessionId = rest[0]
       if (!sessionId) return failure('suggest-from-session requires a session id')
-      const suggestion = await fns.suggestFromSession(sessionId)
-      return success(`Created memory suggestion ${suggestion.id}\n${formatSuggestion(suggestion)}`)
+      const result = await fns.suggestFromSession(sessionId)
+      const suggestions = Array.isArray(result) ? result : [result]
+      if (suggestions.length === 0) return success('No strong memory candidates found')
+      return success(`Created ${suggestions.length} memory suggestion${suggestions.length === 1 ? '' : 's'}\n${formatSuggestions(suggestions)}`)
     }
     if (verb === 'approve') {
       const suggestionId = rest[0]

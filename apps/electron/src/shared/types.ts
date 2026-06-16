@@ -718,6 +718,7 @@ export interface ElectronAPI {
   deleteMemory(workspaceId: string, memoryId: string): Promise<void>
   approveMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
   rejectMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
+  onMemoryChanged(callback: (workspaceId: string) => void): () => void
 
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{

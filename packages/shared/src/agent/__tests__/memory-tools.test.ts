@@ -47,7 +47,7 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('create {"type":"project_decision","scope":"workspace","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Created memory')
     expect((await executeMemoryCommand('update mem-1 {"title":"Next"}', fns())).content[0].text).toContain('Next')
     expect((await executeMemoryCommand('delete mem-1', fns())).content[0].text).toContain('Deleted memory mem-1')
-    expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created memory suggestion')
+    expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created 1 memory suggestion')
     expect((await executeMemoryCommand('approve sug-1', fns())).content[0].text).toContain('Approved suggestion')
     expect((await executeMemoryCommand('reject sug-1', fns())).content[0].text).toContain('Rejected suggestion')
   })
@@ -56,5 +56,15 @@ describe('memory tool', () => {
     const result = await executeMemoryCommand('show', fns())
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toContain('show requires a memory id')
+  })
+
+  it('formats multiple and empty suggestion results', async () => {
+    const multiple = fns()
+    multiple.suggestFromSession = async () => [suggestion, { ...suggestion, id: 'sug-2', title: 'Second' }]
+    expect((await executeMemoryCommand('suggest-from-session session-1', multiple)).content[0].text).toContain('Created 2 memory suggestions')
+
+    const empty = fns()
+    empty.suggestFromSession = async () => []
+    expect((await executeMemoryCommand('suggest-from-session session-1', empty)).content[0].text).toBe('No strong memory candidates found')
   })
 })

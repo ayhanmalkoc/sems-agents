@@ -417,6 +417,7 @@ export const CHANNEL_MAP = {
   deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
   approveMemorySuggestion: invoke(RPC_CHANNELS.memory.APPROVE),
   rejectMemorySuggestion: invoke(RPC_CHANNELS.memory.REJECT),
+  onMemoryChanged: listener(RPC_CHANNELS.memory.CHANGED),
 
   // Messaging gateway
   getMessagingConfig: invoke(RPC_CHANNELS.messaging.GET_CONFIG),
