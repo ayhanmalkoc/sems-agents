@@ -909,6 +909,16 @@ export default function App() {
         return
       }
 
+      if (event.type === 'session_archived') {
+        updateSessionById(sessionId, { isArchived: true, archivedAt: Date.now() })
+        return
+      }
+
+      if (event.type === 'session_unarchived') {
+        updateSessionById(sessionId, { isArchived: false, archivedAt: undefined })
+        return
+      }
+
       const agentEvent = event as unknown as AgentEvent
 
       // Track activity for stale session watchdog
@@ -1032,6 +1042,7 @@ export default function App() {
     windowWorkspaceId,
     store,
     updateSessionDirect,
+    updateSessionById,
     replaceLoadedSession,
     showSessionNotification,
     initializeSessions,

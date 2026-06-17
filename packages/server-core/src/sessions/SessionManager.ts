@@ -5034,6 +5034,16 @@ export class SessionManager implements ISessionManager {
       // Notify all windows for this workspace
       this.sendEvent({ type: 'session_archived', sessionId }, managed.workspace.id)
       this.emitUnreadSummaryChanged()
+      return
+    }
+
+    for (const workspace of getWorkspaces()) {
+      const stored = loadStoredSession(workspace.rootPath, sessionId)
+      if (!stored) continue
+      await updateSessionMetadata(workspace.rootPath, sessionId, { isArchived: true, archivedAt: Date.now() })
+      this.sendEvent({ type: 'session_archived', sessionId }, workspace.id)
+      this.emitUnreadSummaryChanged()
+      return
     }
   }
 
@@ -5048,6 +5058,16 @@ export class SessionManager implements ISessionManager {
       // Notify all windows for this workspace
       this.sendEvent({ type: 'session_unarchived', sessionId }, managed.workspace.id)
       this.emitUnreadSummaryChanged()
+      return
+    }
+
+    for (const workspace of getWorkspaces()) {
+      const stored = loadStoredSession(workspace.rootPath, sessionId)
+      if (!stored) continue
+      await updateSessionMetadata(workspace.rootPath, sessionId, { isArchived: false, archivedAt: undefined })
+      this.sendEvent({ type: 'session_unarchived', sessionId }, workspace.id)
+      this.emitUnreadSummaryChanged()
+      return
     }
   }
 
