@@ -333,6 +333,14 @@ export function MainContentPanel({
     )
   }
 
+  if (isHooksNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <HooksHomePage />
+      </Panel>
+    )
+  }
+
   // Sources navigator - show source info, multi-select panel, or empty state
   if (isSourcesNavigation(navState)) {
     if (isSourceMultiSelectActive) {
