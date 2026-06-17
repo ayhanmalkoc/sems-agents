@@ -187,7 +187,7 @@ export const MemoryToolSchema = z.object({
 });
 
 export const HooksToolSchema = z.object({
-  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>.'),
+  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.'),
 });
 
 export const SessionsToolSchema = z.object({
@@ -548,9 +548,9 @@ Commands:
 - \`export\` - export workspace resources to a bundle
 - \`import <bundlePath>\` - import a resource bundle`,
 
-  hooks: `Manage builtin workspace lifecycle hooks.
+  hooks: `Manage workspace lifecycle hooks, builtin policy hooks, trusted custom hooks, runs, and trust review.
 
-Use this when the user asks to inspect, test, enable, disable, or audit builtin hooks. Custom script/http hooks are not supported in this phase.
+Use this when the user asks to inspect, test, enable, disable, audit, configure policy, or manage trusted custom hooks. Custom hooks require trust approval and never run untrusted.
 
 Commands:
 - \`status\` - summarize hook availability

@@ -81,7 +81,7 @@ export type { LoadedSkill, SkillMetadata, AgentProfile, CreateAgentProfileInput,
 // Resource bundle types (cross-workspace export/import)
 import type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult } from '@craft-agent/shared/resources';
 export type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult };
-import type { BuiltinHookDefinition, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks';
+import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookTrustRecord, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks';
 export type { BuiltinHookDefinition, HookRunRecord, HooksPolicy };
 
 // LLM connection types
@@ -730,6 +730,13 @@ export interface ElectronAPI {
   setHookEnabled(workspaceId: string, hookId: string, enabled: boolean): Promise<void>
   getHooksPolicy(workspaceId: string): Promise<HooksPolicy>
   setHooksPolicy(workspaceId: string, policy: Partial<HooksPolicy>): Promise<HooksPolicy>
+  getCustomHooks(workspaceId: string): Promise<CustomHookDefinition[]>
+  getCustomHook(workspaceId: string, hookId: string): Promise<CustomHookDefinition | undefined>
+  saveCustomHook(workspaceId: string, hook: CustomHookDefinition): Promise<CustomHookDefinition>
+  deleteCustomHook(workspaceId: string, hookId: string): Promise<void>
+  reviewCustomHookTrust(workspaceId: string, hookId: string): Promise<CustomHookTrustRecord>
+  approveCustomHookTrust(workspaceId: string, hookId: string): Promise<CustomHookTrustRecord>
+  revokeCustomHookTrust(workspaceId: string, hookId: string): Promise<CustomHookTrustRecord>
 
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{

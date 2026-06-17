@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, hasSimilarMemoryOrSuggestion, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryConfidence, type MemoryType } from '@craft-agent/shared/memory'
-import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy } from '@craft-agent/shared/hooks'
+import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
 import {
@@ -4311,6 +4311,40 @@ export class SessionManager implements ISessionManager {
             },
             simulateTool: async (payload) => new HookEngine(managed.workspace.rootPath).simulateTool(payload),
             simulatePrompt: async (payload) => new HookEngine(managed.workspace.rootPath).simulatePrompt(payload),
+            customList: async () => loadCustomHooks(managed.workspace.rootPath),
+            customShow: async (hookId) => getCustomHook(managed.workspace.rootPath, hookId),
+            customCreate: async (hook) => {
+              const next = saveCustomHook(managed.workspace.rootPath, hook)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
+            customUpdate: async (hookId, hook) => {
+              const current = getCustomHook(managed.workspace.rootPath, hookId)
+              if (!current) throw new Error(`Unknown custom hook: ${hookId}`)
+              const next = saveCustomHook(managed.workspace.rootPath, { ...current, ...hook, id: hookId })
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
+            customDelete: async (hookId) => {
+              deleteCustomHook(managed.workspace.rootPath, hookId)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+            },
+            trustReview: async (hookId) => trustReviewCustomHook(managed.workspace.rootPath, hookId),
+            trustApprove: async (hookId) => {
+              const next = trustApproveCustomHook(managed.workspace.rootPath, hookId, 'user')
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
+            trustRevoke: async (hookId) => {
+              const next = trustRevokeCustomHook(managed.workspace.rootPath, hookId)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
+            matcherSet: async (hookId, matcher) => {
+              const next = setCustomHookMatcher(managed.workspace.rootPath, hookId, matcher)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
           },
           resourcesFns: {
             status: async () => ({

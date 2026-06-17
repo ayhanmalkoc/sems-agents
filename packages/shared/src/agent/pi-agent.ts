@@ -1207,8 +1207,7 @@ export class PiAgent extends BaseAgent {
         return;
       }
       if (hookDecision.type === 'ask') {
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: hookDecision.message ?? 'Hooks policy requires approval before this tool can run.' });
-        return;
+        this.debug(`Hooks policy requested approval for ${toolName}; deferring to existing permission flow.`);
       }
       if (hookDecision.type === 'mutate' && hookDecision.mutation && typeof hookDecision.mutation === 'object') {
         this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: hookDecision.mutation as Record<string, unknown> });

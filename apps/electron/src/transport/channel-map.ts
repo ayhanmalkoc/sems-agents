@@ -427,6 +427,13 @@ export const CHANNEL_MAP = {
   setHookEnabled: invoke(RPC_CHANNELS.hooks.SET_ENABLED),
   getHooksPolicy: invoke(RPC_CHANNELS.hooks.GET_POLICY),
   setHooksPolicy: invoke(RPC_CHANNELS.hooks.SET_POLICY),
+  getCustomHooks: invoke(RPC_CHANNELS.hooks.CUSTOM_LIST),
+  getCustomHook: invoke(RPC_CHANNELS.hooks.CUSTOM_SHOW),
+  saveCustomHook: invoke(RPC_CHANNELS.hooks.CUSTOM_SAVE),
+  deleteCustomHook: invoke(RPC_CHANNELS.hooks.CUSTOM_DELETE),
+  reviewCustomHookTrust: invoke(RPC_CHANNELS.hooks.TRUST_REVIEW),
+  approveCustomHookTrust: invoke(RPC_CHANNELS.hooks.TRUST_APPROVE),
+  revokeCustomHookTrust: invoke(RPC_CHANNELS.hooks.TRUST_REVOKE),
 
   // Messaging gateway
   getMessagingConfig: invoke(RPC_CHANNELS.messaging.GET_CONFIG),

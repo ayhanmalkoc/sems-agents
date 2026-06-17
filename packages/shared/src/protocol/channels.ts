@@ -425,6 +425,13 @@ export const RPC_CHANNELS = {
     SET_ENABLED: 'hooks:setEnabled',
     GET_POLICY: 'hooks:getPolicy',
     SET_POLICY: 'hooks:setPolicy',
+    CUSTOM_LIST: 'hooks:customList',
+    CUSTOM_SHOW: 'hooks:customShow',
+    CUSTOM_SAVE: 'hooks:customSave',
+    CUSTOM_DELETE: 'hooks:customDelete',
+    TRUST_REVIEW: 'hooks:trustReview',
+    TRUST_APPROVE: 'hooks:trustApprove',
+    TRUST_REVOKE: 'hooks:trustRevoke',
     CHANGED: 'hooks:changed',
   },
   messaging: {

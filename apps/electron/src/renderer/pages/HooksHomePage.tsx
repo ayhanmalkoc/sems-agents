@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { cn } from '@/lib/utils'
-import type { BuiltinHookDefinition, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks'
+import type { BuiltinHookDefinition, CustomHookDefinition, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks'
 
 type HookRow = BuiltinHookDefinition & { enabled: boolean }
-type Tab = 'builtins' | 'runs' | 'policy'
+type Tab = 'builtins' | 'custom' | 'runs' | 'policy' | 'trust'
 
 function badge(text: string) {
   return <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-[11px] text-foreground/55">{text}</span>
@@ -62,6 +62,7 @@ export default function HooksHomePage() {
   const [tab, setTab] = React.useState<Tab>('builtins')
   const [hooks, setHooks] = React.useState<HookRow[]>([])
   const [runs, setRuns] = React.useState<HookRunRecord[]>([])
+  const [customHooks, setCustomHooks] = React.useState<CustomHookDefinition[]>([])
   const [query, setQuery] = React.useState('')
   const [policy, setPolicy] = React.useState<HooksPolicy | null>(null)
   const [loading, setLoading] = React.useState(false)
@@ -70,14 +71,16 @@ export default function HooksHomePage() {
     if (!activeWorkspaceId) return
     setLoading(true)
     try {
-      const [hookRows, runRows, policyRow] = await Promise.all([
+      const [hookRows, runRows, policyRow, customRows] = await Promise.all([
         window.electronAPI.getHooks(activeWorkspaceId),
         window.electronAPI.getHookRuns(activeWorkspaceId),
         window.electronAPI.getHooksPolicy(activeWorkspaceId),
+        window.electronAPI.getCustomHooks(activeWorkspaceId),
       ])
       setHooks(hookRows as HookRow[])
       setRuns(runRows as HookRunRecord[])
       setPolicy(policyRow as HooksPolicy)
+      setCustomHooks(customRows as CustomHookDefinition[])
     } catch (error) {
       toast.error('Failed to load hooks', { description: error instanceof Error ? error.message : String(error) })
     } finally {
@@ -134,16 +137,16 @@ export default function HooksHomePage() {
               <div className="rounded-2xl bg-primary/10 p-2 text-primary"><ShieldCheck className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-base font-semibold text-foreground">Builtin lifecycle hooks</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-foreground/60">Hooks run at agent lifecycle points for policy, memory, audit, and validation. V1 supports builtin hooks only.</p>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-foreground/60">Hooks run at agent lifecycle points for policy, memory, audit, validation, and trusted custom extensions.</p>
               </div>
             </div>
-            <div className="text-sm text-foreground/55">{enabledCount}/{hooks.length} enabled</div>
+            <div className="text-sm text-foreground/55">{enabledCount}/{hooks.length} built-ins enabled · {customHooks.length} custom</div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2">
-            {(['builtins', 'runs', 'policy'] as Tab[]).map(item => <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)}>{item === 'builtins' ? `Built-ins (${hooks.length})` : item === 'runs' ? `Runs (${runs.length})` : 'Policy'}</Button>)}
+            {(['builtins', 'custom', 'runs', 'policy', 'trust'] as Tab[]).map(item => <Button key={item} size="sm" variant={tab === item ? 'default' : 'outline'} onClick={() => setTab(item)}>{item === 'builtins' ? `Built-ins (${hooks.length})` : item === 'custom' ? `Custom (${customHooks.length})` : item === 'runs' ? `Runs (${runs.length})` : item === 'trust' ? 'Trust Review' : 'Policy'}</Button>)}
           </div>
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-foreground/35" />
@@ -153,13 +156,19 @@ export default function HooksHomePage() {
 
         <div className={cn('min-h-0 flex-1 space-y-3 overflow-auto', loading && 'opacity-60')}>
           {tab === 'builtins' && (visibleHooks.length ? visibleHooks.map(hook => <HookCard key={hook.id} hook={hook} onToggle={toggle} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No hooks match.</div>)}
+          {tab === 'custom' && (customHooks.length ? customHooks.map(hook => (
+            <div key={hook.id} className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-medium text-foreground">{hook.name}</h3>{badge(hook.id)}{badge(hook.source)}{badge(hook.matcher.event ?? 'any')}{badge(hook.handler.type)}{badge(hook.enabled ? 'enabled' : 'disabled')}</div>
+              <p className="mt-2 text-sm text-foreground/60">Powers: {hook.powers.join(', ') || 'observe'} · Timeout: {hook.timeoutMs ?? policy?.customMaxDurationMs ?? 2000}ms</p>
+            </div>
+          )) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No custom hooks yet. Use the hooks tool to create and trust-review workspace hooks.</div>)}
           {tab === 'runs' && (visibleRuns.length ? visibleRuns.map(run => <RunCard key={run.id} run={run} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No hook runs yet.</div>)}
           {tab === 'policy' && (
             <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-5 text-sm leading-6 text-foreground/70">
               <div>
                 <h3 className="font-medium text-foreground">Policy</h3>
                 <p className="mt-2">Builtin hooks are workspace-local lifecycle policy. They enforce secret guards, observe prerequisite decisions, audit tool runs, and delegate memory learning to the memory runtime.</p>
-                <p className="mt-2">Custom shell, HTTP, MCP, or user-authored hooks are intentionally out of scope for this phase.</p>
+                <p className="mt-2">Trusted custom hooks are workspace-local. Untrusted hooks do not run; changed hook hashes require review again.</p>
               </div>
               {policy && (
                 <div className="grid gap-2 md:grid-cols-2">
@@ -168,8 +177,16 @@ export default function HooksHomePage() {
                   {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
                   {policySelect('toolAudit', ['on', 'off'])}
                   {policySelect('memoryLearn', ['auto', 'review', 'off'])}
+                  {policySelect('customHooks', ['trusted-only', 'off'])}
                 </div>
               )}
+            </div>
+          )}
+          {tab === 'trust' && (
+            <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-5 text-sm text-foreground/70">
+              <h3 className="font-medium text-foreground">Trust Review</h3>
+              <p>Review handler type, matcher, powers, timeout, output limit, and hash before approving a custom hook.</p>
+              {customHooks.length ? customHooks.map(hook => <div key={hook.id} className="rounded-xl border border-border/60 p-3">{hook.id} · {hook.handler.type} · powers: {hook.powers.join(', ')}</div>) : <p className="text-foreground/50">No custom hooks to review.</p>}
             </div>
           )}
         </div>

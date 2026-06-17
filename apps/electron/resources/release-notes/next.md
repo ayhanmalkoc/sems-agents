@@ -19,3 +19,5 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 - **Dock browser close visibility** — Hide the native dock browser view when the right dock panel closes so browser content no longer remains over the workspace.
 
 ## Breaking Changes
+
+- **Hooks V3 runtime** — Adds trusted custom hooks, trust review, extended policy controls, and run-detail explainability while keeping hooks workspace-local and redacted by default.

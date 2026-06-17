@@ -1,44 +1,73 @@
 # Hooks Tools
 
-Use the `hooks` tool to inspect and manage builtin workspace lifecycle hooks. Hooks are runtime policy/audit orchestration; they do not replace domain tools such as `memory`, `sessions`, `agents`, `automations`, or `resources`.
+Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime policy, audit, enforcement, and explainability layer. They do not replace domain tools such as `memory`, `sessions`, `agents`, `automations`, or `resources`.
 
 ## Product Policy
 
-- V1 is builtin-only. Custom shell, HTTP, MCP, or user-authored hooks are not supported.
-- Hooks run at lifecycle events such as `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `TurnStop`, and `SessionComplete`.
-- Hooks may observe, block, ask, add context, mutate, or redact through existing product domain APIs.
-- Hooks do not control UI panels or browser runtime directly.
-- Use domain tools for product state changes; use `hooks` for hook toggles, dry-run tests, and audit inspection.
+- Builtin hooks are always available for security, prerequisites, workspace boundary checks, audit, memory learning, and validation summaries.
+- Trusted custom hooks are supported for workspace-local automation. Untrusted custom hooks never run.
+- Custom hooks require trust review before execution. If handler config or content hash changes, trust is revoked automatically.
+- Command hooks use `executable + args`; shell strings are not supported.
+- HTTP hooks require an explicit URL target and timeout/output limits.
+- MCP hooks may only target configured workspace MCP sources.
+- Prompt hooks return text/JSON decisions only; they do not execute arbitrary code.
+- Hook audit stores redacted summaries, not raw secrets or large payload dumps.
+- Hook decisions are runtime-authoritative. If a hook blocks or asks, the tool/prompt flow must obey it.
 
 ## Commands
 
-- `hooks status` — summarize hook availability, enabled count, and run count.
-- `hooks list` — list builtin hooks.
-- `hooks show <hookId>` — inspect one builtin hook.
-- `hooks enable <hookId>` — enable one builtin hook.
-- `hooks disable <hookId>` — disable one builtin hook.
-- `hooks runs [hookId]` — show recent hook runs, optionally for one hook.
-- `hooks explain <runId>` — inspect one hook run decision.
-- `hooks test <hookId> <json>` — dry-run one hook with an event payload.
-- `hooks policy` — show workspace hook policy.
-- `hooks set-policy <json>` — update workspace hook policy.
-- `hooks simulate-tool <json>` — dry-run the `PreToolUse` gateway with structured payload.
-- `hooks simulate-prompt <json>` — dry-run the `UserPromptSubmit` gateway with structured payload.
+- `hooks status` - summarize availability, enabled count, custom count, and run count.
+- `hooks list` - list builtin hooks.
+- `hooks show <hookId>` - inspect one builtin hook.
+- `hooks enable <hookId>` - enable one builtin hook.
+- `hooks disable <hookId>` - disable one builtin hook.
+- `hooks runs [hookId]` - show recent hook runs.
+- `hooks explain <runId>` - inspect one hook run summary.
+- `hooks run-detail <runId>` - inspect final decision and per-hook decision timeline.
+- `hooks test <hookId> <json>` - dry-run one builtin or custom hook.
+- `hooks policy` - show workspace hook policy.
+- `hooks set-policy <json>` - update workspace hook policy.
+- `hooks simulate-tool <json>` - dry-run the `PreToolUse` gateway.
+- `hooks simulate-prompt <json>` - dry-run the `UserPromptSubmit` gateway.
+- `hooks custom-list` - list workspace custom hooks.
+- `hooks custom-show <hookId>` - inspect one custom hook.
+- `hooks custom-create <json>` - create one custom hook.
+- `hooks custom-update <hookId> <json>` - update one custom hook; trust may be revoked if hash changes.
+- `hooks custom-delete <hookId>` - delete one custom hook.
+- `hooks trust-review <hookId>` - show trust status and hash.
+- `hooks trust-approve <hookId> --confirm` - approve current custom hook hash.
+- `hooks trust-revoke <hookId>` - revoke trust.
+- `hooks matcher-set <hookId> <json>` - update a custom hook matcher.
 
 ## Builtin Hooks
 
-- `secret_scan_prompt` — blocks prompt content that appears to contain credentials or secrets.
-- `secret_scan_tool_input` — blocks tool input that appears to contain credentials or secrets.
-- `tool_prerequisite_guard` — mirrors documentation prerequisite enforcement.
-- `workspace_boundary_guard` — observes or guards risky workspace boundary operations.
-- `tool_audit_log` — records post-tool audit entries.
-- `validation_summary_on_turn_stop` — captures validation summary context.
-- `memory_learn_on_session_complete` — delegates session-complete memory learning to the memory runtime.
-- `automation_run_audit` — records automation run audit context.
+- `secret_scan_prompt` - blocks prompt content that appears to contain credentials or secrets.
+- `secret_scan_tool_input` - blocks tool input that appears to contain credentials or secrets.
+- `tool_prerequisite_guard` - preserves existing documentation prerequisite checks.
+- `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
+- `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
+- `validation_summary_on_turn_stop` - captures turn-stop validation context.
+- `memory_learn_on_session_complete` - delegates session completion memory learning to the memory engine.
+- `automation_run_audit` - links automation run metadata into hook audit history.
 
-## Decision Model
+## Custom Hook Schema
 
-Decision precedence is `block > ask > mutate > addContext > redact > observe > allow`. A `block` decision prevents execution; an `ask` decision must route through permission approval; redaction never stores raw secrets in hook audit.
+```json
+{
+  "id": "workspace_quality_gate",
+  "name": "Workspace quality gate",
+  "enabled": true,
+  "source": "workspace",
+  "matcher": { "event": "PreToolUse", "toolName": "bash" },
+  "handler": { "type": "prompt", "decision": { "type": "observe", "message": "ok" } },
+  "powers": ["observe"],
+  "timeoutMs": 2000,
+  "maxOutputBytes": 4096
+}
+```
+
+Allowed handler types: `command`, `http`, `mcp`, `prompt`.
+Allowed powers: `observe`, `block`, `ask`, `mutate`, `redact`, `addContext`.
 
 ## Policy
 
@@ -47,7 +76,15 @@ Decision precedence is `block > ask > mutate > addContext > redact > observe > a
 - `prerequisiteGuard`: `enforce | observe`
 - `toolAudit`: `on | off`
 - `memoryLearn`: `auto | review | off`
+- `customHooks`: `off | trusted-only`
+- `customDefaultPower`: `observe`
+- `customMaxDurationMs`: max custom hook runtime
+- `customMaxOutputBytes`: max custom hook output captured
 
-## Safety
+## Examples
 
-Do not create custom scripts or edit hook JSON files directly. Use `hooks enable`, `hooks disable`, and the Hooks UI.
+- `hooks simulate-prompt {"message":"token=sk_test_123456789abcdef"}`
+- `hooks simulate-tool {"toolName":"bash","toolInput":"rm -rf ../outside"}`
+- `hooks custom-create {"id":"review_note","name":"Review note","enabled":true,"source":"workspace","matcher":{"event":"PostToolUse"},"handler":{"type":"prompt","decision":{"type":"observe","message":"reviewed"}},"powers":["observe"]}`
+- `hooks trust-review review_note`
+- `hooks trust-approve review_note --confirm`
