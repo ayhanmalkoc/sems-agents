@@ -122,7 +122,9 @@ export async function handleSessionsTool(
 
       case 'list': {
         if (!ctx.listSessions) return errorResponse('sessions list is not available in this context.');
-        const result = ctx.listSessions();
+        const scopeArg = parsed.args[0];
+        const scope = scopeArg === 'archived' || scopeArg === 'all' || scopeArg === 'active' ? scopeArg : 'active';
+        const result = ctx.listSessions({ scope });
         return successResponse(JSON.stringify(result, null, 2));
       }
 
@@ -195,6 +197,7 @@ export async function handleSessionsTool(
         if (!ctx.archiveSession) return errorResponse('sessions archive is not available in this context.');
         const sessionId = requireArg(parsed.args[0], 'sessionId');
         const archived = parseBoolean(parsed.args[1], 'archived');
+        if (ctx.getSessionInfo && !ctx.getSessionInfo(sessionId)) return errorResponse(`Session not found: ${sessionId}`);
         await ctx.archiveSession(sessionId, archived);
         return successResponse(archived ? `Archived ${sessionTarget(sessionId)}.` : `Unarchived ${sessionTarget(sessionId)}.`);
       }

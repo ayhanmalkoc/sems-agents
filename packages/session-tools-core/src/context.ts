@@ -452,6 +452,9 @@ export interface SessionInfo {
   llmConnection?: string;
   model?: string;
   isActive: boolean;
+  isArchived?: boolean;
+  archivedAt?: number;
+  isPinned?: boolean;
 }
 
 /** Compact session summary (returned by list_sessions). */
@@ -461,6 +464,9 @@ export interface SessionListItem {
   labels: string[];
   status: string;
   createdAt: number;
+  isArchived?: boolean;
+  archivedAt?: number;
+  isPinned?: boolean;
 }
 
 /** Options for list_sessions filtering and pagination. */
@@ -469,6 +475,7 @@ export interface ListSessionsOptions {
   label?: string;
   search?: string;
   sortBy?: 'recent' | 'name' | 'status';
+  scope?: 'active' | 'archived' | 'all';
   limit?: number;
   offset?: number;
 }

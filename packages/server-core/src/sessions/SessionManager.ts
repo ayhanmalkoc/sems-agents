@@ -4745,18 +4745,22 @@ export class SessionManager implements ISessionManager {
         getSessionInfoFn: (sessionId?: string) => {
           const targetId = sessionId ?? managed.id
           const session = this.sessions.get(targetId)
-          if (!session) return null
+          const source = session ?? loadStoredSession(managed.workspace.rootPath, targetId)
+          if (!source) return null
           return {
-            id: session.id,
-            name: session.name ?? session.id,
-            labels: session.labels ?? [],
-            status: session.sessionStatus ?? 'todo',
-            permissionMode: session.permissionMode ?? 'ask',
-            createdAt: session.createdAt ?? 0,
-            workingDirectory: session.workingDirectory,
-            llmConnection: session.llmConnection,
-            model: session.model,
-            isActive: session.agent != null,
+            id: source.id,
+            name: source.name ?? source.id,
+            labels: source.labels ?? [],
+            status: source.sessionStatus ?? 'todo',
+            permissionMode: source.permissionMode ?? 'ask',
+            createdAt: source.createdAt ?? 0,
+            workingDirectory: source.workingDirectory,
+            llmConnection: source.llmConnection,
+            model: source.model,
+            isActive: session?.agent != null,
+            isArchived: !!source.isArchived,
+            archivedAt: source.archivedAt,
+            isPinned: !!source.isFlagged,
           }
         },
         listSessionsFn: (options) => {
@@ -4766,6 +4770,13 @@ export class SessionManager implements ISessionManager {
           const offset = options?.offset ?? 0
 
           let sessions = this.getSessions(managed.workspace.id)
+
+          const scope = options?.scope ?? 'active'
+          if (scope === 'active') {
+            sessions = sessions.filter(s => !s.isArchived)
+          } else if (scope === 'archived') {
+            sessions = sessions.filter(s => !!s.isArchived)
+          }
 
           // Filter
           if (options?.status) {
@@ -4803,6 +4814,9 @@ export class SessionManager implements ISessionManager {
               labels: s.labels ?? [],
               status: s.sessionStatus ?? 'todo',
               createdAt: s.createdAt ?? 0,
+              isArchived: !!s.isArchived,
+              archivedAt: s.archivedAt,
+              isPinned: !!s.isFlagged,
             })),
           }
         },
@@ -5045,6 +5059,7 @@ export class SessionManager implements ISessionManager {
       this.emitUnreadSummaryChanged()
       return
     }
+    throw new Error(`Session not found: ${sessionId}`)
   }
 
   async unarchiveSession(sessionId: string): Promise<void> {
@@ -5069,6 +5084,7 @@ export class SessionManager implements ISessionManager {
       this.emitUnreadSummaryChanged()
       return
     }
+    throw new Error(`Session not found: ${sessionId}`)
   }
 
   async setSessionStatus(sessionId: string, sessionStatus: SessionStatus): Promise<void> {

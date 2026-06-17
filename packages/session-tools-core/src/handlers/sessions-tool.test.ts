@@ -27,11 +27,13 @@ describe('sessions domain tool', () => {
   it('list and show use read callbacks', async () => {
     const ctx = {
       sessionId: 'current',
-      listSessions: () => ({ total: 1, returned: 1, sessions: [{ id: 's1', name: 'One', labels: [], status: 'todo', createdAt: 1 }] }),
+      listSessions: (options) => ({ total: 1, returned: 1, sessions: [{ id: options?.scope === 'archived' ? 'archived-1' : 's1', name: 'One', labels: [], status: 'todo', createdAt: 1, isArchived: options?.scope === 'archived' }] }),
       getSessionInfo: (id?: string) => id === 's1' ? makeInfo(id) : null,
     } satisfies Partial<SessionToolContext>;
 
-    expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'list' }))).toContain('"total": 1');
+    expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'list' }))).toContain('"id": "s1"');
+    expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'list archived' }))).toContain('"id": "archived-1"');
+    expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'list all' }))).toContain('"id": "s1"');
     expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'show s1' }))).toContain('"id": "s1"');
     expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'show missing' }))).toContain('Session not found');
   });
@@ -57,6 +59,7 @@ describe('sessions domain tool', () => {
       setSessionStatus: async (id, status) => { calls.push(`status:${id}:${status}`); },
       setSessionAgent: async (id, agent) => { calls.push(`agent:${id}:${agent}`); },
       archiveSession: async (id, archived) => { calls.push(`archive:${id}:${archived}`); },
+      getSessionInfo: (id) => id === 'missing' ? null : makeInfo(id ?? 'current'),
       pinSession: async (id, pinned) => { calls.push(`pin:${id}:${pinned}`); },
     } satisfies Partial<SessionToolContext>;
 
@@ -66,6 +69,7 @@ describe('sessions domain tool', () => {
     await handleSessionsTool(ctx as SessionToolContext, { command: 'agent s1 default' });
     await handleSessionsTool(ctx as SessionToolContext, { command: 'archive s1 true' });
     await handleSessionsTool(ctx as SessionToolContext, { command: 'pin s1 false' });
+    expect(text(await handleSessionsTool(ctx as SessionToolContext, { command: 'archive missing true' }))).toContain('Session not found: missing');
 
     expect(calls).toEqual([
       'rename:s1:New Name',
