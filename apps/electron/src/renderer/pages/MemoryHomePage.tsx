@@ -49,6 +49,8 @@ type WorkingMemoryNote = {
   day?: string
 }
 
+type HygieneItem = { kind: 'duplicate' | 'stale'; memoryId: string; relatedMemoryId?: string; reason: string }
+
 type Tab = 'memories' | 'suggestions' | 'working'
 type Filters = { type: string; scope: string; sourceSessionId: string; status: string }
 
@@ -157,7 +159,10 @@ function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: Memor
             {suggestion.confidence && badge(suggestion.confidence)}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{suggestion.content}</p>
-          {suggestion.reason && <p className="mt-2 text-xs text-foreground/45">{suggestion.reason}</p>}
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
+            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(suggestion.sourceSessionId))}>source: {suggestion.sourceSessionId}</button>
+            {suggestion.reason && <span>reason: {suggestion.reason}</span>}
+          </div>
           <AuditDetails item={suggestion} />
         </div>
         <div className="flex shrink-0 gap-1">
@@ -185,12 +190,26 @@ function WorkingCard({ note }: { note: WorkingMemoryNote }) {
         {note.day && badge(note.day)}
       </div>
       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{note.content}</p>
+      <p className="mt-2 text-xs text-foreground/45">Temporary context only. Use Review or Edit with the agent to promote durable learnings.</p>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
         <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(note.sourceSessionId))}>source: {note.sourceSessionId}</button>
         {note.tags?.map(tag => <span key={tag}>#{tag}</span>)}
       </div>
     </div>
   )
+}
+
+function buildHygieneItems(memories: MemoryRecord[]): HygieneItem[] {
+  const seen = new Map<string, MemoryRecord>()
+  const items: HygieneItem[] = []
+  for (const memory of memories) {
+    if ((memory.status ?? 'active') === 'stale') items.push({ kind: 'stale', memoryId: memory.id, reason: 'Memory is marked stale.' })
+    const key = `${memory.type}:${memory.title.trim().toLowerCase()}:${memory.content.trim().toLowerCase().slice(0, 120)}`
+    const related = seen.get(key)
+    if (related) items.push({ kind: 'duplicate', memoryId: memory.id, relatedMemoryId: related.id, reason: 'Similar type, title, and content.' })
+    else seen.set(key, memory)
+  }
+  return items.slice(0, 5)
 }
 
 function selectOptions(values: string[]) {
@@ -300,8 +319,11 @@ export default function MemoryHomePage() {
 
   const pendingCount = suggestions.filter(item => item.status === 'pending').length
   const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories') && matchesQuery(memory, query))
-  const visibleSuggestions = suggestions.filter(suggestion => matchesFilters(suggestion, filters, 'suggestions') && matchesQuery(suggestion, query))
+  const visibleSuggestions = suggestions
+    .filter(suggestion => matchesFilters(suggestion, filters, 'suggestions') && matchesQuery(suggestion, query))
+    .sort((left, right) => (left.status === 'pending' ? 0 : 1) - (right.status === 'pending' ? 0 : 1))
   const visibleWorkingNotes = workingNotes.filter(note => matchesQuery(note, query))
+  const hygieneItems = React.useMemo(() => buildHygieneItems(memories), [memories])
   const activeRows = tab === 'memories' ? memories : tab === 'suggestions' ? suggestions : []
   const typeOptions = selectOptions(activeRows.map(item => item.type))
   const scopeOptions = selectOptions(activeRows.map(item => item.scope))
@@ -374,9 +396,9 @@ export default function MemoryHomePage() {
           <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>Reset</Button>
         </div>
         )}
-        {tab === 'working' && (
+          {tab === 'working' && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-background/60 p-3">
-            <p className="text-xs text-foreground/50">Working memory is temporary session/day context. It never becomes curated memory automatically.</p>
+            <p className="text-xs text-foreground/50">Working memory is temporary session/day context, not curated memory. Use Review/Edit with the agent to promote useful notes.</p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>Clear session</Button>
               <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>Clear day</Button>
@@ -385,6 +407,16 @@ export default function MemoryHomePage() {
         )}
 
         <div className={cn('min-h-0 flex-1 space-y-3 overflow-auto', loading && 'opacity-60')}>
+          {tab === 'memories' && hygieneItems.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-4 text-sm">
+              <div className="font-medium text-foreground">Needs cleanup</div>
+              <div className="mt-2 space-y-1 text-xs text-foreground/60">
+                {hygieneItems.map(item => (
+                  <div key={`${item.kind}-${item.memoryId}-${item.relatedMemoryId ?? ''}`}>{item.kind}: {item.memoryId}{item.relatedMemoryId ? ` ↔ ${item.relatedMemoryId}` : ''} — {item.reason}</div>
+                ))}
+              </div>
+            </div>
+          )}
           {tab === 'memories' && (visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No curated memories match.</div>)}
           {tab === 'suggestions' && (visibleSuggestions.length ? visibleSuggestions.map(suggestion => <SuggestionCard key={suggestion.id} suggestion={suggestion} onApprove={approve} onReject={reject} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No memory suggestions match.</div>)}
           {tab === 'working' && (visibleWorkingNotes.length ? visibleWorkingNotes.map(note => <WorkingCard key={note.id} note={note} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No working memory notes.</div>)}

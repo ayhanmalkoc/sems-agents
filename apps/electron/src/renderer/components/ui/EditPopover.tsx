@@ -638,7 +638,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
           `The user wants to edit workspace memory ${memoryId}. ` +
           'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
           'Use memory show to inspect the current record if needed. ' +
-          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, delete only when requested, or working-add for temporary notes. ' +
+          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, hygiene to find cleanup candidates, delete only when requested, or working-add for temporary notes. ' +
           'Do not edit memory JSON files directly except as a last-resort fallback. ' +
           'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
           'Confirm clearly what changed.',
@@ -658,7 +658,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       context:
         'The user wants to review workspace memory suggestions. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. ' +
+        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. If a working note should become durable, create a memory suggestion or approved memory only when the user intent is clear. ' +
         'Do not edit memory JSON files directly except as a last-resort fallback. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
         'Confirm clearly what changed.',
@@ -679,7 +679,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to refresh memory by learning from session history. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'Use memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
-        'Summarize processed, created, suggested, skipped, mode, and any ids. ' +
+        'Return a short learn summary with processed, created, suggested, skipped, mode, created ids, suggested ids, and the first skip reasons. ' +
         'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
     },
     example: 'Refresh memory from all sessions',

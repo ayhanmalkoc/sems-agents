@@ -113,17 +113,20 @@ type AutomationToolItemServer = Record<string, unknown> & { id: string; event: s
 const MEMORY_AUTO_SUGGEST_COOLDOWN_MS = 10 * 60 * 1000
 
 const MEMORY_CANDIDATE_RULES: Array<{ type: MemoryType; title: string; patterns: RegExp[]; strongPatterns?: RegExp[] }> = [
-  { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararlaÅŸtÄ±rdÄ±k/i, /anlaÅŸtÄ±k/i, /\bdecision\b/i, /\bagreed\b/i] },
-  { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i], strongPatterns: [/bundan sonra/i, /tercih (ediyorum|ederim)/i, /I prefer/i, /don't want/i] },
-  { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /Ã§Ã¶zÃ¼m/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i] },
-  { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /sÃ¼reÃ§/i, /\bcommand\b/i] },
+  { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararlaþtýrdýk/i, /anlaþtýk/i, /bundan sonra .*?(yap|kullan|ilerle)/i, /\bdecision\b/i, /\bagreed\b/i], strongPatterns: [/karar (verdik|netleþti)/i, /kararlaþtýrdýk/i, /anlaþtýk/i, /\bagreed\b/i] },
+  { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /istiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i], strongPatterns: [/bundan sonra/i, /tercih (ediyorum|ederim)/i, /I prefer/i, /don't want/i] },
+  { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /çözüm/i, /çözdük/i, /düzeldi/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i], strongPatterns: [/(hata|bug|error).*?(çözüm|sebep|fix|düzeldi)/i, /(çözüm|fix).*?(hata|bug|error)/i] },
+  { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /süreç/i, /akýþ/i, /validasyon/i, /\bcommand\b/i], strongPatterns: [/(test|komut|workflow|akýþ).*?(çalýþtýr|kullan|doðrula)/i] },
 ]
+
+const MEMORY_NOISE_PATTERNS = [/^(tamam|ok|okay|evet|hayýr|devam|done|geçti|baþla)[.!\s]*$/i, /^qa (done|tamam|geçti)/i, /^test sonucu/i, /^commit push$/i]
 
 function extractMemoryCandidateText(message: Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }): string | undefined {
   const role = message.role ?? message.type
   if (role !== 'user' && role !== 'assistant') return undefined
   const text = message.content.trim().replace(/```[\s\S]*?```/g, '').replace(/\s+/g, ' ')
   if (text.length < 24) return undefined
+  if (MEMORY_NOISE_PATTERNS.some(pattern => pattern.test(text))) return undefined
   return text.slice(0, 800)
 }
 
@@ -135,9 +138,11 @@ function classifyMemoryCandidate(text: string): { type: MemoryType; title: strin
 }
 
 function curateMemoryCandidateContent(text: string): string {
-  const cleaned = text.replace(/^(tamam|evet|peki|þimdi|ok)[,\s]+/i, '').trim()
-  const sentence = cleaned.split(/(?<=[.!?])\s+/).find(part => part.length >= 24) ?? cleaned
-  return sentence.slice(0, 360).trim()
+  const cleaned = text.replace(/^(tamam|evet|peki|þimdi|simdi|ok|okay|not:)[,\s]+/i, '').trim()
+  const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).filter(Boolean)
+  const signal = sentences.find(part => MEMORY_CANDIDATE_RULES.some(rule => rule.patterns.some(pattern => pattern.test(part))))
+  const sentence = signal ?? sentences.find(part => part.length >= 24) ?? cleaned
+  return sentence.replace(/\s+/g, ' ').slice(0, 360).trim()
 }
 
 function buildMemoryCandidates(messages: Array<Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }>, sessionId: string, sessionName?: string): Array<{ type: MemoryType; title: string; content: string; confidence: MemoryConfidence; hash: string }> {

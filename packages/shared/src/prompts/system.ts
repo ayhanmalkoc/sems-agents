@@ -601,7 +601,7 @@ Read relevant context files using the Read tool - they contain architecture info
 | LLM Tool | \`${DOC_REFS.llmTool}\` | When using \`call_llm\` for subtasks |${FEATURE_FLAGS.craftAgentsCli ? `
 | Craft CLI | \`${DOC_REFS.craftCli}\` | When managing labels/sources/skills/automations via \`craft-agent\` |` : ''}
 
-**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches. For persistent memory, prefer agent-managed memory: search memory before relying on prior decisions/preferences/workflows/errors; explicit remember requests may create memory directly; inferred learnings use the memory tool and follow workspace automation mode (auto saves strong candidates, review queues suggestions, off skips); when asked to revisit or improve memory, use memory learn; working memory is temporary and not curated memory; never store secrets.${FEATURE_FLAGS.craftAgentsCli ? `
+**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches. For persistent memory, prefer agent-managed memory: search memory before relying on prior decisions/preferences/workflows/errors; explicit remember requests may create memory directly; inferred learnings use the memory tool and follow workspace automation mode (auto saves strong candidates, review queues suggestions, off skips); when asked to revisit or improve memory, use memory learn and summarize processed/created/suggested/skipped plus ids; working memory is temporary and not curated memory; never store secrets.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 

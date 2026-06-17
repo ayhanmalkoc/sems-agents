@@ -22,7 +22,7 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory status` — show availability and counts.
 - `memory list` — list approved memories.
 - `memory show <memoryId>` — inspect one memory.
-- `memory search <query>` — find approved memories by text.
+- `memory search <query>` — find approved memories by text in decision-support format (`id`, `type`, `confidence`, `status`, content, `sourceSessionId`).
 - `memory create <json>` — create an approved memory for explicit user requests.
 - `memory update <memoryId> <json>` — update one approved memory.
 - `memory delete <memoryId>` — delete one approved memory.
@@ -30,6 +30,13 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory learn <current|recent|all|sessionId>` — manually learn from current, recent, all, or one specific session for strong memory candidates.
 - `memory approve <suggestionId>` — move a pending suggestion into approved memory.
 - `memory reject <suggestionId>` — reject a pending suggestion.
+- `memory hygiene` — list duplicate/stale/conflict cleanup candidates without mutating records.
+- `memory merge <targetId> <sourceId>` — mark the source stale and add it to target `supersedes`.
+- `memory mark-stale <memoryId>` — mark one memory stale.
+- `memory refresh <memoryId> <json>` — update a memory and mark it active.
+- `memory working-list` — list temporary working notes.
+- `memory working-add <json>` — add a temporary session/day working note.
+- `memory working-clear <session|day>` — clear temporary working notes by scope.
 
 ## Memory Types
 
@@ -78,6 +85,7 @@ Use manual learning when automatic completion learning may have missed something
 - In `review` mode, strong learning candidates become pending suggestions.
 - In `off` mode, manual learning is still allowed and queues suggestions (`off-as-review`) because it is an explicit user action.
 - Duplicate, secret, and low-confidence guards still apply.
+- Tool output is a stable summary: `processed`, `created`, `suggested`, `skipped`, `mode`, created ids, suggested ids, and the first skip reasons.
 
 ## Suggestions
 
@@ -108,7 +116,7 @@ Working memory is a lightweight layer for short-lived session/day notes. It stay
 
 ## Hygiene
 
-Use `memory hygiene` when memory feels noisy, duplicated, or outdated. Use `merge` for duplicates and `mark-stale` for old facts. `delete` is still available but should be reserved for clearly unwanted records.
+Use `memory hygiene` when memory feels noisy, duplicated, or outdated. It reports cleanup candidates only. Use `merge` for duplicates, `mark-stale` for old facts, and `refresh` for updated facts. `delete` is still available but should be reserved for clearly unwanted records.
 
 ## Retrieval Guidance
 

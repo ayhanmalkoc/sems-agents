@@ -57,6 +57,22 @@ function formatMemory(memory: MemoryRecord): string {
   if (memory.supersedes?.length) parts.push(`supersedes=${memory.supersedes.join(',')}`)
   return `- ${parts.join(' ')}\n  ${content}`
 }
+function formatMemorySearchResult(memory: MemoryRecord): string {
+  const content = memory.content.length > 180 ? `${memory.content.slice(0, 177)}...` : memory.content
+  return [
+    `- id=${memory.id}`,
+    `type=${memory.type}`,
+    `confidence=${memory.confidence ?? 'n/a'}`,
+    `status=${memory.status ?? 'active'}`,
+    `title=${JSON.stringify(memory.title)}`,
+    `sourceSessionId=${memory.sourceSessionId}`,
+    `content=${JSON.stringify(content)}`,
+  ].join(' ')
+}
+function formatMemorySearchResults(memories: MemoryRecord[]): string {
+  if (memories.length === 0) return 'Memory search: no relevant memories found'
+  return ['Memory search results:', ...memories.map(formatMemorySearchResult)].join('\n')
+}
 function formatSuggestion(suggestion: MemorySuggestion): string {
   const content = suggestion.content.length > 240 ? `${suggestion.content.slice(0, 237)}...` : suggestion.content
   const parts = [suggestion.id, `status=${suggestion.status}`, `type=${suggestion.type}`, `scope=${suggestion.scope}`, `confidence=${suggestion.confidence ?? 'n/a'}`, `title=${JSON.stringify(suggestion.title)}`]
@@ -69,8 +85,8 @@ function formatSuggestions(suggestions: MemorySuggestion[]): string {
 }
 
 function formatHygiene(items: MemoryHygieneItem[]): string {
-  if (items.length === 0) return 'Memory hygiene: no issues found'
-  return ['Memory hygiene:', ...items.map(item => `- ${item.kind} memoryId=${item.memoryId}${item.relatedMemoryId ? ` relatedMemoryId=${item.relatedMemoryId}` : ''} reason=${JSON.stringify(item.reason)}`)].join('\n')
+  if (items.length === 0) return 'Memory hygiene: no cleanup needed'
+  return ['Memory hygiene: needs cleanup', ...items.map(item => `- kind=${item.kind} memoryId=${item.memoryId}${item.relatedMemoryId ? ` relatedMemoryId=${item.relatedMemoryId}` : ''} reason=${JSON.stringify(item.reason)}`)].join('\n')
 }
 function formatWorkingNote(note: WorkingMemoryNote): string {
   const parts = [note.id, `scope=${note.scope}`, `title=${JSON.stringify(note.title)}`, `sourceSessionId=${note.sourceSessionId}`]
@@ -96,11 +112,11 @@ function formatStatus(status: MemoryStatusSnapshot): string {
 
 function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
-    `Memory learn: mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
+    `Memory learn summary: mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
   ]
-  if (summary.created.length) lines.push('Created:', ...summary.created.map(formatMemory))
-  if (summary.suggested.length) lines.push('Suggested:', ...summary.suggested.map(formatSuggestion))
-  if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.map(reason => `- ${reason}`))
+  if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(', ')}`, 'Created:', ...summary.created.map(formatMemory))
+  if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(', ')}`, 'Suggested:', ...summary.suggested.map(formatSuggestion))
+  if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.slice(0, 10).map(reason => `- ${reason}`))
   return lines.join('\n')
 }
 
@@ -121,7 +137,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
     if (verb === 'search') {
       const query = trimmed.slice(rawVerb.length).trim()
       if (!query) return failure('search requires a query')
-      return success(formatMemories(await fns.search(query)))
+      return success(formatMemorySearchResults(await fns.search(query)))
     }
     if (verb === 'create') {
       const input = parseJsonPayload<CreateMemoryInput>(trimmed.slice(rawVerb.length).trim(), 'create')
