@@ -89,6 +89,8 @@ export type EditContextKey =
   | 'edit-views'
   | 'edit-tool-icons'
   | 'automation-config'
+  | 'hooks-create'
+  | 'hooks-edit'
   | 'memory-create'
   | 'memory-edit'
   | 'memory-review'
@@ -606,6 +608,45 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
+
+
+  'hooks-create': (location) => ({
+    context: {
+      label: 'Hooks',
+      filePath: `${location}/hooks/hooks.json`,
+      context:
+        'The user wants to create or configure workspace hooks. ' +
+        'Read ~/.craft-agent/docs/hooks-tools.md first, then use the hooks tool. ' +
+        'Use hooks custom-create for new custom hooks, hooks trust-review to explain risk, and never approve trust without explicit user confirmation. ' +
+        'Use the Craft native hook contract with snake_case hook input and output. ' +
+        'Do not edit hooks JSON files directly except as a last-resort fallback. Confirm clearly what changed.',
+    },
+    example: 'Create a hook that warns before risky bash commands',
+    overridePlaceholder: 'What hook should be created?',
+    model: 'default',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
+  'hooks-edit': (location) => {
+    const [workspaceRoot, hookId = ''] = location.split('::')
+    return {
+      context: {
+        label: 'Hooks',
+        filePath: `${workspaceRoot}/hooks/hooks.json`,
+        context:
+          `The user wants to edit hook ${hookId}. ` +
+          'Read ~/.craft-agent/docs/hooks-tools.md first, then use hooks custom-show, custom-update, matcher-set, trust-review, trust-revoke, or trust-approve only after explicit user confirmation. ' +
+          'Changing handler, matcher, powers, timeout, or output limit can make trust stale. Explain that clearly. ' +
+          'Do not edit hooks JSON files directly except as a last-resort fallback. Confirm clearly what changed.',
+      },
+      example: 'Limit this hook to bash tools only',
+      overridePlaceholder: 'How should this hook change?',
+      model: 'default' as const,
+      systemPromptPreset: 'mini' as const,
+      inlineExecution: true,
+    }
+  },
 
   'memory-create': (location) => ({
     context: {
