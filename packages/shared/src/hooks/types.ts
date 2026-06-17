@@ -1,4 +1,4 @@
-export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'TurnStop' | 'SessionComplete' | 'AutomationRun' | 'FileChanged'
+export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'TurnStop' | 'SessionComplete' | 'AutomationRun' | 'FileChanged'
 export type HookMode = 'observe' | 'enforce' | 'mutate' | 'ask'
 export type HookDecisionType = 'allow' | 'block' | 'ask' | 'addContext' | 'mutate' | 'redact' | 'observe'
 export type HookOutputDecision = 'allow' | 'block' | 'ask' | 'modify' | 'add_context' | 'redact' | 'observe'
@@ -74,4 +74,4 @@ export interface HookEventPayload {
 }
 
 export interface HookRunRecord { id: string; hookId: string; event: HookEventName; decision: HookDecisionType; message?: string; inputSummary?: string; outputSummary?: string; decisions?: HookDecision[]; outputs?: HookOutput[]; finalDecision?: HookDecision; finalOutput?: HookOutput; matcherReason?: string; trustSource?: HookSource; sessionId?: string; toolName?: string; durationMs: number; ok: boolean; error?: string; createdAt: string }
-export interface HookStatusSnapshot { available: boolean; hooks: number; enabled: number; runs: number; reason?: string }
+export interface HookStatusSnapshot { available: boolean; hooks: number; enabled: number; runs: number; policy?: HooksPolicy; reason?: string }

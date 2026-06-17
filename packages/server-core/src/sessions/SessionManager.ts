@@ -114,13 +114,13 @@ type AutomationToolItemServer = Record<string, unknown> & { id: string; event: s
 const MEMORY_AUTO_SUGGEST_COOLDOWN_MS = 10 * 60 * 1000
 
 const MEMORY_CANDIDATE_RULES: Array<{ type: MemoryType; title: string; patterns: RegExp[]; strongPatterns?: RegExp[] }> = [
-  { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararlaþtýrdýk/i, /anlaþtýk/i, /bundan sonra .*?(yap|kullan|ilerle)/i, /\bdecision\b/i, /\bagreed\b/i], strongPatterns: [/karar (verdik|netleþti)/i, /kararlaþtýrdýk/i, /anlaþtýk/i, /\bagreed\b/i] },
+  { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararlaï¿½tï¿½rdï¿½k/i, /anlaï¿½tï¿½k/i, /bundan sonra .*?(yap|kullan|ilerle)/i, /\bdecision\b/i, /\bagreed\b/i], strongPatterns: [/karar (verdik|netleï¿½ti)/i, /kararlaï¿½tï¿½rdï¿½k/i, /anlaï¿½tï¿½k/i, /\bagreed\b/i] },
   { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /istiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i], strongPatterns: [/bundan sonra/i, /tercih (ediyorum|ederim)/i, /I prefer/i, /don't want/i] },
-  { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /çözüm/i, /çözdük/i, /düzeldi/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i], strongPatterns: [/(hata|bug|error).*?(çözüm|sebep|fix|düzeldi)/i, /(çözüm|fix).*?(hata|bug|error)/i] },
-  { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /süreç/i, /akýþ/i, /validasyon/i, /\bcommand\b/i], strongPatterns: [/(test|komut|workflow|akýþ).*?(çalýþtýr|kullan|doðrula)/i] },
+  { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /ï¿½ï¿½zï¿½m/i, /ï¿½ï¿½zdï¿½k/i, /dï¿½zeldi/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i], strongPatterns: [/(hata|bug|error).*?(ï¿½ï¿½zï¿½m|sebep|fix|dï¿½zeldi)/i, /(ï¿½ï¿½zï¿½m|fix).*?(hata|bug|error)/i] },
+  { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /sï¿½reï¿½/i, /akï¿½ï¿½/i, /validasyon/i, /\bcommand\b/i], strongPatterns: [/(test|komut|workflow|akï¿½ï¿½).*?(ï¿½alï¿½ï¿½tï¿½r|kullan|doï¿½rula)/i] },
 ]
 
-const MEMORY_NOISE_PATTERNS = [/^(tamam|ok|okay|evet|hayýr|devam|done|geçti|baþla)[.!\s]*$/i, /^qa (done|tamam|geçti)/i, /^test sonucu/i, /^commit push$/i]
+const MEMORY_NOISE_PATTERNS = [/^(tamam|ok|okay|evet|hayï¿½r|devam|done|geï¿½ti|baï¿½la)[.!\s]*$/i, /^qa (done|tamam|geï¿½ti)/i, /^test sonucu/i, /^commit push$/i]
 
 function extractMemoryCandidateText(message: Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }): string | undefined {
   const role = message.role ?? message.type
@@ -139,7 +139,7 @@ function classifyMemoryCandidate(text: string): { type: MemoryType; title: strin
 }
 
 function curateMemoryCandidateContent(text: string): string {
-  const cleaned = text.replace(/^(tamam|evet|peki|þimdi|simdi|ok|okay|not:)[,\s]+/i, '').trim()
+  const cleaned = text.replace(/^(tamam|evet|peki|ï¿½imdi|simdi|ok|okay|not:)[,\s]+/i, '').trim()
   const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).filter(Boolean)
   const signal = sentences.find(part => MEMORY_CANDIDATE_RULES.some(rule => rule.patterns.some(pattern => pattern.test(part))))
   const sentence = signal ?? sentences.find(part => part.length >= 24) ?? cleaned
@@ -4311,6 +4311,8 @@ export class SessionManager implements ISessionManager {
             },
             simulateTool: async (payload) => new HookEngine(managed.workspace.rootPath).simulateTool(payload),
             simulatePrompt: async (payload) => new HookEngine(managed.workspace.rootPath).simulatePrompt(payload),
+            afterToolUse: async (payload) => new HookEngine(managed.workspace.rootPath).afterToolUse(payload),
+            beforePromptSubmit: async (payload) => new HookEngine(managed.workspace.rootPath).beforePromptSubmit(payload),
             customList: async () => loadCustomHooks(managed.workspace.rootPath),
             customShow: async (hookId) => getCustomHook(managed.workspace.rootPath, hookId),
             customCreate: async (hook) => {

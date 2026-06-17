@@ -74,6 +74,7 @@ import {
 } from '@craft-agent/session-tools-core';
 import { createClaudeContext, type SessionToolContext } from './claude-context.ts';
 import { getPermissionModeDiagnostics } from './mode-manager.ts';
+import type { HookEventName, HookEventPayload } from '../hooks/types.ts';
 
 // call_llm pre-execution pipeline
 
@@ -1133,15 +1134,26 @@ export class PiAgent extends BaseAgent {
 
       // Fire PostToolUse / PostToolUseFailure hook events (fire-and-forget)
       if (agentEvent.type === 'tool_result') {
-        const hookEvent = agentEvent.isError ? 'PostToolUseFailure' : 'PostToolUse';
-        this.emitAutomationEvent(hookEvent, {
+        const hookEvent: HookEventName = agentEvent.isError ? 'PostToolUseFailure' : 'PostToolUse';
+        const hookPayload: HookEventPayload = {
           hook_event_name: hookEvent,
           tool_name: agentEvent.toolName ?? (event.toolName as string) ?? 'unknown',
           tool_input: agentEvent.input,
           ...(agentEvent.isError
             ? { error: typeof agentEvent.result === 'string' ? agentEvent.result : undefined }
             : { tool_response: typeof agentEvent.result === 'string' ? agentEvent.result : undefined }),
-        });
+        };
+        this.emitAutomationEvent(hookEvent, hookPayload as any);
+        const hookCallbacks = getSessionScopedToolCallbacks(this._sessionId)?.hooksFns;
+        if (hookCallbacks?.afterToolUse) {
+          void hookCallbacks.afterToolUse({
+            ...hookPayload,
+            event: hookEvent,
+            workspaceId: this.config.workspace.id,
+            sessionId: this.config.session?.id || this._sessionId,
+            source: 'pi-post-tool-use',
+          }).catch(error => this.debug(`PostToolUse hook failed: ${error instanceof Error ? error.message : String(error)}`));
+        }
       }
 
       this.eventQueue.enqueue(agentEvent);
@@ -2023,12 +2035,28 @@ export class PiAgent extends BaseAgent {
     this.eventQueue.reset();
     this.currentUserMessage = message;
     this.adapter.startTurn();
-
-    // Fire UserPromptSubmit hook event (fire-and-forget)
+    // Fire UserPromptSubmit hook event. Hooks are authoritative; block before the turn starts.
     this.emitAutomationEvent('UserPromptSubmit', {
       hook_event_name: 'UserPromptSubmit',
       prompt: message,
     });
+
+    const promptHookCallbacks = getSessionScopedToolCallbacks(this.config.session?.id || this._sessionId)?.hooksFns;
+    if (promptHookCallbacks?.beforePromptSubmit) {
+      const promptDecision = await promptHookCallbacks.beforePromptSubmit({
+        event: 'UserPromptSubmit',
+        workspaceId: this.config.workspace.id,
+        sessionId: this.config.session?.id || this._sessionId,
+        prompt: message,
+        source: 'pi-user-prompt-submit',
+      });
+      if (promptDecision.type === 'block') {
+        throw new Error(`Hook blocked prompt: ${promptDecision.message ?? 'blocked by hooks policy'}`);
+      }
+      if (promptDecision.type === 'addContext' && promptDecision.context) {
+        message = `${promptDecision.context}\n\n${message}`;
+      }
+    }
 
     // Refresh session-scoped tool callbacks (for SubmitPlan, source auth, etc.)
     // IMPORTANT: merge (don't replace) so SessionManager-provided browserPaneFns

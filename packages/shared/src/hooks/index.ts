@@ -3,7 +3,7 @@ import { BUILTIN_HOOKS, getBuiltinHook } from './builtins.ts'
 import { appendHookRun, getHookConfigEntries, hashCustomHook, loadCustomHookTrust, loadCustomHooks, loadHookRuns, loadHooksPolicy } from './storage.ts'
 import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookPower, HookDecision, HookDecisionType, HookEventPayload, HookInput, HookMatcher, HookOutput, HookOutputDecision, HookRunRecord, HookStatusSnapshot, HooksPolicy } from './types.ts'
 
-const SECRET_PATTERNS = [/["']?\b(api[_-]?key|token|password|passwd|secret|bearer)\b["']?\s*[:=]\s*["']?[A-Za-z0-9_\-./+=]{12,}/i, /-----BEGIN (RSA |OPENSSH |EC |)PRIVATE KEY-----/i, /\bBearer\s+[A-Za-z0-9_\-./+=]{12,}/i]
+const SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/i, /[\"']?\b(api[_-]?key|token|password|passwd|secret|bearer)\b[\"']?\s*(?:[:=]|is|=)?\s*[\"']?[A-Za-z0-9_\-./+=]{10,}/i, /-----BEGIN (RSA |OPENSSH |EC |)PRIVATE KEY-----/i, /\bBearer\s+[A-Za-z0-9_\-./+=]{12,}/i]
 function containsSecret(value: unknown): boolean { return SECRET_PATTERNS.some(pattern => pattern.test(typeof value === 'string' ? value : JSON.stringify(value ?? ''))) }
 function redactSecrets(text: string): string { return SECRET_PATTERNS.reduce((current, pattern) => current.replace(pattern, '[REDACTED]'), text) }
 function summarize(value: unknown, max = 420): string | undefined { if (value === undefined) return undefined; const text = typeof value === 'string' ? value : JSON.stringify(value); return text ? redactSecrets(text).slice(0, max) : undefined }
@@ -53,7 +53,7 @@ function parseHookOutput(value: string): HookOutput { try { const parsed = JSON.
 
 export class HookEngine {
   constructor(private readonly workspaceRootPath: string) {}
-  status(): HookStatusSnapshot { const config = getHookConfigEntries(this.workspaceRootPath); return { available: true, hooks: BUILTIN_HOOKS.length + loadCustomHooks(this.workspaceRootPath).length, enabled: config.filter(entry => entry.enabled).length + loadCustomHooks(this.workspaceRootPath).filter(hook => hook.enabled).length, runs: loadHookRuns(this.workspaceRootPath, undefined, 1000).length } }
+  status(): HookStatusSnapshot { const config = getHookConfigEntries(this.workspaceRootPath); return { available: true, hooks: BUILTIN_HOOKS.length + loadCustomHooks(this.workspaceRootPath).length, enabled: config.filter(entry => entry.enabled).length + loadCustomHooks(this.workspaceRootPath).filter(hook => hook.enabled).length, runs: loadHookRuns(this.workspaceRootPath, undefined, 1000).length, policy: this.policy() } }
   list(): Array<BuiltinHookDefinition & { enabled: boolean }> { const enabled = new Map(getHookConfigEntries(this.workspaceRootPath).map(entry => [entry.id, entry.enabled])); return BUILTIN_HOOKS.map(hook => ({ ...hook, enabled: enabled.get(hook.id) ?? true })).sort((a, b) => a.order - b.order) }
   show(hookId: string): (BuiltinHookDefinition & { enabled: boolean }) | undefined { return this.list().find(hook => hook.id === hookId) }
   policy(): HooksPolicy { return loadHooksPolicy(this.workspaceRootPath) }
@@ -63,8 +63,8 @@ export class HookEngine {
   async beforeToolUseOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'PreToolUse' })) }
   async afterToolUseOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'PostToolUse' })) }
   async beforePromptSubmitOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'UserPromptSubmit' })) }
-  async simulateTool(payload: HookEventPayload): Promise<HookOutput & HookDecision> { return Object.assign(fromHookOutput(await this.beforeToolUseOutput(payload)), await this.beforeToolUseOutput(payload)) }
-  async simulatePrompt(payload: HookEventPayload): Promise<HookOutput & HookDecision> { return Object.assign(fromHookOutput(await this.beforePromptSubmitOutput(payload)), await this.beforePromptSubmitOutput(payload)) }
+  async simulateTool(payload: HookEventPayload): Promise<HookOutput & HookDecision> { const output = await this.beforeToolUseOutput(payload); return Object.assign(fromHookOutput(output), output) }
+  async simulatePrompt(payload: HookEventPayload): Promise<HookOutput & HookDecision> { const output = await this.beforePromptSubmitOutput(payload); return Object.assign(fromHookOutput(output), output) }
   async emit(payload: HookEventPayload): Promise<HookDecision[]> { return (await this.runEvent(payload)).map(fromHookOutput) }
   async test(hookId: string, payload: HookEventPayload): Promise<HookOutput & HookDecision> {
     const input = normalizeHookInput(payload)

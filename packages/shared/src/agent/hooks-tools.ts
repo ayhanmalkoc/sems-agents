@@ -17,6 +17,8 @@ export interface HooksFns {
   setPolicy: (policy: Partial<HooksPolicy>) => Promise<HooksPolicy>
   simulateTool: (payload: HookEventPayload) => Promise<HookDecision>
   simulatePrompt: (payload: HookEventPayload) => Promise<HookDecision>
+  afterToolUse?: (payload: HookEventPayload) => Promise<HookDecision>
+  beforePromptSubmit?: (payload: HookEventPayload) => Promise<HookDecision>
   customList: () => Promise<CustomHookDefinition[]>
   customShow: (hookId: string) => Promise<CustomHookDefinition | undefined>
   customCreate: (hook: CustomHookDefinition) => Promise<CustomHookDefinition>
@@ -37,11 +39,12 @@ function commandPayload(command: string, verb: string, firstArg?: string): strin
 
 function formatStatus(status: HookStatusSnapshot): string {
   const lines = [`Hooks: ${status.available ? 'available' : 'unavailable'}`, `Built-ins: ${status.hooks}`, `Enabled: ${status.enabled}`, `Runs: ${status.runs}`]
+  if (status.policy) lines.push('Policy:', `secretGuard=${status.policy.secretGuard}`, `workspaceBoundary=${status.policy.workspaceBoundary}`, `prerequisiteGuard=${status.policy.prerequisiteGuard}`, `toolAudit=${status.policy.toolAudit}`, `memoryLearn=${status.policy.memoryLearn}`, `customHooks=${status.policy.customHooks}`)
   if (status.reason) lines.push(`Reason: ${status.reason}`)
   return lines.join('\n')
 }
 function formatHook(hook: BuiltinHookDefinition & { enabled: boolean }): string { return `- ${hook.id} enabled=${hook.enabled} event=${hook.event} mode=${hook.mode} scope=${hook.scope} source=${hook.source}\n  ${hook.description}` }
-function formatRun(run: HookRunRecord): string { return `- ${run.id} hook=${run.hookId} event=${run.event} decision=${run.decision} ok=${run.ok} durationMs=${run.durationMs}${run.toolName ? ` tool=${run.toolName}` : ''}${run.sessionId ? ` session=${run.sessionId}` : ''}\n  ${run.message ?? run.error ?? ''}` }
+function formatRun(run: HookRunRecord): string { return `- ${run.id} hook=${run.hookId} event=${run.event} decision=${run.decision} ok=${run.ok} durationMs=${run.durationMs}${run.toolName ? ` tool=${run.toolName}` : ''}${run.sessionId ? ` session=${run.sessionId}` : ''}\n  ${run.message ?? run.error ?? ''}${run.inputSummary ? `\n  input=${run.inputSummary}` : ''}${run.outputSummary ? `\n  output=${run.outputSummary}` : ''}` }
 function formatDecision(decision: HookDecision & { decision?: string; reason?: string; updated_input?: unknown; additional_context?: string; redacted_response?: unknown }): string {
   if (decision.decision) return `decision=${decision.decision}${decision.reason ? `\nreason=${decision.reason}` : ''}${decision.updated_input !== undefined ? `\nupdated_input=${JSON.stringify(decision.updated_input)}` : ''}${decision.additional_context ? `\nadditional_context=${decision.additional_context}` : ''}${decision.redacted_response !== undefined ? `\nredacted_response=${JSON.stringify(decision.redacted_response)}` : ''}`
   return `Decision: ${decision.type}${decision.message ? `\nMessage: ${decision.message}` : ''}${decision.context ? `\nContext: ${decision.context}` : ''}`
@@ -60,7 +63,7 @@ export async function executeHooksCommand(command: string, fns: HooksFns): Promi
     if (verb === 'show') { const hookId = rest[0]; if (!hookId) return failure('show requires a hook id'); const hook = await fns.show(hookId); return hook ? success(formatHook(hook)) : failure(`Hook not found: ${hookId}`) }
     if (verb === 'enable' || verb === 'disable') { const hookId = rest[0]; if (!hookId) return failure(`${verb} requires a hook id`); if (verb === 'enable') await fns.enable(hookId); else await fns.disable(hookId); return success(`${verb === 'enable' ? 'Enabled' : 'Disabled'} hook ${hookId}`) }
     if (verb === 'runs') { const runs = await fns.runs(rest[0]); return success(runs.length ? ['Hook runs:', ...runs.map(formatRun)].join('\n') : 'Hook runs: none') }
-    if (verb === 'explain' || verb === 'run-detail') { const runId = rest[0]; if (!runId) return failure(`${verb} requires a run id`); const run = await fns.explain(runId); if (!run) return failure(`Hook run not found: ${runId}`); return success(verb === 'run-detail' ? [formatRun(run), run.finalDecision ? `Final: ${formatDecision(run.finalDecision)}` : undefined, run.decisions?.length ? `Decisions: ${run.decisions.map(decision => decision.type).join(' -> ')}` : undefined].filter(Boolean).join('\n') : formatRun(run)) }
+    if (verb === 'explain' || verb === 'run-detail') { const runId = rest[0]; if (!runId) return failure(`${verb} requires a run id`); const run = await fns.explain(runId); if (!run) return failure(`Hook run not found: ${runId}`); return success([formatRun(run), run.finalDecision ? `Final: ${formatDecision(run.finalDecision)}` : undefined, run.decisions?.length ? `Decisions: ${run.decisions.map(decision => decision.type).join(' -> ')}` : undefined, run.outputs?.length ? `Outputs: ${run.outputs.map(output => output.decision).join(' -> ')}` : undefined].filter(Boolean).join('\n')) }
     if (verb === 'policy') return success(formatPolicy(await fns.policy()))
     if (verb === 'set-policy') return success(`Updated hooks policy\n${formatPolicy(await fns.setPolicy(parseJson<Partial<HooksPolicy>>(commandPayload(trimmed, rawVerb) || '{}')))}`)
     if (verb === 'simulate-tool') return success(formatDecision(await fns.simulateTool(parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb) || '{}'))))

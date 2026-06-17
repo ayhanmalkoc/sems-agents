@@ -4,12 +4,12 @@ import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookTrustRecord
 
 const hook: BuiltinHookDefinition & { enabled: boolean } = { id: 'secret_scan_prompt', name: 'Secret scan prompt', description: 'Blocks secrets.', event: 'UserPromptSubmit', mode: 'enforce', source: 'builtin', scope: 'workspace', order: 1, enabled: true }
 const policy: HooksPolicy = { secretGuard: 'standard', workspaceBoundary: 'ask', prerequisiteGuard: 'enforce', toolAudit: 'on', memoryLearn: 'auto', customHooks: 'trusted-only', customDefaultPower: 'observe', customMaxDurationMs: 2000, customMaxOutputBytes: 4096 }
-const run: HookRunRecord = { id: 'run-1', hookId: hook.id, event: hook.event, decision: 'block', message: 'blocked', durationMs: 1, ok: true, createdAt: '2026-06-17T00:00:00.000Z' }
+const run: HookRunRecord = { id: 'run-1', hookId: hook.id, event: hook.event, decision: 'block', message: 'blocked', inputSummary: 'prompt=[REDACTED]', outputSummary: 'decision=block', finalDecision: { type: 'block', message: 'blocked' }, decisions: [{ type: 'observe', message: 'observed' }, { type: 'block', message: 'blocked' }], outputs: [{ decision: 'observe', reason: 'observed' }, { decision: 'block', reason: 'blocked' }], durationMs: 1, ok: true, createdAt: '2026-06-17T00:00:00.000Z' }
 const customHook: CustomHookDefinition = { id: 'custom-1', name: 'Custom one', enabled: true, source: 'workspace', matcher: { event: 'PreToolUse' }, handler: { type: 'prompt', decision: { type: 'observe', message: 'ok' } }, powers: ['observe'] }
 const trust: CustomHookTrustRecord = { hookId: 'custom-1', hash: 'abc', trusted: false, reason: 'Trust review required.' }
 function fns(): HooksFns {
   return {
-    status: async () => ({ available: true, hooks: 1, enabled: 1, runs: 1 }),
+    status: async () => ({ available: true, hooks: 1, enabled: 1, runs: 1, policy }),
     list: async () => [hook],
     show: async id => id === hook.id ? hook : undefined,
     enable: async () => {},
@@ -35,7 +35,10 @@ function fns(): HooksFns {
 
 describe('hooks tool', () => {
   it('handles read and toggle commands', async () => {
-    expect((await executeHooksCommand('status', fns())).content[0].text).toContain('Hooks: available')
+    const status = (await executeHooksCommand('status', fns())).content[0].text
+    expect(status).toContain('Hooks: available')
+    expect(status).toContain('secretGuard=standard')
+    expect(status).toContain('toolAudit=on')
     expect((await executeHooksCommand('list', fns())).content[0].text).toContain('secret_scan_prompt')
     expect((await executeHooksCommand('show secret_scan_prompt', fns())).content[0].text).toContain('UserPromptSubmit')
     expect((await executeHooksCommand('disable secret_scan_prompt', fns())).content[0].text).toContain('Disabled hook')
@@ -43,7 +46,11 @@ describe('hooks tool', () => {
 
   it('handles runs and dry-run test', async () => {
     expect((await executeHooksCommand('runs secret_scan_prompt', fns())).content[0].text).toContain('run-1')
-    expect((await executeHooksCommand('explain run-1', fns())).content[0].text).toContain('blocked')
+    const explain = (await executeHooksCommand('explain run-1', fns())).content[0].text
+    expect(explain).toContain('blocked')
+    expect(explain).toContain('input=prompt=[REDACTED]')
+    expect(explain).toContain('Final: Decision: block')
+    expect(explain).toContain('Outputs: observe -> block')
     expect((await executeHooksCommand('test secret_scan_prompt {"event":"UserPromptSubmit"}', fns())).content[0].text).toContain('Decision: block')
   })
 

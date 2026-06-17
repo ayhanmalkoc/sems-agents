@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, RefreshCw, Settings, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { Button } from '@/components/ui/button'
@@ -15,14 +15,17 @@ type HookRow = BuiltinHookDefinition & { enabled: boolean }
 
 type PendingTrustAction = { hook: CustomHookDefinition; enableAfterTrust: boolean } | null
 
-function badge(text: string, tone: 'default' | 'good' | 'warn' | 'muted' = 'default') {
-  return <span className={cn('rounded-full px-2 py-0.5 text-[11px]', tone === 'good' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' : tone === 'warn' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300' : tone === 'muted' ? 'bg-foreground/[0.04] text-foreground/45' : 'bg-foreground/[0.06] text-foreground/55')}>{text}</span>
+function reviewBadge(status: HookListItem['trustStatus']) {
+  if (status === 'Trusted' || status === 'Built-in') return null
+  return <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-600 dark:text-amber-300">Review required</span>
 }
 
-function trustTone(status: HookListItem['trustStatus']): 'default' | 'good' | 'warn' | 'muted' {
-  if (status === 'Trusted' || status === 'Built-in') return 'good'
-  if (status === 'Changed' || status === 'Untrusted') return 'warn'
-  return 'default'
+function handlerLabel(type: string): string {
+  if (type === 'command') return 'Command'
+  if (type === 'http') return 'URL'
+  if (type === 'mcp') return 'MCP tool'
+  if (type === 'prompt') return 'Prompt output'
+  return 'Built-in handler'
 }
 
 function handlerSummary(hook: CustomHookDefinition): string {
@@ -32,17 +35,39 @@ function handlerSummary(hook: CustomHookDefinition): string {
   return hook.handler.output?.decision ?? hook.handler.decision?.type ?? 'observe'
 }
 
-function HookDetail({ item }: { item: HookListItem }) {
+function matcherDetail(item: HookListItem): string {
+  const matcher = item.customHook?.matcher
+  if (!matcher) return item.matcherSummary
+  const parts = [matcher.toolName, matcher.commandIncludes, matcher.pathGlob, matcher.agentProfileId, matcher.sessionScope, matcher.automationEvent].filter(Boolean)
+  return parts.length ? parts.join(' | ') : 'all matching events'
+}
+
+function formatTimeout(timeoutMs?: number): string {
+  if (!timeoutMs) return 'Default'
+  return timeoutMs >= 1000 ? `${Math.round(timeoutMs / 1000)}s` : `${timeoutMs}ms`
+}
+
+function DetailRow({ label, children, mono = false }: { label: string; children: React.ReactNode; mono?: boolean }) {
   return (
-    <div className="mt-3 rounded-xl border border-border/60 bg-foreground/[0.02] p-3 text-xs text-foreground/60">
-      <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
-        <span className="text-foreground/40">Handler</span><span>{item.handlerType}</span>
-        <span className="text-foreground/40">Matcher</span><span>{item.matcherSummary}</span>
-        <span className="text-foreground/40">Trust</span><span>{item.trustStatus}{item.hash ? ` · ${item.hash.slice(0, 12)}` : ''}</span>
-        {item.customHook && <><span className="text-foreground/40">Target</span><span className="break-all font-mono">{handlerSummary(item.customHook)}</span></>}
-        {item.powers && <><span className="text-foreground/40">Powers</span><span>{item.powers.join(', ')}</span></>}
-        {item.timeoutMs && <><span className="text-foreground/40">Timeout</span><span>{item.timeoutMs}ms</span></>}
-        {item.lastRun && <><span className="text-foreground/40">Last run</span><span>{item.lastRun.decision} · {item.lastRun.ok ? 'ok' : 'error'} · {item.lastRun.durationMs}ms</span></>}
+    <>
+      <div className="text-[11px] font-medium text-foreground/45">{label}</div>
+      <div className={cn('break-words text-xs text-foreground/70', mono && 'font-mono')}>{children}</div>
+    </>
+  )
+}
+
+function HookDetail({ item }: { item: HookListItem }) {
+  const target = item.customHook ? handlerSummary(item.customHook) : item.id
+  return (
+    <div className="mx-3 mb-3 rounded-md border border-border/60 bg-foreground/[0.015] p-3">
+      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-[120px_1fr]">
+        <DetailRow label="Handler">{item.handlerType === 'builtin' ? 'Built-in' : item.handlerType}</DetailRow>
+        <DetailRow label={handlerLabel(item.handlerType)} mono>{target}</DetailRow>
+        <DetailRow label="Matcher" mono>{matcherDetail(item)}</DetailRow>
+        <DetailRow label="Timeout">{formatTimeout(item.timeoutMs)}</DetailRow>
+        {item.powers && <DetailRow label="Powers">{item.powers.join(', ')}</DetailRow>}
+        <DetailRow label="Trust">{item.trustStatus}{item.hash ? ` · ${item.hash.slice(0, 12)}` : ''}</DetailRow>
+        {item.lastRun && <DetailRow label="Last run">{item.lastRun.decision} · {item.lastRun.ok ? 'ok' : 'error'} · {item.lastRun.durationMs}ms</DetailRow>}
       </div>
     </div>
   )
@@ -51,20 +76,18 @@ function HookDetail({ item }: { item: HookListItem }) {
 function HookRowView({ item, workspaceRoot, onToggle, onReview }: { item: HookListItem; workspaceRoot?: string; onToggle: (item: HookListItem, checked: boolean) => void; onReview: (hook: CustomHookDefinition) => void }) {
   const [open, setOpen] = React.useState(false)
   return (
-    <div className="border-t border-border/60 first:border-t-0">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div className="border-t border-border/60 first:border-t-0 bg-background/70">
+      <div className="flex items-center gap-3 px-3 py-2.5">
         <button type="button" className="text-foreground/45 hover:text-foreground" onClick={() => setOpen(value => !value)} aria-label={open ? 'Collapse hook' : 'Expand hook'}>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm text-foreground">{item.name}</span>
-            {badge(item.trustStatus, trustTone(item.trustStatus))}
-            {badge(item.handlerType, 'muted')}
-            {item.kind === 'custom' && item.trustStatus !== 'Trusted' && item.customHook && <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => onReview(item.customHook!)}>Review</Button>}
+            {reviewBadge(item.trustStatus)}
           </div>
-          <p className="mt-1 truncate text-xs text-foreground/50">{item.matcherSummary}</p>
         </div>
+        {item.kind === 'custom' && item.trustStatus !== 'Trusted' && item.customHook && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onReview(item.customHook!)}>Review</Button>}
         {workspaceRoot && item.kind === 'custom' && (
-          <EditPopover trigger={<Button size="sm" variant="ghost">Edit</Button>} {...getEditConfig('hooks-edit', `${workspaceRoot}::${item.id}`)} />
+          <EditPopover trigger={<Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Edit hook"><ExternalLink className="h-3.5 w-3.5" /></Button>} {...getEditConfig('hooks-edit', `${workspaceRoot}::${item.id}`)} />
         )}
         <Switch checked={item.enabled} onCheckedChange={checked => onToggle(item, checked)} />
       </div>
@@ -161,61 +184,67 @@ export default function HooksHomePage() {
   return (
     <div className="flex h-full flex-col bg-background">
       <PanelHeader title="Hooks" />
-      <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-5 p-6">
+      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-foreground">Hooks</h2>
             <p className="mt-2 text-sm text-foreground/60">Manage lifecycle hooks for workspace configuration. <button type="button" className="text-primary hover:underline">Learn more</button></p>
           </div>
           <div className="flex gap-2">
-            {workspaceRoot && <EditPopover trigger={<Button size="sm"><Sparkles className="mr-1.5 h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
+            {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1.5 h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
             <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className="h-4 w-4" /></Button>
           </div>
         </div>
 
-        <button type="button" className="rounded-2xl border border-border bg-background p-4 text-left transition hover:bg-foreground/[0.02]" onClick={() => setPolicyOpen(value => !value)}>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-primary/10 p-2 text-primary"><ShieldCheck className="h-4 w-4" /></div>
-              <div>
-                <div className="text-sm font-medium text-foreground">Workspace configuration</div>
-                <div className="mt-1 text-xs text-foreground/50">{hooks.length} built-ins · {customHooks.length} custom · {customTrusted} trusted · {customUntrusted} needs review</div>
-              </div>
+        <div className="rounded-xl border border-border bg-background p-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-foreground/[0.04] p-2 text-foreground/55"><Settings className="h-4 w-4" /></div>
+            <div>
+              <div className="text-sm font-medium text-foreground">Workspace configuration</div>
+              <div className="mt-1 text-xs text-foreground/50">{hooks.length} built-ins · {customHooks.length} custom · {customTrusted} trusted · {customUntrusted} needs review</div>
             </div>
-            <ChevronRight className={cn('h-4 w-4 text-foreground/45 transition-transform', policyOpen && 'rotate-90')} />
           </div>
-        </button>
-
-        <div className={cn('min-h-0 flex-1 overflow-auto rounded-2xl border border-border bg-background', loading && 'opacity-60')}>
-          {groups.length ? groups.map(group => (
-            <section key={group.event} className="border-b border-border/70 last:border-b-0">
-              <div className="flex items-start gap-3 px-4 py-4">
-                <span className="mt-1 text-foreground/45">⌘</span>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">{group.title}</h3>
-                  <p className="mt-1 text-xs text-foreground/50">{group.description}</p>
-                </div>
-              </div>
-              <div className="border-t border-border/60">
-                {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} workspaceRoot={workspaceRoot} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
-              </div>
-            </section>
-          )) : <div className="p-8 text-center text-sm text-foreground/50">No hooks configured.</div>}
         </div>
 
-        {policyOpen && policy && (
-          <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-            <h3 className="text-sm font-medium text-foreground">Policy</h3>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {policySelect('secretGuard', ['strict', 'standard', 'off'])}
-              {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
-              {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
-              {policySelect('toolAudit', ['on', 'off'])}
-              {policySelect('memoryLearn', ['auto', 'review', 'off'])}
-              {policySelect('customHooks', ['trusted-only', 'off'])}
+        <div className={cn('min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-background', loading && 'opacity-60')}>
+          {groups.length ? (
+            <div className="space-y-1 p-3">
+              {groups.map(group => (
+                <section key={group.event} className="rounded-lg px-1 py-2">
+                  <div className="flex items-start gap-3 px-2 pb-2">
+                    <span className="mt-0.5 text-foreground/35">⌘</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">{group.title}</h3>
+                      <p className="mt-0.5 text-xs text-foreground/45">{group.description}</p>
+                    </div>
+                  </div>
+                  <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-foreground/[0.018]">
+                    {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} workspaceRoot={workspaceRoot} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
+                  </div>
+                </section>
+              ))}
             </div>
-          </div>
-        )}
+          ) : <div className="p-8 text-center text-sm text-foreground/50">No hooks configured.</div>}
+        </div>
+
+        <div>
+          <button type="button" className="flex items-center gap-1 text-xs text-foreground/50 hover:text-foreground" onClick={() => setPolicyOpen(value => !value)}>
+            <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', policyOpen && 'rotate-90')} />
+            Advanced policy
+          </button>
+          {policyOpen && policy && (
+            <div className="mt-3 rounded-xl border border-border/70 bg-background/80 p-4">
+              <div className="grid gap-2 md:grid-cols-2">
+                {policySelect('secretGuard', ['strict', 'standard', 'off'])}
+                {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
+                {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
+                {policySelect('toolAudit', ['on', 'off'])}
+                {policySelect('memoryLearn', ['auto', 'review', 'off'])}
+                {policySelect('customHooks', ['trusted-only', 'off'])}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog open={!!pendingTrust} onOpenChange={open => !open && setPendingTrust(null)}>
