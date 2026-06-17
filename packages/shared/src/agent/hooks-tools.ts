@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { BuiltinHookDefinition, HookDecision, HookEventPayload, HookRunRecord, HookStatusSnapshot } from '../hooks/types.ts'
+import type { BuiltinHookDefinition, HookDecision, HookEventPayload, HookRunRecord, HookStatusSnapshot, HooksPolicy } from '../hooks/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 
@@ -13,9 +13,13 @@ export interface HooksFns {
   runs: (hookId?: string) => Promise<HookRunRecord[]>
   explain: (runId: string) => Promise<HookRunRecord | undefined>
   test: (hookId: string, payload: HookEventPayload) => Promise<HookDecision>
+  policy: () => Promise<HooksPolicy>
+  setPolicy: (policy: Partial<HooksPolicy>) => Promise<HooksPolicy>
+  simulateTool: (payload: HookEventPayload) => Promise<HookDecision>
+  simulatePrompt: (payload: HookEventPayload) => Promise<HookDecision>
 }
 
-const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>.') })
+const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>.') })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
 function failure(text: string): ToolResult { return { content: [{ type: 'text', text: `Error: ${text}` }], isError: true } }
@@ -34,6 +38,9 @@ function formatRun(run: HookRunRecord): string {
 }
 function formatDecision(decision: HookDecision): string {
   return `Decision: ${decision.type}${decision.message ? `\nMessage: ${decision.message}` : ''}${decision.context ? `\nContext: ${decision.context}` : ''}`
+}
+function formatPolicy(policy: HooksPolicy): string {
+  return ['Hooks policy:', `secretGuard=${policy.secretGuard}`, `workspaceBoundary=${policy.workspaceBoundary}`, `prerequisiteGuard=${policy.prerequisiteGuard}`, `toolAudit=${policy.toolAudit}`, `memoryLearn=${policy.memoryLearn}`].join('\n')
 }
 
 export async function executeHooksCommand(command: string, fns: HooksFns): Promise<ToolResult> {
@@ -67,6 +74,19 @@ export async function executeHooksCommand(command: string, fns: HooksFns): Promi
       const run = await fns.explain(runId)
       if (!run) return failure(`Hook run not found: ${runId}`)
       return success(formatRun(run))
+    }
+    if (verb === 'policy') return success(formatPolicy(await fns.policy()))
+    if (verb === 'set-policy') {
+      const payload = parseJson<Partial<HooksPolicy>>(trimmed.slice(rawVerb.length).trim() || '{}')
+      return success(`Updated hooks policy\n${formatPolicy(await fns.setPolicy(payload))}`)
+    }
+    if (verb === 'simulate-tool') {
+      const payload = parseJson<HookEventPayload>(trimmed.slice(rawVerb.length).trim() || '{}')
+      return success(formatDecision(await fns.simulateTool(payload)))
+    }
+    if (verb === 'simulate-prompt') {
+      const payload = parseJson<HookEventPayload>(trimmed.slice(rawVerb.length).trim() || '{}')
+      return success(formatDecision(await fns.simulatePrompt(payload)))
     }
     if (verb === 'test') {
       const hookId = rest[0]

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { mkdtempSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { HookEngine, loadHookRuns, setHookEnabled } from '../index.ts'
+import { HookEngine, loadHookRuns, mergeHookDecisions, saveHooksPolicy, setHookEnabled } from '../index.ts'
 
 function tempWorkspace(): string { return mkdtempSync(join(tmpdir(), 'hooks-test-')) }
 
@@ -21,6 +21,21 @@ describe('builtin hooks runtime', () => {
     expect(prompt.type).toBe('block')
     const tool = await engine.test('secret_scan_tool_input', { event: 'PreToolUse', input: { password: 'super-secret-value-12345' } })
     expect(tool.type).toBe('block')
+  })
+
+  it('merges decisions by precedence', () => {
+    expect(mergeHookDecisions([{ type: 'allow' }, { type: 'ask' }, { type: 'block' }]).type).toBe('block')
+    expect(mergeHookDecisions([{ type: 'observe' }, { type: 'redact' }]).type).toBe('redact')
+  })
+
+  it('applies policy to workspace boundary and audit redaction', async () => {
+    const workspace = tempWorkspace()
+    saveHooksPolicy(workspace, { workspaceBoundary: 'block' })
+    const engine = new HookEngine(workspace)
+    const boundary = await engine.beforeToolUse({ event: 'PreToolUse', toolName: 'bash', toolInput: 'rm -rf ../outside' })
+    expect(boundary.type).toBe('block')
+    const audit = await engine.afterToolUse({ event: 'PostToolUse', toolName: 'bash', toolResult: 'token=sk_test_123456789abcdef' })
+    expect(audit.type).toBe('redact')
   })
 
   it('skips disabled hooks and records audit runs', async () => {

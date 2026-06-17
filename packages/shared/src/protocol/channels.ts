@@ -423,6 +423,8 @@ export const RPC_CHANNELS = {
     GET: 'hooks:get',
     RUNS: 'hooks:runs',
     SET_ENABLED: 'hooks:setEnabled',
+    GET_POLICY: 'hooks:getPolicy',
+    SET_POLICY: 'hooks:setPolicy',
     CHANGED: 'hooks:changed',
   },
   messaging: {

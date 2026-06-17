@@ -81,8 +81,8 @@ export type { LoadedSkill, SkillMetadata, AgentProfile, CreateAgentProfileInput,
 // Resource bundle types (cross-workspace export/import)
 import type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult } from '@craft-agent/shared/resources';
 export type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult };
-import type { BuiltinHookDefinition, HookRunRecord } from '@craft-agent/shared/hooks';
-export type { BuiltinHookDefinition, HookRunRecord };
+import type { BuiltinHookDefinition, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks';
+export type { BuiltinHookDefinition, HookRunRecord, HooksPolicy };
 
 // LLM connection types
 import type { LlmConnection, LlmConnectionWithStatus, LlmAuthType, LlmProviderType, NetworkProxySettings } from '@craft-agent/shared/config';
@@ -728,6 +728,8 @@ export interface ElectronAPI {
   getHooks(workspaceId: string): Promise<Array<BuiltinHookDefinition & { enabled: boolean }>>
   getHookRuns(workspaceId: string, hookId?: string): Promise<HookRunRecord[]>
   setHookEnabled(workspaceId: string, hookId: string, enabled: boolean): Promise<void>
+  getHooksPolicy(workspaceId: string): Promise<HooksPolicy>
+  setHooksPolicy(workspaceId: string, policy: Partial<HooksPolicy>): Promise<HooksPolicy>
 
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{

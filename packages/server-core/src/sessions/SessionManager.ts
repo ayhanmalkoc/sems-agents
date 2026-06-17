@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, hasSimilarMemoryOrSuggestion, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryConfidence, type MemoryType } from '@craft-agent/shared/memory'
-import { HookEngine, loadHookRuns, setHookEnabled, getHookRun } from '@craft-agent/shared/hooks'
+import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
 import {
@@ -4303,6 +4303,14 @@ export class SessionManager implements ISessionManager {
             runs: async (hookId) => loadHookRuns(managed.workspace.rootPath, hookId),
             explain: async (runId) => getHookRun(managed.workspace.rootPath, runId),
             test: async (hookId, payload) => new HookEngine(managed.workspace.rootPath).test(hookId, payload),
+            policy: async () => loadHooksPolicy(managed.workspace.rootPath),
+            setPolicy: async (policy) => {
+              const next = saveHooksPolicy(managed.workspace.rootPath, policy)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+              return next
+            },
+            simulateTool: async (payload) => new HookEngine(managed.workspace.rootPath).simulateTool(payload),
+            simulatePrompt: async (payload) => new HookEngine(managed.workspace.rootPath).simulatePrompt(payload),
           },
           resourcesFns: {
             status: async () => ({

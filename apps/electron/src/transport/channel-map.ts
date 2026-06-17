@@ -425,6 +425,8 @@ export const CHANNEL_MAP = {
   getHooks: invoke(RPC_CHANNELS.hooks.GET),
   getHookRuns: invoke(RPC_CHANNELS.hooks.RUNS),
   setHookEnabled: invoke(RPC_CHANNELS.hooks.SET_ENABLED),
+  getHooksPolicy: invoke(RPC_CHANNELS.hooks.GET_POLICY),
+  setHooksPolicy: invoke(RPC_CHANNELS.hooks.SET_POLICY),
 
   // Messaging gateway
   getMessagingConfig: invoke(RPC_CHANNELS.messaging.GET_CONFIG),

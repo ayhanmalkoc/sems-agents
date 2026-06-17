@@ -187,7 +187,7 @@ export const MemoryToolSchema = z.object({
 });
 
 export const HooksToolSchema = z.object({
-  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>.'),
+  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>.'),
 });
 
 export const SessionsToolSchema = z.object({
@@ -559,7 +559,11 @@ Commands:
 - \`enable <hookId>\` / \`disable <hookId>\` - toggle one builtin hook
 - \`runs [hookId]\` - show recent hook runs
 - \`explain <runId>\` - inspect one run decision
-- \`test <hookId> <json>\` - dry-run one hook with event payload`,
+- \`test <hookId> <json>\` - dry-run one hook with event payload
+- \`policy\` - show workspace hook policy
+- \`set-policy <json>\` - update workspace hook policy
+- \`simulate-tool <json>\` - dry-run PreToolUse gateway
+- \`simulate-prompt <json>\` - dry-run UserPromptSubmit gateway`,
 
   memory: `Manage persistent scoped workspace memory.
 

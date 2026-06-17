@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { cn } from '@/lib/utils'
-import type { BuiltinHookDefinition, HookRunRecord } from '@craft-agent/shared/hooks'
+import type { BuiltinHookDefinition, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks'
 
 type HookRow = BuiltinHookDefinition & { enabled: boolean }
 type Tab = 'builtins' | 'runs' | 'policy'
@@ -63,18 +63,21 @@ export default function HooksHomePage() {
   const [hooks, setHooks] = React.useState<HookRow[]>([])
   const [runs, setRuns] = React.useState<HookRunRecord[]>([])
   const [query, setQuery] = React.useState('')
+  const [policy, setPolicy] = React.useState<HooksPolicy | null>(null)
   const [loading, setLoading] = React.useState(false)
 
   const refresh = React.useCallback(async () => {
     if (!activeWorkspaceId) return
     setLoading(true)
     try {
-      const [hookRows, runRows] = await Promise.all([
+      const [hookRows, runRows, policyRow] = await Promise.all([
         window.electronAPI.getHooks(activeWorkspaceId),
         window.electronAPI.getHookRuns(activeWorkspaceId),
+        window.electronAPI.getHooksPolicy(activeWorkspaceId),
       ])
       setHooks(hookRows as HookRow[])
       setRuns(runRows as HookRunRecord[])
+      setPolicy(policyRow as HooksPolicy)
     } catch (error) {
       toast.error('Failed to load hooks', { description: error instanceof Error ? error.message : String(error) })
     } finally {
@@ -94,6 +97,28 @@ export default function HooksHomePage() {
       toast.error('Failed to update hook', { description: error instanceof Error ? error.message : String(error) })
     }
   }
+
+
+  const updatePolicy = async <K extends keyof HooksPolicy>(key: K, value: HooksPolicy[K]) => {
+    if (!activeWorkspaceId) return
+    try {
+      const next = await window.electronAPI.setHooksPolicy(activeWorkspaceId, { [key]: value })
+      setPolicy(next as HooksPolicy)
+      toast.success('Hooks policy updated')
+      void refresh()
+    } catch (error) {
+      toast.error('Failed to update hooks policy', { description: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  const policySelect = <K extends keyof HooksPolicy>(key: K, values: HooksPolicy[K][]) => (
+    <label className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 p-3 text-sm">
+      <span className="text-foreground/70">{key}</span>
+      <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={policy?.[key] ?? ''} onChange={event => updatePolicy(key, event.target.value as HooksPolicy[K])}>
+        {values.map(value => <option key={String(value)} value={String(value)}>{String(value)}</option>)}
+      </select>
+    </label>
+  )
 
   const visibleHooks = hooks.filter(hook => `${hook.id} ${hook.name} ${hook.event} ${hook.description}`.toLowerCase().includes(query.toLowerCase()))
   const visibleRuns = runs.filter(run => `${run.id} ${run.hookId} ${run.event} ${run.decision} ${run.message ?? ''}`.toLowerCase().includes(query.toLowerCase()))
@@ -130,10 +155,21 @@ export default function HooksHomePage() {
           {tab === 'builtins' && (visibleHooks.length ? visibleHooks.map(hook => <HookCard key={hook.id} hook={hook} onToggle={toggle} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No hooks match.</div>)}
           {tab === 'runs' && (visibleRuns.length ? visibleRuns.map(run => <RunCard key={run.id} run={run} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No hook runs yet.</div>)}
           {tab === 'policy' && (
-            <div className="rounded-2xl border border-border/70 bg-background/80 p-5 text-sm leading-6 text-foreground/70">
-              <h3 className="font-medium text-foreground">Policy</h3>
-              <p className="mt-2">Builtin hooks are workspace-local lifecycle policy. They can enforce secret guards, observe prerequisite decisions, audit tool runs, and delegate memory learning to the memory runtime.</p>
-              <p className="mt-2">Custom shell, HTTP, MCP, or user-authored hooks are intentionally out of scope for this phase.</p>
+            <div className="space-y-3 rounded-2xl border border-border/70 bg-background/80 p-5 text-sm leading-6 text-foreground/70">
+              <div>
+                <h3 className="font-medium text-foreground">Policy</h3>
+                <p className="mt-2">Builtin hooks are workspace-local lifecycle policy. They enforce secret guards, observe prerequisite decisions, audit tool runs, and delegate memory learning to the memory runtime.</p>
+                <p className="mt-2">Custom shell, HTTP, MCP, or user-authored hooks are intentionally out of scope for this phase.</p>
+              </div>
+              {policy && (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {policySelect('secretGuard', ['strict', 'standard', 'off'])}
+                  {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
+                  {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
+                  {policySelect('toolAudit', ['on', 'off'])}
+                  {policySelect('memoryLearn', ['auto', 'review', 'off'])}
+                </div>
+              )}
             </div>
           )}
         </div>

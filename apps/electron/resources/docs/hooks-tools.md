@@ -6,7 +6,7 @@ Use the `hooks` tool to inspect and manage builtin workspace lifecycle hooks. Ho
 
 - V1 is builtin-only. Custom shell, HTTP, MCP, or user-authored hooks are not supported.
 - Hooks run at lifecycle events such as `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `TurnStop`, and `SessionComplete`.
-- Hooks may observe, block, ask, add context, or mutate through existing product domain APIs.
+- Hooks may observe, block, ask, add context, mutate, or redact through existing product domain APIs.
 - Hooks do not control UI panels or browser runtime directly.
 - Use domain tools for product state changes; use `hooks` for hook toggles, dry-run tests, and audit inspection.
 
@@ -20,6 +20,10 @@ Use the `hooks` tool to inspect and manage builtin workspace lifecycle hooks. Ho
 - `hooks runs [hookId]` — show recent hook runs, optionally for one hook.
 - `hooks explain <runId>` — inspect one hook run decision.
 - `hooks test <hookId> <json>` — dry-run one hook with an event payload.
+- `hooks policy` — show workspace hook policy.
+- `hooks set-policy <json>` — update workspace hook policy.
+- `hooks simulate-tool <json>` — dry-run the `PreToolUse` gateway with structured payload.
+- `hooks simulate-prompt <json>` — dry-run the `UserPromptSubmit` gateway with structured payload.
 
 ## Builtin Hooks
 
@@ -31,6 +35,18 @@ Use the `hooks` tool to inspect and manage builtin workspace lifecycle hooks. Ho
 - `validation_summary_on_turn_stop` — captures validation summary context.
 - `memory_learn_on_session_complete` — delegates session-complete memory learning to the memory runtime.
 - `automation_run_audit` — records automation run audit context.
+
+## Decision Model
+
+Decision precedence is `block > ask > mutate > addContext > redact > observe > allow`. A `block` decision prevents execution; an `ask` decision must route through permission approval; redaction never stores raw secrets in hook audit.
+
+## Policy
+
+- `secretGuard`: `strict | standard | off`
+- `workspaceBoundary`: `block | ask | observe`
+- `prerequisiteGuard`: `enforce | observe`
+- `toolAudit`: `on | off`
+- `memoryLearn`: `auto | review | off`
 
 ## Safety
 

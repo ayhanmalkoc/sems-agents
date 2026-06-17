@@ -1,6 +1,6 @@
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
-import { HookEngine, loadHookRuns, setHookEnabled } from '@craft-agent/shared/hooks'
+import { HookEngine, loadHookRuns, setHookEnabled, loadHooksPolicy, saveHooksPolicy } from '@craft-agent/shared/hooks'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
@@ -21,5 +21,11 @@ export function registerHooksHandlers(server: RpcServer, deps: HandlerDeps): voi
   server.handle(RPC_CHANNELS.hooks.SET_ENABLED, async (_ctx, workspaceId: string, hookId: string, enabled: boolean) => {
     setHookEnabled(workspaceRoot(workspaceId), hookId, enabled)
     changed(workspaceId)
+  })
+  server.handle(RPC_CHANNELS.hooks.GET_POLICY, async (_ctx, workspaceId: string) => loadHooksPolicy(workspaceRoot(workspaceId)))
+  server.handle(RPC_CHANNELS.hooks.SET_POLICY, async (_ctx, workspaceId: string, policy: Parameters<typeof saveHooksPolicy>[1]) => {
+    const next = saveHooksPolicy(workspaceRoot(workspaceId), policy)
+    changed(workspaceId)
+    return next
   })
 }

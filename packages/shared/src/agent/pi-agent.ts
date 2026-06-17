@@ -1192,6 +1192,30 @@ export class PiAgent extends BaseAgent {
       tool_input: input,
     });
 
+    const hookCallbacks = getSessionScopedToolCallbacks(this._sessionId)?.hooksFns;
+    if (hookCallbacks) {
+      const hookDecision = await hookCallbacks.simulateTool({
+        event: 'PreToolUse',
+        workspaceId: this.config.workspace.id,
+        sessionId: this.config.session?.id || this._sessionId,
+        toolName,
+        toolInput: input,
+        source: 'pi-pre-tool-use',
+      });
+      if (hookDecision.type === 'block') {
+        this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: hookDecision.message ?? 'Blocked by hooks policy.' });
+        return;
+      }
+      if (hookDecision.type === 'ask') {
+        this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: hookDecision.message ?? 'Hooks policy requires approval before this tool can run.' });
+        return;
+      }
+      if (hookDecision.type === 'mutate' && hookDecision.mutation && typeof hookDecision.mutation === 'object') {
+        this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: hookDecision.mutation as Record<string, unknown> });
+        return;
+      }
+    }
+
     const rootPath = this.config.workspace.rootPath ?? this.workingDirectory;
     const workspaceSlug = extractWorkspaceSlug(rootPath, this.config.workspace.id);
     const sessionId = this.config.session?.id || this._sessionId;
