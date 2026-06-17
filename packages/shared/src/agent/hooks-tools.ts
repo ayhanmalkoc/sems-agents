@@ -28,7 +28,7 @@ export interface HooksFns {
   matcherSet: (hookId: string, matcher: HookMatcher) => Promise<CustomHookDefinition>
 }
 
-const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.') })
+const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <snake_case-json>, simulate-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.') })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
 function failure(text: string): ToolResult { return { content: [{ type: 'text', text: `Error: ${text}` }], isError: true } }
@@ -42,7 +42,10 @@ function formatStatus(status: HookStatusSnapshot): string {
 }
 function formatHook(hook: BuiltinHookDefinition & { enabled: boolean }): string { return `- ${hook.id} enabled=${hook.enabled} event=${hook.event} mode=${hook.mode} scope=${hook.scope} source=${hook.source}\n  ${hook.description}` }
 function formatRun(run: HookRunRecord): string { return `- ${run.id} hook=${run.hookId} event=${run.event} decision=${run.decision} ok=${run.ok} durationMs=${run.durationMs}${run.toolName ? ` tool=${run.toolName}` : ''}${run.sessionId ? ` session=${run.sessionId}` : ''}\n  ${run.message ?? run.error ?? ''}` }
-function formatDecision(decision: HookDecision): string { return `Decision: ${decision.type}${decision.message ? `\nMessage: ${decision.message}` : ''}${decision.context ? `\nContext: ${decision.context}` : ''}` }
+function formatDecision(decision: HookDecision & { decision?: string; reason?: string; updated_input?: unknown; additional_context?: string; redacted_response?: unknown }): string {
+  if (decision.decision) return `decision=${decision.decision}${decision.reason ? `\nreason=${decision.reason}` : ''}${decision.updated_input !== undefined ? `\nupdated_input=${JSON.stringify(decision.updated_input)}` : ''}${decision.additional_context ? `\nadditional_context=${decision.additional_context}` : ''}${decision.redacted_response !== undefined ? `\nredacted_response=${JSON.stringify(decision.redacted_response)}` : ''}`
+  return `Decision: ${decision.type}${decision.message ? `\nMessage: ${decision.message}` : ''}${decision.context ? `\nContext: ${decision.context}` : ''}`
+}
 function formatPolicy(policy: HooksPolicy): string { return ['Hooks policy:', `secretGuard=${policy.secretGuard}`, `workspaceBoundary=${policy.workspaceBoundary}`, `prerequisiteGuard=${policy.prerequisiteGuard}`, `toolAudit=${policy.toolAudit}`, `memoryLearn=${policy.memoryLearn}`, `customHooks=${policy.customHooks}`, `customDefaultPower=${policy.customDefaultPower}`, `customMaxDurationMs=${policy.customMaxDurationMs}`, `customMaxOutputBytes=${policy.customMaxOutputBytes}`].join('\n') }
 function formatCustomHook(hook: CustomHookDefinition): string { return `- ${hook.id} enabled=${hook.enabled} source=${hook.source} event=${hook.matcher.event} handler=${hook.handler.type} powers=${hook.powers.join(',')}\n  ${hook.description ?? hook.name}` }
 function formatTrust(record: CustomHookTrustRecord): string { return `hook=${record.hookId} trusted=${record.trusted} hash=${record.hash}${record.reason ? ` reason=${record.reason}` : ''}${record.approvedBy ? ` approvedBy=${record.approvedBy}` : ''}` }

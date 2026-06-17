@@ -14,6 +14,42 @@ Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime 
 - Hook audit stores redacted summaries, not raw secrets or large payload dumps.
 - Hook decisions are runtime-authoritative. If a hook blocks or asks, the tool/prompt flow must obey it.
 
+
+## Craft Native Hook Contract
+
+Hook input is snake_case and lifecycle-focused:
+
+```json
+{
+  "hook_event_name": "PreToolUse",
+  "workspace_id": "my-workspace",
+  "session_id": "260617-example",
+  "agent_id": "default",
+  "tool_name": "bash",
+  "tool_input": { "command": "git status" },
+  "tool_response": null,
+  "prompt": null,
+  "timestamp": "2026-06-17T00:00:00.000Z",
+  "metadata": {}
+}
+```
+
+Hook output is explicit:
+
+```json
+{
+  "decision": "modify",
+  "reason": "Normalize command input",
+  "updated_input": { "command": "git status --short" },
+  "additional_context": null,
+  "redacted_response": null
+}
+```
+
+Valid decisions: `allow`, `block`, `ask`, `modify`, `add_context`, `redact`, `observe`.
+
+Legacy internal camelCase payloads are normalized into this contract before hooks run.
+
 ## Commands
 
 - `hooks status` - summarize availability, enabled count, custom count, and run count.
@@ -27,8 +63,8 @@ Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime 
 - `hooks test <hookId> <json>` - dry-run one builtin or custom hook.
 - `hooks policy` - show workspace hook policy.
 - `hooks set-policy <json>` - update workspace hook policy.
-- `hooks simulate-tool <json>` - dry-run the `PreToolUse` gateway.
-- `hooks simulate-prompt <json>` - dry-run the `UserPromptSubmit` gateway.
+- `hooks simulate-tool <snake_case-json>` - dry-run the `PreToolUse` gateway.
+- `hooks simulate-prompt <snake_case-json>` - dry-run the `UserPromptSubmit` gateway.
 - `hooks custom-list` - list workspace custom hooks.
 - `hooks custom-show <hookId>` - inspect one custom hook.
 - `hooks custom-create <json>` - create one custom hook.
@@ -59,7 +95,7 @@ Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime 
   "enabled": true,
   "source": "workspace",
   "matcher": { "event": "PreToolUse", "toolName": "bash" },
-  "handler": { "type": "prompt", "decision": { "type": "observe", "message": "ok" } },
+  "handler": { "type": "prompt", "output": { "decision": "observe", "reason": "ok" } },
   "powers": ["observe"],
   "timeoutMs": 2000,
   "maxOutputBytes": 4096
@@ -83,8 +119,8 @@ Allowed powers: `observe`, `block`, `ask`, `mutate`, `redact`, `addContext`.
 
 ## Examples
 
-- `hooks simulate-prompt {"message":"token=sk_test_123456789abcdef"}`
-- `hooks simulate-tool {"toolName":"bash","toolInput":"rm -rf ../outside"}`
-- `hooks custom-create {"id":"review_note","name":"Review note","enabled":true,"source":"workspace","matcher":{"event":"PostToolUse"},"handler":{"type":"prompt","decision":{"type":"observe","message":"reviewed"}},"powers":["observe"]}`
+- `hooks simulate-prompt {"hook_event_name":"UserPromptSubmit","prompt":"token=sk_test_123456789abcdef"}`
+- `hooks simulate-tool {"hook_event_name":"PreToolUse","tool_name":"bash","tool_input":"rm -rf ../outside"}`
+- `hooks custom-create {"id":"review_note","name":"Review note","enabled":true,"source":"workspace","matcher":{"event":"PostToolUse"},"handler":{"type":"prompt","output":{"decision":"observe","reason":"reviewed"}},"powers":["observe"]}`
 - `hooks trust-review review_note`
 - `hooks trust-approve review_note --confirm`

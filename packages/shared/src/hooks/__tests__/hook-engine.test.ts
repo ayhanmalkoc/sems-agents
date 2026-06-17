@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { mkdtempSync } from 'fs'
+import { mkdtempSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { HookEngine, HookToolGateway, loadHookRuns, mergeHookDecisions, saveCustomHook, saveHooksPolicy, setHookEnabled, trustApproveCustomHook } from '../index.ts'
@@ -78,6 +78,57 @@ describe('builtin hooks runtime', () => {
       maxOutputBytes: 1024,
     })
     expect((await new HookEngine(workspace).beforePromptSubmit({ event: 'UserPromptSubmit', message: 'hello' })).type).toBe('allow')
+  })
+
+
+
+  it('accepts native snake_case input and returns public hook output', async () => {
+    const workspace = tempWorkspace()
+    saveCustomHook(workspace, {
+      id: 'native_modify',
+      name: 'Native modify',
+      enabled: true,
+      source: 'workspace',
+      handler: { type: 'prompt', output: { decision: 'modify', reason: 'normalize', updated_input: { command: 'echo updated' } } },
+      matcher: { event: 'PreToolUse', toolName: 'bash' },
+      powers: ['modify'],
+    })
+    trustApproveCustomHook(workspace, 'native_modify', 'tester')
+    const engine = new HookEngine(workspace)
+    const output = await engine.simulateTool({ hook_event_name: 'PreToolUse', tool_name: 'bash', tool_input: { command: 'echo old' } })
+    expect(output.decision).toBe('modify')
+    expect(output.updated_input).toEqual({ command: 'echo updated' })
+  })
+
+  it('passes canonical hook input to command hook stdin and parses stdout hook output', async () => {
+    const workspace = tempWorkspace()
+    const script = join(workspace, 'hook-command.js')
+    writeFileSync(script, "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const input = JSON.parse(data); console.log(JSON.stringify({ decision: 'add_context', reason: input.tool_name, additional_context: 'ctx:' + input.tool_input.command })); });\n", 'utf8')
+    saveCustomHook(workspace, {
+      id: 'command_context',
+      name: 'Command context',
+      enabled: true,
+      source: 'workspace',
+      handler: { type: 'command', executable: process.execPath, args: [script] },
+      matcher: { event: 'PreToolUse', toolName: 'bash' },
+      powers: ['add_context'],
+      timeoutMs: 2000,
+      maxOutputBytes: 2048,
+    })
+    trustApproveCustomHook(workspace, 'command_context', 'tester')
+    const output = await new HookEngine(workspace).simulateTool({ hook_event_name: 'PreToolUse', tool_name: 'bash', tool_input: { command: 'pwd' } })
+    expect(output.decision).toBe('add_context')
+    expect(output.additional_context).toBe('ctx:pwd')
+  })
+
+  it('records canonical redacted run summaries', async () => {
+    const workspace = tempWorkspace()
+    const engine = new HookEngine(workspace)
+    await engine.afterToolUse({ hook_event_name: 'PostToolUse', tool_name: 'bash', tool_response: 'token=sk_test_123456789abcdef' })
+    const run = loadHookRuns(workspace).find(item => item.hookId === 'tool_audit_log')
+    expect(run?.inputSummary).toContain('hook_event_name')
+    expect(run?.outputSummary).toContain('[REDACTED]')
+    expect(run?.outputSummary).not.toContain('sk_test')
   })
 
   it('gateway blocks callbacks and redacts returned output', async () => {

@@ -187,7 +187,7 @@ export const MemoryToolSchema = z.object({
 });
 
 export const HooksToolSchema = z.object({
-  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <json>, simulate-prompt <json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.'),
+  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <snake_case-json>, simulate-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.'),
 });
 
 export const SessionsToolSchema = z.object({
@@ -562,8 +562,8 @@ Commands:
 - \`test <hookId> <json>\` - dry-run one hook with event payload
 - \`policy\` - show workspace hook policy
 - \`set-policy <json>\` - update workspace hook policy
-- \`simulate-tool <json>\` - dry-run PreToolUse gateway
-- \`simulate-prompt <json>\` - dry-run UserPromptSubmit gateway`,
+- \`simulate-tool <snake_case-json>\` - dry-run PreToolUse gateway
+- \`simulate-prompt <snake_case-json>\` - dry-run UserPromptSubmit gateway`,
 
   memory: `Manage persistent scoped workspace memory.
 
