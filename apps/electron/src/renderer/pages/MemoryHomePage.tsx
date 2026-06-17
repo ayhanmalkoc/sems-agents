@@ -205,6 +205,13 @@ function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters,
   return true
 }
 
+function matchesQuery(item: MemoryRecord | MemorySuggestion | WorkingMemoryNote, query: string) {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+  const haystack = [item.id, item.title, item.content, item.sourceSessionId, ...(item.tags ?? [])].join(' ').toLowerCase()
+  return haystack.includes(needle)
+}
+
 export default function MemoryHomePage() {
   const { activeWorkspaceId, workspaces } = useAppShellContext()
   const [tab, setTab] = React.useState<Tab>('memories')
@@ -238,12 +245,24 @@ export default function MemoryHomePage() {
 
   React.useEffect(() => { void refresh() }, [refresh])
 
+  React.useEffect(() => {
+    const cleanup = window.electronAPI.onMemoryChanged((workspaceId) => {
+      if (workspaceId !== activeWorkspaceId) return
+      void refresh()
+    })
+    return cleanup
+  }, [activeWorkspaceId, refresh])
+
   const deleteOne = async (id: string) => {
     if (!activeWorkspaceId) return
     if (!window.confirm(`Delete memory ${id}?`)) return
-    await window.electronAPI.deleteMemory(activeWorkspaceId, id)
-    toast.success('Memory deleted')
-    void refresh()
+    try {
+      await window.electronAPI.deleteMemory(activeWorkspaceId, id)
+      toast.success('Memory deleted')
+      void refresh()
+    } catch (error) {
+      toast.error('Failed to delete memory', { description: error instanceof Error ? error.message : String(error) })
+    }
   }
 
   const approve = async (id: string) => {
@@ -270,14 +289,19 @@ export default function MemoryHomePage() {
 
   const clearWorking = async (scope: 'session' | 'day') => {
     if (!activeWorkspaceId) return
-    const count = await window.electronAPI.clearWorkingMemoryNotes(activeWorkspaceId, scope)
-    toast.success(`Cleared ${count} ${scope} working note${count === 1 ? '' : 's'}`)
-    void refresh()
+    try {
+      const count = await window.electronAPI.clearWorkingMemoryNotes(activeWorkspaceId, scope)
+      toast.success(`Cleared ${count} ${scope} working note${count === 1 ? '' : 's'}`)
+      void refresh()
+    } catch (error) {
+      toast.error('Failed to clear working memory', { description: error instanceof Error ? error.message : String(error) })
+    }
   }
 
   const pendingCount = suggestions.filter(item => item.status === 'pending').length
-  const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories'))
-  const visibleSuggestions = suggestions.filter(suggestion => matchesFilters(suggestion, filters, 'suggestions'))
+  const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories') && matchesQuery(memory, query))
+  const visibleSuggestions = suggestions.filter(suggestion => matchesFilters(suggestion, filters, 'suggestions') && matchesQuery(suggestion, query))
+  const visibleWorkingNotes = workingNotes.filter(note => matchesQuery(note, query))
   const activeRows = tab === 'memories' ? memories : tab === 'suggestions' ? suggestions : []
   const typeOptions = selectOptions(activeRows.map(item => item.type))
   const scopeOptions = selectOptions(activeRows.map(item => item.scope))
@@ -296,11 +320,18 @@ export default function MemoryHomePage() {
               </div>
             </div>
             {workspaceRoot && (
-              <EditPopover
-                trigger={<Button size="sm">Create</Button>}
-                onInlineComplete={refresh}
-                {...getEditConfig('memory-create', workspaceRoot)}
-              />
+              <div className="flex gap-2">
+                <EditPopover
+                  trigger={<Button size="sm" variant="outline">Refresh Memory</Button>}
+                  onInlineComplete={refresh}
+                  {...getEditConfig('memory-learn', workspaceRoot)}
+                />
+                <EditPopover
+                  trigger={<Button size="sm">Create</Button>}
+                  onInlineComplete={refresh}
+                  {...getEditConfig('memory-create', workspaceRoot)}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -356,7 +387,7 @@ export default function MemoryHomePage() {
         <div className={cn('min-h-0 flex-1 space-y-3 overflow-auto', loading && 'opacity-60')}>
           {tab === 'memories' && (visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No curated memories match.</div>)}
           {tab === 'suggestions' && (visibleSuggestions.length ? visibleSuggestions.map(suggestion => <SuggestionCard key={suggestion.id} suggestion={suggestion} onApprove={approve} onReject={reject} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No memory suggestions match.</div>)}
-          {tab === 'working' && (workingNotes.length ? workingNotes.map(note => <WorkingCard key={note.id} note={note} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No working memory notes.</div>)}
+          {tab === 'working' && (visibleWorkingNotes.length ? visibleWorkingNotes.map(note => <WorkingCard key={note.id} note={note} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No working memory notes.</div>)}
         </div>
       </div>
     </div>

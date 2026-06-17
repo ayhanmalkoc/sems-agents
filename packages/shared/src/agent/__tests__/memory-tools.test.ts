@@ -49,6 +49,7 @@ function fns(): MemoryFns {
     approve: async () => ({ suggestion: { ...suggestion, status: 'approved', memoryId: memory.id }, memory }),
     reject: async () => ({ ...suggestion, status: 'rejected' }),
     listSuggestions: async () => [suggestion],
+    learn: async () => ({ mode: 'review', processed: 1, created: [], suggested: [suggestion], skipped: 0, reasons: [] }),
   }
 }
 
@@ -72,6 +73,7 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('working-add {"scope":"session","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Added working memory')
     expect((await executeMemoryCommand('working-clear session', fns())).content[0].text).toContain('Cleared 1')
     expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created 1 memory suggestion')
+    expect((await executeMemoryCommand('learn current', fns())).content[0].text).toContain('Memory learn: mode=review processed=1 created=0 suggested=1 skipped=0')
     expect((await executeMemoryCommand('approve sug-1', fns())).content[0].text).toContain('Approved suggestion')
     expect((await executeMemoryCommand('reject sug-1', fns())).content[0].text).toContain('Rejected suggestion')
   })
@@ -80,6 +82,12 @@ describe('memory tool', () => {
     const result = await executeMemoryCommand('show', fns())
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toContain('show requires a memory id')
+
+    const noScan = fns()
+    delete noScan.learn
+    const scanResult = await executeMemoryCommand('learn current', noScan)
+    expect(scanResult.isError).toBe(true)
+    expect(scanResult.content[0].text).toContain('learn is not available')
   })
 
   it('formats multiple and empty suggestion results', async () => {

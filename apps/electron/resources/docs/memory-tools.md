@@ -27,6 +27,7 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory update <memoryId> <json>` — update one approved memory.
 - `memory delete <memoryId>` — delete one approved memory.
 - `memory suggest-from-session <sessionId>` — create up to 3 pending candidates from strong session signals.
+- `memory learn <current|recent|all|sessionId>` — manually learn from current, recent, all, or one specific session for strong memory candidates.
 - `memory approve <suggestionId>` — move a pending suggestion into approved memory.
 - `memory reject <suggestionId>` — reject a pending suggestion.
 
@@ -64,6 +65,19 @@ Memory is workspace-first. Use `workspace`, `agent_profile`, or `session` unless
 ```
 
 `sourceSessionId`, `createdBy`, `createdAt`, `scope`, and `type` are required for traceability.
+
+## Manual Learning
+
+Use manual learning when automatic completion learning may have missed something, or when the user asks to revisit session history for memory.
+
+- `memory learn current` learns from the current session.
+- `memory learn recent` learns from recent loaded workspace sessions.
+- `memory learn all` learns from up to 100 workspace sessions, including sessions loaded from disk.
+- `memory learn <sessionId>` learns from one session.
+- In `auto` mode, strong learning candidates are saved as curated memory.
+- In `review` mode, strong learning candidates become pending suggestions.
+- In `off` mode, manual learning is still allowed and queues suggestions (`off-as-review`) because it is an explicit user action.
+- Duplicate, secret, and low-confidence guards still apply.
 
 ## Suggestions
 

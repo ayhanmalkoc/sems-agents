@@ -26,10 +26,20 @@ export interface MemoryFns {
   approve: (suggestionId: string) => Promise<{ suggestion: MemorySuggestion; memory: MemoryRecord }>
   reject: (suggestionId: string) => Promise<MemorySuggestion>
   listSuggestions?: () => Promise<MemorySuggestion[]>
+  learn?: (target: string) => Promise<MemoryLearnSummary>
+}
+
+export interface MemoryLearnSummary {
+  mode: 'auto' | 'review' | 'off-as-review'
+  processed: number
+  created: MemoryRecord[]
+  suggested: MemorySuggestion[]
+  skipped: number
+  reasons?: string[]
 }
 
 const MemorySchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>, working-list, working-add <json>, working-clear <session|day>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, learn <current|recent|all|sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>, working-list, working-add <json>, working-clear <session|day>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -81,6 +91,16 @@ function formatMemories(memories: MemoryRecord[]): string {
 function formatStatus(status: MemoryStatusSnapshot): string {
   const lines = [`Memory: ${status.available ? 'available' : 'unavailable'}`, `Memories: ${status.memories}`, `Suggestions: ${status.suggestions}`, `Pending suggestions: ${status.pendingSuggestions}`]
   if (status.reason) lines.push(`Reason: ${status.reason}`)
+  return lines.join('\n')
+}
+
+function formatLearnSummary(summary: MemoryLearnSummary): string {
+  const lines = [
+    `Memory learn: mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
+  ]
+  if (summary.created.length) lines.push('Created:', ...summary.created.map(formatMemory))
+  if (summary.suggested.length) lines.push('Suggested:', ...summary.suggested.map(formatSuggestion))
+  if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.map(reason => `- ${reason}`))
   return lines.join('\n')
 }
 
@@ -160,6 +180,12 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       const suggestions = Array.isArray(result) ? result : [result]
       if (suggestions.length === 0) return success('No strong memory candidates found')
       return success(`Created ${suggestions.length} memory suggestion${suggestions.length === 1 ? '' : 's'}\n${formatSuggestions(suggestions)}`)
+    }
+    if (verb === 'learn') {
+      if (!fns.learn) return failure('learn is not available in this context')
+      const target = rest.join(' ').trim()
+      if (!target) return failure('learn requires target: current, recent, all, or session id')
+      return success(formatLearnSummary(await fns.learn(target)))
     }
     if (verb === 'approve') {
       const suggestionId = rest[0]

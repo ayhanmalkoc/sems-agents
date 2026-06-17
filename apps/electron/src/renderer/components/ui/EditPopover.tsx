@@ -92,6 +92,7 @@ export type EditContextKey =
   | 'memory-create'
   | 'memory-edit'
   | 'memory-review'
+  | 'memory-learn'
 
 /**
  * Full edit configuration including context for agent and example for UI.
@@ -664,6 +665,25 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     },
     example: 'Review pending suggestions and approve only strong project decisions',
     overridePlaceholder: 'How should suggestions be reviewed?',
+    model: 'default',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
+
+  'memory-learn': (location) => ({
+    context: {
+      label: 'Refresh Memory',
+      filePath: `${location}/memory/memories.json`,
+      context:
+        'The user wants to refresh memory by learning from session history. ' +
+        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
+        'Use memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
+        'Summarize processed, created, suggested, skipped, mode, and any ids. ' +
+        'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
+    },
+    example: 'Refresh memory from all sessions',
+    overridePlaceholder: 'What should memory learn from?',
     model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
