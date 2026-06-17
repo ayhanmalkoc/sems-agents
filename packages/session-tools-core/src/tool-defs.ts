@@ -186,6 +186,10 @@ export const MemoryToolSchema = z.object({
   command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>.'),
 });
 
+export const HooksToolSchema = z.object({
+  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, test <hookId> <json>.'),
+});
+
 export const SessionsToolSchema = z.object({
   command: z.string().describe('Sessions command: status, list, show <sessionId>, spawn <json>, rename <sessionId> <name>, labels <sessionId> <json-array>, status-set <sessionId> <status>, agent <sessionId> <agentId>, archive <sessionId> <true|false>, pin <sessionId> <true|false>, delete <sessionId> --confirm, message <sessionId> <message>.'),
 });
@@ -544,6 +548,19 @@ Commands:
 - \`export\` - export workspace resources to a bundle
 - \`import <bundlePath>\` - import a resource bundle`,
 
+  hooks: `Manage builtin workspace lifecycle hooks.
+
+Use this when the user asks to inspect, test, enable, disable, or audit builtin hooks. Custom script/http hooks are not supported in this phase.
+
+Commands:
+- \`status\` - summarize hook availability
+- \`list\` - list builtin hooks
+- \`show <hookId>\` - inspect one hook
+- \`enable <hookId>\` / \`disable <hookId>\` - toggle one builtin hook
+- \`runs [hookId]\` - show recent hook runs
+- \`explain <runId>\` - inspect one run decision
+- \`test <hookId> <json>\` - dry-run one hook with event payload`,
+
   memory: `Manage persistent scoped workspace memory.
 
 Use this when the user asks to remember durable information, inspect/search memory, or review memory suggestions.
@@ -736,6 +753,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'automations', description: TOOL_DESCRIPTIONS.automations, inputSchema: AutomationsToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'resources', description: TOOL_DESCRIPTIONS.resources, inputSchema: ResourcesToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'memory', description: TOOL_DESCRIPTIONS.memory, inputSchema: MemoryToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'hooks', description: TOOL_DESCRIPTIONS.hooks, inputSchema: HooksToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'sessions', description: TOOL_DESCRIPTIONS.sessions, inputSchema: SessionsToolSchema, executionMode: 'registry', safeMode: 'block', handler: handleSessionsTool },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },

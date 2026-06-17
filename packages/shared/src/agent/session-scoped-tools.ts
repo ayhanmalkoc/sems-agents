@@ -39,6 +39,7 @@ import { createAgentsTool, type AgentsFns } from './agents-tools.ts';
 import { createAutomationsTool, type AutomationsFns } from './automations-tools.ts';
 import { createResourcesTool, type ResourcesFns } from './resources-tools.ts';
 import { createMemoryTool, type MemoryFns } from './memory-tools.ts';
+import { createHooksTool, type HooksFns } from './hooks-tools.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 
@@ -65,6 +66,7 @@ export type { AgentsFns } from './agents-tools.ts';
 export type { AutomationsFns } from './automations-tools.ts';
 export type { ResourcesFns } from './resources-tools.ts';
 export type { MemoryFns } from './memory-tools.ts';
+export type { HooksFns } from './hooks-tools.ts';
 
 // ============================================================
 // Session-Scoped Tool Callbacks (re-exported from dedicated registry module)
@@ -93,6 +95,7 @@ export const CLAUDE_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'automations',
   'resources',
   'memory',
+  'hooks',
 ]);
 
 /**
@@ -359,6 +362,15 @@ export function getSessionScopedTools(
         getMemoryFns: () => {
           const callbacks = getSessionScopedToolCallbacks(sessionId);
           return callbacks?.memoryFns;
+        },
+      }),
+    );
+
+    tools.push(
+      createHooksTool({
+        getHooksFns: () => {
+          const callbacks = getSessionScopedToolCallbacks(sessionId);
+          return callbacks?.hooksFns;
         },
       }),
     );

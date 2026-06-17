@@ -106,6 +106,7 @@ import { executeAgentsCommand } from './agents-tools.ts';
 import { executeAutomationsCommand } from './automations-tools.ts';
 import { executeResourcesCommand } from './resources-tools.ts';
 import { executeMemoryCommand } from './memory-tools.ts';
+import { executeHooksCommand } from './hooks-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
@@ -123,6 +124,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'automations',
   'resources',
   'memory',
+  'hooks',
 ]);
 
 /**
@@ -1607,6 +1609,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Memory controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeMemoryCommand(String(args.command ?? 'status'), memoryFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'hooks') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const hooksFns = callbacks?.hooksFns;
+        if (!hooksFns) {
+          return { content: 'Hooks controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeHooksCommand(String(args.command ?? 'status'), hooksFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
       const def = SESSION_TOOL_REGISTRY.get(toolName);

@@ -54,6 +54,10 @@ function memoryDocPath(): string {
   return resolve(join(homedir(), '.craft-agent', 'docs', 'memory-tools.md'));
 }
 
+function hooksDocPath(): string {
+  return resolve(join(homedir(), '.craft-agent', 'docs', 'hooks-tools.md'));
+}
+
 describe('PrerequisiteManager', () => {
   let manager: PrerequisiteManager;
   let debugMessages: string[];
@@ -195,6 +199,17 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(docsPath);
 
       for (const toolName of ['memory', 'mcp__session__memory']) {
+        const result = manager.checkPrerequisites(toolName);
+        expect(result.allowed).toBe(false);
+        expect(result.blockReason).toContain(docsPath);
+      }
+    });
+
+    it('matches hooks tools and blocks until hooks docs are read', () => {
+      const docsPath = hooksDocPath();
+      mockExistsPaths.add(docsPath);
+
+      for (const toolName of ['hooks', 'mcp__session__hooks']) {
         const result = manager.checkPrerequisites(toolName);
         expect(result.allowed).toBe(false);
         expect(result.blockReason).toContain(docsPath);

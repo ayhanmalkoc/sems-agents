@@ -419,6 +419,12 @@ export const RPC_CHANNELS = {
     CLEAR_WORKING: 'memory:clearWorking',
     CHANGED: 'memory:changed',
   },
+  hooks: {
+    GET: 'hooks:get',
+    RUNS: 'hooks:runs',
+    SET_ENABLED: 'hooks:setEnabled',
+    CHANGED: 'hooks:changed',
+  },
   messaging: {
     // WhatsApp subprocess → Gateway (subprocess invokes on server)
     WA_REGISTER: 'messaging:wa:register',

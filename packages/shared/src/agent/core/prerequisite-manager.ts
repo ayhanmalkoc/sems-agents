@@ -68,6 +68,8 @@ const SESSION_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', '
 
 /** Global memory tools docs path required before persistent memory management. */
 const MEMORY_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'memory-tools.md'));
+/** Global hooks tools docs path required before lifecycle hook management. */
+const HOOKS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'hooks-tools.md'));
 
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {

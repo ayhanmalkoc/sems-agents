@@ -33,6 +33,7 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isMemoryNavigation,
+  isHooksNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { agentSelection, sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
@@ -45,6 +46,7 @@ import AgentInfoPage from '@/pages/AgentInfoPage'
 import AgentsHomePage from '@/pages/AgentsHomePage'
 import AutomationsHomePage from '@/pages/AutomationsHomePage'
 import MemoryHomePage from '@/pages/MemoryHomePage'
+import HooksHomePage from '@/pages/HooksHomePage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'

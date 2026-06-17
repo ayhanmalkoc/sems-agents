@@ -421,6 +421,11 @@ export const CHANNEL_MAP = {
   clearWorkingMemoryNotes: invoke(RPC_CHANNELS.memory.CLEAR_WORKING),
   onMemoryChanged: listener(RPC_CHANNELS.memory.CHANGED),
 
+  // Hooks
+  getHooks: invoke(RPC_CHANNELS.hooks.GET),
+  getHookRuns: invoke(RPC_CHANNELS.hooks.RUNS),
+  setHookEnabled: invoke(RPC_CHANNELS.hooks.SET_ENABLED),
+
   // Messaging gateway
   getMessagingConfig: invoke(RPC_CHANNELS.messaging.GET_CONFIG),
   updateMessagingConfig: invoke(RPC_CHANNELS.messaging.UPDATE_CONFIG),

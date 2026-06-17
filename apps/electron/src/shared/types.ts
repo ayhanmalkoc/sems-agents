@@ -81,6 +81,8 @@ export type { LoadedSkill, SkillMetadata, AgentProfile, CreateAgentProfileInput,
 // Resource bundle types (cross-workspace export/import)
 import type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult } from '@craft-agent/shared/resources';
 export type { ExportResourcesOptions, ExportResult, ResourceImportMode, ResourceBundle, ResourceImportResult };
+import type { BuiltinHookDefinition, HookRunRecord } from '@craft-agent/shared/hooks';
+export type { BuiltinHookDefinition, HookRunRecord };
 
 // LLM connection types
 import type { LlmConnection, LlmConnectionWithStatus, LlmAuthType, LlmProviderType, NetworkProxySettings } from '@craft-agent/shared/config';
@@ -722,6 +724,11 @@ export interface ElectronAPI {
   clearWorkingMemoryNotes(workspaceId: string, scope: 'session' | 'day'): Promise<number>
   onMemoryChanged(callback: (workspaceId: string) => void): () => void
 
+  // Hooks
+  getHooks(workspaceId: string): Promise<Array<BuiltinHookDefinition & { enabled: boolean }>>
+  getHookRuns(workspaceId: string, hookId?: string): Promise<HookRunRecord[]>
+  setHookEnabled(workspaceId: string, hookId: string, enabled: boolean): Promise<void>
+
   // Messaging gateway — workspaceId is taken from the client handshake (ctx.workspaceId)
   getMessagingConfig(): Promise<{
     enabled: boolean
@@ -926,6 +933,11 @@ export interface MemoryNavigationState {
   rightSidebar?: RightSidebarPanel
 }
 
+export interface HooksNavigationState {
+  navigator: 'hooks'
+  rightSidebar?: RightSidebarPanel
+}
+
 /**
  * Unified navigation state
  */
@@ -937,6 +949,7 @@ export type NavigationState =
   | SkillsNavigationState
   | AutomationsNavigationState
   | MemoryNavigationState
+  | HooksNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -965,6 +978,10 @@ export const isAutomationsNavigation = (
 export const isMemoryNavigation = (
   state: NavigationState
 ): state is MemoryNavigationState => state.navigator === 'memory'
+
+export const isHooksNavigation = (
+  state: NavigationState
+): state is HooksNavigationState => state.navigator === 'hooks'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -998,6 +1015,7 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     return 'automations'
   }
   if (state.navigator === 'memory') return 'memory'
+  if (state.navigator === 'hooks') return 'hooks'
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
@@ -1058,6 +1076,9 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
 
   // Handle memory
   if (key === 'memory') return { navigator: 'memory' }
+
+  // Handle hooks
+  if (key === 'hooks') return { navigator: 'hooks' }
 
   // Handle settings
   if (key === 'settings') return { navigator: 'settings', subpage: null }

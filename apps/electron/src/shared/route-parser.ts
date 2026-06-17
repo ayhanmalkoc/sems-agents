@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'memory' | 'settings'
+export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'memory' | 'hooks' | 'settings'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -61,7 +61,7 @@ export interface ParsedCompoundRoute {
  * Known prefixes that indicate a compound route
  */
 const COMPOUND_ROUTE_PREFIXES = [
-  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'agents', 'sources', 'skills', 'automations', 'memory', 'settings'
+  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'agents', 'sources', 'skills', 'automations', 'memory', 'hooks', 'settings'
 ]
 
 /**
@@ -214,6 +214,11 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
     return segments.length === 1 ? { navigator: 'memory', details: null } : null
   }
 
+  // Hooks navigator
+  if (first === 'hooks') {
+    return segments.length === 1 ? { navigator: 'hooks', details: null } : null
+  }
+
   // Sessions navigator (allSessions, flagged, state)
   let sessionFilter: SessionFilter
   let detailsStartIndex: number
@@ -277,6 +282,7 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
  */
 export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
   if (parsed.navigator === 'memory') return 'memory'
+  if (parsed.navigator === 'hooks') return 'hooks'
 
   if (parsed.navigator === 'settings') {
     if (!parsed.details) return 'settings'
@@ -407,6 +413,9 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
   if (compound.navigator === 'memory') {
     return { type: 'view', name: 'memory', params: {} }
   }
+  if (compound.navigator === 'hooks') {
+    return { type: 'view', name: 'hooks', params: {} }
+  }
 
   // Settings
   if (compound.navigator === 'settings') {
@@ -528,6 +537,9 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
   // Memory
   if (compound.navigator === 'memory') {
     return { navigator: 'memory' }
+  }
+  if (compound.navigator === 'hooks') {
+    return { navigator: 'hooks' }
   }
 
   // Settings
@@ -671,6 +683,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       return { navigator: 'automations', details: null }
     case 'memory':
       return { navigator: 'memory' }
+    case 'hooks':
+      return { navigator: 'hooks' }
     case 'session':
       if (parsed.id) {
         // Reconstruct filter from params
@@ -788,6 +802,10 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
 
   if (state.navigator === 'memory') {
     return { navigator: 'memory', details: null }
+  }
+
+  if (state.navigator === 'hooks') {
+    return { navigator: 'hooks', details: null }
   }
 
   // Sessions

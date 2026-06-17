@@ -185,6 +185,8 @@ export const routes = {
 
     /** Memory view (memory navigator). */
     memory: () => 'memory' as const,
+    /** Hooks view (hooks navigator). */
+    hooks: () => 'hooks' as const,
 
     /** Settings view (settings navigator) - uses SettingsSubpage from registry */
     settings: (subpage?: SettingsSubpage) =>

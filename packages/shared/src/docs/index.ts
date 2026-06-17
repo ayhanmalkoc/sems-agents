@@ -125,6 +125,7 @@ export const DOC_REFS = {
   automationsTools: `${APP_ROOT}/docs/automations-tools.md`,
   resourcesTools: `${APP_ROOT}/docs/resources-tools.md`,
   memoryTools: `${APP_ROOT}/docs/memory-tools.md`,
+  hooksTools: `${APP_ROOT}/docs/hooks-tools.md`,
   sessionTools: `${APP_ROOT}/docs/session-tools.md`,
   craftCli: `${APP_ROOT}/docs/craft-cli.md`,
   docsDir: `${APP_ROOT}/docs/`,

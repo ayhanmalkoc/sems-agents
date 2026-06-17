@@ -13,7 +13,7 @@ function generatePanelId(): string {
   return `panel-${++nextPanelId}-${Date.now()}`
 }
 
-export type PanelType = 'session' | 'agent' | 'source' | 'settings' | 'skills' | 'memory' | 'other'
+export type PanelType = 'session' | 'agent' | 'source' | 'settings' | 'skills' | 'memory' | 'hooks' | 'other'
 export type PanelLaneId = 'main'
 export type OpenIntent = 'implicit' | 'explicit'
 
@@ -29,7 +29,7 @@ export const PANEL_LANE_POLICIES: Record<PanelLaneId, PanelLanePolicy> = {
   main: {
     id: 'main',
     order: 0,
-    allowedTypes: ['session', 'agent', 'source', 'settings', 'skills', 'memory', 'other'],
+    allowedTypes: ['session', 'agent', 'source', 'settings', 'skills', 'memory', 'hooks', 'other'],
     locked: false,
     singleton: false,
   },
@@ -79,6 +79,8 @@ export function getPanelTypeFromRoute(route: ViewRoute): PanelType {
       return 'skills'
     case 'memory':
       return 'memory'
+    case 'hooks':
+      return 'hooks'
     default:
       return 'other'
   }

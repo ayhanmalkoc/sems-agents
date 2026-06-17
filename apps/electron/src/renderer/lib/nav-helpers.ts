@@ -33,6 +33,7 @@ export function isDetailNavState(navState: NavigationState | null): boolean {
     case 'automations':
       return navState.details !== null
     case 'memory':
+    case 'hooks':
       return false
   }
 }

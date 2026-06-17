@@ -41,6 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, hasSimilarMemoryOrSuggestion, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryConfidence, type MemoryType } from '@craft-agent/shared/memory'
+import { HookEngine, loadHookRuns, setHookEnabled, getHookRun } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
 import {
@@ -4287,6 +4288,22 @@ export class SessionManager implements ISessionManager {
               return this.learnMemorySessions(managed, this.resolveMemoryLearnTargets(managed, target), mode)
             },
           } satisfies MemoryFns,
+          hooksFns: {
+            status: async () => new HookEngine(managed.workspace.rootPath).status(),
+            list: async () => new HookEngine(managed.workspace.rootPath).list(),
+            show: async (hookId) => new HookEngine(managed.workspace.rootPath).show(hookId),
+            enable: async (hookId) => {
+              setHookEnabled(managed.workspace.rootPath, hookId, true)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+            },
+            disable: async (hookId) => {
+              setHookEnabled(managed.workspace.rootPath, hookId, false)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
+            },
+            runs: async (hookId) => loadHookRuns(managed.workspace.rootPath, hookId),
+            explain: async (runId) => getHookRun(managed.workspace.rootPath, runId),
+            test: async (hookId, payload) => new HookEngine(managed.workspace.rootPath).test(hookId, payload),
+          },
           resourcesFns: {
             status: async () => ({
               available: true,
@@ -6974,6 +6991,7 @@ export class SessionManager implements ISessionManager {
         }
       }
       try {
+        void new HookEngine(managed.workspace.rootPath).emit({ event: 'SessionComplete', sessionId, hookId: 'memory_learn_on_session_complete', metadata: { finalMessageId: currentFinalMessageId } }).catch(error => sessionLog.warn('[Hooks] SessionComplete hook failed:', error))
         this.maybeAutoSuggestMemory(managed, currentFinalMessageId)
       } catch (error) {
         sessionLog.warn(`Auto memory suggestion skipped for session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`)
