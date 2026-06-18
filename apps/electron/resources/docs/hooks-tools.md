@@ -2,6 +2,17 @@
 
 Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime policy, audit, enforcement, and explainability layer. They do not replace domain tools such as `memory`, `sessions`, `agents`, `automations`, or `resources`.
 
+
+## Tool Invocation
+
+Use the native session tool, not shell. In MCP-backed agent tool lists, this may appear as `mcp__session__hooks`. Call it with a `command` string:
+
+```json
+{ "command": "status" }
+```
+
+Do not run `hooks status` in Bash or PowerShell.
+
 ## Product Policy
 
 - Builtin hooks are always available for security, prerequisites, workspace boundary checks, audit, memory learning, and validation summaries.
@@ -13,42 +24,6 @@ Use the `hooks` tool to manage workspace lifecycle hooks. Hooks are the runtime 
 - Prompt hooks return text/JSON decisions only; they do not execute arbitrary code.
 - Hook audit stores redacted summaries, not raw secrets or large payload dumps.
 - Hook decisions are runtime-authoritative. If a hook blocks or asks, the tool/prompt flow must obey it.
-
-
-## Craft Native Hook Contract
-
-Hook input is snake_case and lifecycle-focused:
-
-```json
-{
-  "hook_event_name": "PreToolUse",
-  "workspace_id": "my-workspace",
-  "session_id": "260617-example",
-  "agent_id": "default",
-  "tool_name": "bash",
-  "tool_input": { "command": "git status" },
-  "tool_response": null,
-  "prompt": null,
-  "timestamp": "2026-06-17T00:00:00.000Z",
-  "metadata": {}
-}
-```
-
-Hook output is explicit:
-
-```json
-{
-  "decision": "modify",
-  "reason": "Normalize command input",
-  "updated_input": { "command": "git status --short" },
-  "additional_context": null,
-  "redacted_response": null
-}
-```
-
-Valid decisions: `allow`, `block`, `ask`, `modify`, `add_context`, `redact`, `observe`.
-
-Legacy internal camelCase payloads are normalized into this contract before hooks run.
 
 
 ## Lifecycle Events
@@ -93,6 +68,42 @@ Craft supports the Codex-style lifecycle set plus Craft product events:
 - `hooks trust-approve <hookId> --confirm` - approve current custom hook hash.
 - `hooks trust-revoke <hookId>` - revoke trust.
 - `hooks matcher-set <hookId> <json>` - update a custom hook matcher.
+
+## Craft Native Hook Contract
+
+Hook input is snake_case and lifecycle-focused:
+
+```json
+{
+  "hook_event_name": "PreToolUse",
+  "workspace_id": "my-workspace",
+  "session_id": "260617-example",
+  "agent_id": "default",
+  "tool_name": "bash",
+  "tool_input": { "command": "git status" },
+  "tool_response": null,
+  "prompt": null,
+  "timestamp": "2026-06-17T00:00:00.000Z",
+  "metadata": {}
+}
+```
+
+Hook output is explicit:
+
+```json
+{
+  "decision": "modify",
+  "reason": "Normalize command input",
+  "updated_input": { "command": "git status --short" },
+  "additional_context": null,
+  "redacted_response": null
+}
+```
+
+Valid decisions: `allow`, `block`, `ask`, `modify`, `add_context`, `redact`, `observe`.
+
+Legacy internal camelCase payloads are normalized into this contract before hooks run.
+
 
 ## Builtin Hooks
 
