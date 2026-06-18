@@ -106,12 +106,11 @@ Legacy internal camelCase payloads are normalized into this contract before hook
 
 - `secret_scan_prompt` - blocks prompt content that appears to contain credentials or secrets.
 - `secret_scan_tool_input` - blocks tool input that appears to contain credentials or secrets.
-- `tool_prerequisite_guard` - preserves existing documentation prerequisite checks.
+- `tool_prerequisite_guard` - connects existing documentation prerequisite decisions to hook audit/context.
 - `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
 - `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
 - `validation_summary_on_stop` - captures stop validation context.
 - `memory_learn_on_stop` - delegates session completion memory learning to the memory engine when `Stop` metadata marks session completion.
-- `automation_run_audit` - links automation run metadata into hook audit history from `PostToolUse` payloads.
 
 ## Custom Hook Schema
 
