@@ -201,7 +201,7 @@ export default function HooksSettingsPage() {
       <PanelHeader title={t('settings.hooks.title')} actions={<HeaderMenu route={routes.view.settings('hooks')} />} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-          <SettingsSection title={t('settings.hooks.title')} description={t('settings.hooks.pageDescription')}>
+          <SettingsSection title={t('settings.hooks.title')} description={t('settings.hooks.pageDescription')} action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}>
             <SettingsCard>
               <SettingsRow
                 label={
@@ -211,19 +211,18 @@ export default function HooksSettingsPage() {
                   </span>
                 }
                 description={`${hooks.length} built-ins · ${customHooks.length} custom · ${customTrusted} trusted · ${customUntrusted} needs review`}
-                action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
               />
             </SettingsCard>
           </SettingsSection>
 
           <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}>
             <SettingsCard className={cn('overflow-hidden', loading && 'opacity-60')}>
-              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-                <div>
-                  <div className="text-sm font-medium text-foreground">Lifecycle hooks</div>
-                  <div className="text-xs text-foreground/45">{showBuiltinHooks ? 'Showing custom and built-in hooks.' : 'Showing custom hooks only.'}</div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Custom'}</Button>
+              <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
+                <div className="text-xs text-foreground/45">{showBuiltinHooks ? t('settings.hooks.showingAll') : t('settings.hooks.showingCustom')}</div>
+                <button type="button" className="inline-flex h-7 items-center rounded-md border border-border bg-background p-0.5 text-xs text-foreground/60" onClick={() => setShowBuiltinHooks(value => !value)}>
+                  <span className={cn('rounded px-2 py-0.5', !showBuiltinHooks && 'bg-foreground text-background')}>{t('settings.hooks.customFilter')}</span>
+                  <span className={cn('rounded px-2 py-0.5', showBuiltinHooks && 'bg-foreground text-background')}>{t('settings.hooks.allFilter')}</span>
+                </button>
               </div>
               {visibleGroups.length ? (
                 <div className="space-y-1 p-3">
@@ -247,13 +246,13 @@ export default function HooksSettingsPage() {
           </SettingsSection>
 
 
-          <SettingsSection title="Recent runs" description="Watch recent hook decisions, errors, and runtime activity.">
+          <SettingsSection title={t('settings.hooks.recentRunsTitle')} description={t('settings.hooks.recentRunsDescription')}>
             <SettingsCard className="overflow-hidden">
               <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setShowRuns(value => !value)}>
                 <span className="text-foreground/45">{showRuns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">Run history</div>
-                  <div className="text-xs text-foreground/45">{runs.length ? `${runs.length} recorded hook runs. Open to inspect recent decisions.` : 'No hook runs recorded yet.'}</div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.hooks.runHistory')}</div>
+                  <div className="text-xs text-foreground/45">{runs.length ? t('settings.hooks.runHistoryCount', { count: runs.length }) : t('settings.hooks.noHookRunsRecorded')}</div>
                 </div>
               </button>
               {showRuns && (
@@ -282,7 +281,7 @@ export default function HooksSettingsPage() {
                         </details>
                       ))}
                     </div>
-                  ) : <div className="border-t border-border/60 p-8 text-center text-sm text-foreground/50">No hook runs</div>}
+                  ) : <div className="border-t border-border/60 p-8 text-center text-sm text-foreground/50">{t('settings.hooks.noHookRuns')}</div>}
                 </>
               )}
             </SettingsCard>
