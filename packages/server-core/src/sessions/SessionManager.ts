@@ -7035,7 +7035,7 @@ export class SessionManager implements ISessionManager {
         }
       }
       try {
-        void new HookEngine(managed.workspace.rootPath).emit({ event: 'SessionComplete', sessionId, hookId: 'memory_learn_on_session_complete', metadata: { finalMessageId: currentFinalMessageId } }).catch(error => sessionLog.warn('[Hooks] SessionComplete hook failed:', error))
+        void new HookEngine(managed.workspace.rootPath).emit({ event: 'Stop', sessionId, hookId: 'memory_learn_on_stop', metadata: { reason: 'session_complete', finalMessageId: currentFinalMessageId } }).catch(error => sessionLog.warn('[Hooks] Stop memory hook failed:', error))
         this.maybeAutoSuggestMemory(managed, currentFinalMessageId)
       } catch (error) {
         sessionLog.warn(`Auto memory suggestion skipped for session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`)

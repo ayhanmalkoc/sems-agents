@@ -42,7 +42,7 @@ function handlerSummary(hook: CustomHookDefinition): string {
 function matcherDetail(item: HookListItem): string {
   const matcher = item.customHook?.matcher
   if (!matcher) return item.matcherSummary
-  const parts = [matcher.toolName, matcher.commandIncludes, matcher.pathGlob, matcher.agentProfileId, matcher.sessionScope, matcher.automationEvent].filter(Boolean)
+  const parts = [matcher.toolName, matcher.commandIncludes, matcher.pathGlob, matcher.agentProfileId, matcher.sessionScope, matcher.metadata ? JSON.stringify(matcher.metadata) : undefined].filter(Boolean)
   return parts.length ? parts.join(' | ') : 'all matching events'
 }
 
@@ -302,7 +302,6 @@ export default function HooksSettingsPage() {
                     {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
                     {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
                     {policySelect('toolAudit', ['on', 'off'])}
-                    {policySelect('memoryLearn', ['auto', 'review', 'off'])}
                     {policySelect('customHooks', ['trusted-only', 'off'])}
                   </div>
                 </div>

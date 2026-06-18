@@ -33,20 +33,19 @@ describe('hooks ui model', () => {
     const groups = buildHookGroups([
       item({ event: 'PreToolUse' }),
       item({ id: 'tool_audit_log', event: 'PostToolUse' }),
-      item({ id: 'memory_learn_on_session_complete', event: 'SessionComplete' }),
+      item({ id: 'memory_learn_on_stop', event: 'Stop' }),
     ], [])
-    expect(groups.map(group => group.title)).toEqual(['Before tool use', 'After tool use', 'Session complete'])
+    expect(groups.map(group => group.title)).toEqual(['Before tool use', 'After tool use', 'Stop'])
   })
 
-  it('orders OpenAI-style lifecycle events before Craft-specific events', () => {
+  it('orders lifecycle events without domain-specific groups', () => {
     const groups = buildHookGroups([
       item({ id: 'permission_request', event: 'PermissionRequest' }),
       item({ id: 'pre_compact', event: 'PreCompact' }),
       item({ id: 'subagent_start', event: 'SubagentStart' }),
       item({ id: 'stop', event: 'Stop' }),
-      item({ id: 'file_changed', event: 'FileChanged' }),
     ], [])
-    expect(groups.map(group => group.title)).toEqual(['Permission request', 'Before compaction', 'Subagent start', 'Stop', 'File changed'])
+    expect(groups.map(group => group.title)).toEqual(['Permission request', 'Before compaction', 'Subagent start', 'Stop'])
   })
 
 

@@ -28,21 +28,18 @@ Do not run `hooks status` in Bash or PowerShell.
 
 ## Lifecycle Events
 
-Craft supports the Codex-style lifecycle set plus Craft product events:
+Craft supports a compact lifecycle event set. Product/domain behavior is expressed through payload metadata, tool names, and builtin hooks instead of extra domain events:
 
 - `SessionStart` - session starts.
 - `UserPromptSubmit` - user submits a prompt.
 - `PreToolUse` - before a tool runs.
 - `PermissionRequest` - before an approval request is shown.
-- `PostToolUse` - after a tool runs, including failures with error context.
+- `PostToolUse` - after a tool runs, including failures with error context. Automation and file-change behavior is represented here with tool/payload metadata.
 - `PreCompact` - before conversation compaction.
 - `PostCompact` - after conversation compaction.
 - `SubagentStart` - subagent starts.
 - `SubagentStop` - subagent stops.
-- `Stop` - before an agent turn stops.
-- `SessionComplete` - session completion and memory learning.
-- `AutomationRun` - automation run audit.
-- `FileChanged` - watched file change.
+- `Stop` - before an agent turn stops. Session completion and memory learning are represented here with metadata such as `{ "reason": "session_complete" }`.
 
 ## Commands
 
@@ -113,8 +110,8 @@ Legacy internal camelCase payloads are normalized into this contract before hook
 - `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
 - `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
 - `validation_summary_on_stop` - captures stop validation context.
-- `memory_learn_on_session_complete` - delegates session completion memory learning to the memory engine.
-- `automation_run_audit` - links automation run metadata into hook audit history.
+- `memory_learn_on_stop` - delegates session completion memory learning to the memory engine when `Stop` metadata marks session completion.
+- `automation_run_audit` - links automation run metadata into hook audit history from `PostToolUse` payloads.
 
 ## Custom Hook Schema
 
@@ -141,9 +138,7 @@ Allowed powers: `observe`, `block`, `ask`, `mutate`, `redact`, `addContext`.
 - `workspaceBoundary`: `block | ask | observe`
 - `prerequisiteGuard`: `enforce | observe`
 - `toolAudit`: `on | off`
-- `memoryLearn`: `auto | review | off`
 - `customHooks`: `off | trusted-only`
-- `customDefaultPower`: `observe`
 - `customMaxDurationMs`: max custom hook runtime
 - `customMaxOutputBytes`: max custom hook output captured
 

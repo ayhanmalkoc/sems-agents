@@ -12,6 +12,7 @@ function ensureDir(workspaceRootPath: string): void { mkdirSync(hooksDir(workspa
 
 const LEGACY_BUILTIN_HOOK_IDS: Record<string, string> = {
   validation_summary_on_turn_stop: 'validation_summary_on_stop',
+  memory_learn_on_session_complete: 'memory_learn_on_stop',
 }
 
 function normalizeBuiltinHookId(id: string): string {
@@ -19,7 +20,7 @@ function normalizeBuiltinHookId(id: string): string {
 }
 
 export function defaultHooksPolicy(): HooksPolicy {
-  return { secretGuard: 'standard', workspaceBoundary: 'ask', prerequisiteGuard: 'enforce', toolAudit: 'on', memoryLearn: 'auto', customHooks: 'trusted-only', customDefaultPower: 'observe', customMaxDurationMs: 2000, customMaxOutputBytes: 4096 }
+  return { secretGuard: 'standard', workspaceBoundary: 'ask', prerequisiteGuard: 'enforce', toolAudit: 'on', customHooks: 'trusted-only', customMaxDurationMs: 2000, customMaxOutputBytes: 4096 }
 }
 
 export function normalizeHooksPolicy(policy?: Partial<HooksPolicy>): HooksPolicy {
@@ -29,9 +30,7 @@ export function normalizeHooksPolicy(policy?: Partial<HooksPolicy>): HooksPolicy
     workspaceBoundary: policy?.workspaceBoundary === 'block' || policy?.workspaceBoundary === 'observe' ? policy.workspaceBoundary : defaults.workspaceBoundary,
     prerequisiteGuard: policy?.prerequisiteGuard === 'observe' ? 'observe' : defaults.prerequisiteGuard,
     toolAudit: policy?.toolAudit === 'off' ? 'off' : defaults.toolAudit,
-    memoryLearn: policy?.memoryLearn === 'review' || policy?.memoryLearn === 'off' ? policy.memoryLearn : defaults.memoryLearn,
     customHooks: policy?.customHooks === 'off' ? 'off' : defaults.customHooks,
-    customDefaultPower: 'observe',
     customMaxDurationMs: Number.isFinite(policy?.customMaxDurationMs) ? Math.max(100, Math.min(30000, Number(policy?.customMaxDurationMs))) : defaults.customMaxDurationMs,
     customMaxOutputBytes: Number.isFinite(policy?.customMaxOutputBytes) ? Math.max(128, Math.min(65536, Number(policy?.customMaxOutputBytes))) : defaults.customMaxOutputBytes,
   }
@@ -50,7 +49,10 @@ function normalizeCustomHook(hook: CustomHookDefinition): CustomHookDefinition {
   if (hook.handler.type === 'command' && !hook.handler.executable?.trim()) throw new Error('Command hook executable is required.')
   if (hook.handler.type === 'http' && !hook.handler.url?.trim()) throw new Error('HTTP hook url is required.')
   if (hook.handler.type === 'mcp' && (!hook.handler.target?.trim() || !hook.handler.tool?.trim())) throw new Error('MCP hook target and tool are required.')
-  return { ...hook, id: hook.id.trim(), name: hook.name.trim(), enabled: hook.enabled !== false, source: hook.source ?? 'workspace', powers: hook.powers?.length ? hook.powers : ['observe'], timeoutMs: hook.timeoutMs, maxOutputBytes: hook.maxOutputBytes }
+  const matcher = { ...hook.matcher }
+  if ((matcher as { event?: string }).event === 'SessionComplete') matcher.event = 'Stop'
+  if ((matcher as { event?: string }).event === 'AutomationRun' || (matcher as { event?: string }).event === 'FileChanged') matcher.event = 'PostToolUse'
+  return { ...hook, id: hook.id.trim(), name: hook.name.trim(), enabled: hook.enabled !== false, source: hook.source ?? 'workspace', matcher, powers: hook.powers?.length ? hook.powers : ['observe'], timeoutMs: hook.timeoutMs, maxOutputBytes: hook.maxOutputBytes }
 }
 
 export function defaultHooksConfig(): HooksConfig {

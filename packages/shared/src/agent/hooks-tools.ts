@@ -39,7 +39,7 @@ function commandPayload(command: string, verb: string, firstArg?: string): strin
 
 function formatStatus(status: HookStatusSnapshot): string {
   const lines = [`Hooks: ${status.available ? 'available' : 'unavailable'}`, `Total: ${status.hooks}`, `Built-ins: ${status.builtins ?? status.hooks}`, `Custom: ${status.custom ?? 0}`, `Enabled: ${status.enabled}`, `Runs: ${status.runs}`]
-  if (status.policy) lines.push('Policy:', `secretGuard=${status.policy.secretGuard}`, `workspaceBoundary=${status.policy.workspaceBoundary}`, `prerequisiteGuard=${status.policy.prerequisiteGuard}`, `toolAudit=${status.policy.toolAudit}`, `memoryLearn=${status.policy.memoryLearn}`, `customHooks=${status.policy.customHooks}`)
+  if (status.policy) lines.push('Policy:', `secretGuard=${status.policy.secretGuard}`, `workspaceBoundary=${status.policy.workspaceBoundary}`, `prerequisiteGuard=${status.policy.prerequisiteGuard}`, `toolAudit=${status.policy.toolAudit}`, `customHooks=${status.policy.customHooks}`)
   if (status.reason) lines.push(`Reason: ${status.reason}`)
   return lines.join('\n')
 }
@@ -49,7 +49,7 @@ function formatDecision(decision: HookDecision & { decision?: string; reason?: s
   if (decision.decision) return `decision=${decision.decision}${decision.reason ? `\nreason=${decision.reason}` : ''}${decision.updated_input !== undefined ? `\nupdated_input=${JSON.stringify(decision.updated_input)}` : ''}${decision.additional_context ? `\nadditional_context=${decision.additional_context}` : ''}${decision.redacted_response !== undefined ? `\nredacted_response=${JSON.stringify(decision.redacted_response)}` : ''}`
   return `Decision: ${decision.type}${decision.message ? `\nMessage: ${decision.message}` : ''}${decision.context ? `\nContext: ${decision.context}` : ''}`
 }
-function formatPolicy(policy: HooksPolicy): string { return ['Hooks policy:', `secretGuard=${policy.secretGuard}`, `workspaceBoundary=${policy.workspaceBoundary}`, `prerequisiteGuard=${policy.prerequisiteGuard}`, `toolAudit=${policy.toolAudit}`, `memoryLearn=${policy.memoryLearn}`, `customHooks=${policy.customHooks}`, `customDefaultPower=${policy.customDefaultPower}`, `customMaxDurationMs=${policy.customMaxDurationMs}`, `customMaxOutputBytes=${policy.customMaxOutputBytes}`].join('\n') }
+function formatPolicy(policy: HooksPolicy): string { return ['Hooks policy:', `secretGuard=${policy.secretGuard}`, `workspaceBoundary=${policy.workspaceBoundary}`, `prerequisiteGuard=${policy.prerequisiteGuard}`, `toolAudit=${policy.toolAudit}`, `customHooks=${policy.customHooks}`, `customMaxDurationMs=${policy.customMaxDurationMs}`, `customMaxOutputBytes=${policy.customMaxOutputBytes}`].join('\n') }
 function formatCustomHook(hook: CustomHookDefinition): string { return `- ${hook.id} enabled=${hook.enabled} source=${hook.source} event=${hook.matcher.event} handler=${hook.handler.type} powers=${hook.powers.join(',')}\n  ${hook.description ?? hook.name}` }
 function formatTrust(record: CustomHookTrustRecord): string { return `hook=${record.hookId} trusted=${record.trusted} hash=${record.hash}${record.reason ? ` reason=${record.reason}` : ''}${record.approvedBy ? ` approvedBy=${record.approvedBy}` : ''}` }
 

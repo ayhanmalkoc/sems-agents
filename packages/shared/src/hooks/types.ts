@@ -1,4 +1,4 @@
-export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PermissionRequest' | 'PostToolUse' | 'PreCompact' | 'PostCompact' | 'SubagentStart' | 'SubagentStop' | 'Stop' | 'SessionComplete' | 'AutomationRun' | 'FileChanged'
+export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PermissionRequest' | 'PostToolUse' | 'PreCompact' | 'PostCompact' | 'SubagentStart' | 'SubagentStop' | 'Stop'
 export type HookMode = 'observe' | 'enforce' | 'mutate' | 'ask'
 export type HookDecisionType = 'allow' | 'block' | 'ask' | 'addContext' | 'mutate' | 'redact' | 'observe'
 export type HookOutputDecision = 'allow' | 'block' | 'ask' | 'modify' | 'add_context' | 'redact' | 'observe'
@@ -7,9 +7,9 @@ export type HookScope = 'system' | 'workspace' | 'agent_profile' | 'session'
 
 export interface BuiltinHookDefinition { id: string; name: string; description: string; event: HookEventName; mode: HookMode; source: HookSource; scope: HookScope; order: number }
 export interface HookConfigEntry { id: string; enabled: boolean }
-export interface HooksPolicy { secretGuard: 'strict' | 'standard' | 'off'; workspaceBoundary: 'block' | 'ask' | 'observe'; prerequisiteGuard: 'enforce' | 'observe'; toolAudit: 'on' | 'off'; memoryLearn: 'auto' | 'review' | 'off'; customHooks: 'off' | 'trusted-only'; customDefaultPower: 'observe'; customMaxDurationMs: number; customMaxOutputBytes: number }
+export interface HooksPolicy { secretGuard: 'strict' | 'standard' | 'off'; workspaceBoundary: 'block' | 'ask' | 'observe'; prerequisiteGuard: 'enforce' | 'observe'; toolAudit: 'on' | 'off'; customHooks: 'off' | 'trusted-only'; customMaxDurationMs: number; customMaxOutputBytes: number }
 
-export interface HookMatcher { event?: HookEventName; toolName?: string; commandIncludes?: string; pathGlob?: string; sessionScope?: 'current' | 'any'; agentProfileId?: string; automationEvent?: string }
+export interface HookMatcher { event?: HookEventName; toolName?: string; commandIncludes?: string; pathGlob?: string; sessionScope?: 'current' | 'any'; agentProfileId?: string; metadata?: Record<string, string | number | boolean> }
 
 export interface HookInput {
   hook_event_name: HookEventName

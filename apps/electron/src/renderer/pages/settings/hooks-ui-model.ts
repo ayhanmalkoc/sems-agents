@@ -44,9 +44,6 @@ export const EVENT_GROUPS: Array<{ event: HookEventName; title: string; descript
   { event: 'SubagentStart', title: 'Subagent start', description: 'When a subagent starts' },
   { event: 'SubagentStop', title: 'Subagent stop', description: 'When a subagent stops' },
   { event: 'Stop', title: 'Stop', description: 'Before an agent turn stops' },
-  { event: 'SessionComplete', title: 'Session complete', description: 'When a session completes' },
-  { event: 'AutomationRun', title: 'Automation run', description: 'When an automation runs' },
-  { event: 'FileChanged', title: 'File changed', description: 'When a watched file changes' },
 ]
 
 export function getCustomHookTrustStatus(_hook: CustomHookDefinition, record?: CustomHookTrustRecord): TrustStatus {
