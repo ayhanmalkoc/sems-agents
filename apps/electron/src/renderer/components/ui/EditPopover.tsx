@@ -635,8 +635,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         label: 'Hooks',
         filePath: `${workspaceRoot}/hooks/hooks.json`,
         context:
-          `The user wants to edit hook ${hookId}. ` +
-          'Read ~/.craft-agent/docs/hooks-tools.md first, then use hooks custom-show, custom-update, matcher-set, trust-review, trust-revoke, or trust-approve only after explicit user confirmation. ' +
+          (hookId && hookId !== 'workspace hooks' ? `The user wants to edit hook ${hookId}. ` : 'The user wants to manage workspace hooks. ') +
+          'Read ~/.craft-agent/docs/hooks-tools.md first, then use hooks custom-list, custom-show, custom-update, matcher-set, trust-review, trust-revoke, or trust-approve only after explicit user confirmation. ' +
           'Changing handler, matcher, powers, timeout, or output limit can make trust stale. Explain that clearly. ' +
           'Do not edit hooks JSON files directly except as a last-resort fallback. Confirm clearly what changed.',
       },

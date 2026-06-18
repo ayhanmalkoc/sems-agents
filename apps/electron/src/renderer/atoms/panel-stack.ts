@@ -79,8 +79,6 @@ export function getPanelTypeFromRoute(route: ViewRoute): PanelType {
       return 'skills'
     case 'memory':
       return 'memory'
-    case 'hooks':
-      return 'hooks'
     default:
       return 'other'
   }

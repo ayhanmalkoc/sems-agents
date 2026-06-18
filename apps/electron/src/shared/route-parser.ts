@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'memory' | 'hooks' | 'settings'
+export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'memory' | 'settings'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -214,9 +214,9 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
     return segments.length === 1 ? { navigator: 'memory', details: null } : null
   }
 
-  // Hooks navigator
+  // Backward-compatible hooks route -> Settings > Hooks
   if (first === 'hooks') {
-    return segments.length === 1 ? { navigator: 'hooks', details: null } : null
+    return segments.length === 1 ? { navigator: 'settings', details: { type: 'hooks', id: 'hooks' } } : null
   }
 
   // Sessions navigator (allSessions, flagged, state)
@@ -282,8 +282,6 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
  */
 export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
   if (parsed.navigator === 'memory') return 'memory'
-  if (parsed.navigator === 'hooks') return 'hooks'
-
   if (parsed.navigator === 'settings') {
     if (!parsed.details) return 'settings'
     return `settings/${parsed.details.type}`
@@ -413,10 +411,6 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
   if (compound.navigator === 'memory') {
     return { type: 'view', name: 'memory', params: {} }
   }
-  if (compound.navigator === 'hooks') {
-    return { type: 'view', name: 'hooks', params: {} }
-  }
-
   // Settings
   if (compound.navigator === 'settings') {
     const subpage = compound.details?.type || 'app'
@@ -538,10 +532,6 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
   if (compound.navigator === 'memory') {
     return { navigator: 'memory' }
   }
-  if (compound.navigator === 'hooks') {
-    return { navigator: 'hooks' }
-  }
-
   // Settings
   if (compound.navigator === 'settings') {
     if (!compound.details) {
@@ -684,7 +674,7 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
     case 'memory':
       return { navigator: 'memory' }
     case 'hooks':
-      return { navigator: 'hooks' }
+      return { navigator: 'settings', subpage: 'hooks' }
     case 'session':
       if (parsed.id) {
         // Reconstruct filter from params
@@ -802,10 +792,6 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
 
   if (state.navigator === 'memory') {
     return { navigator: 'memory', details: null }
-  }
-
-  if (state.navigator === 'hooks') {
-    return { navigator: 'hooks', details: null }
   }
 
   // Sessions

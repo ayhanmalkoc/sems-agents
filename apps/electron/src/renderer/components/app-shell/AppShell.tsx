@@ -24,9 +24,7 @@ import {
   Layers,
   ListTodo,
   Bot,
-  Brain,
-  ShieldCheck,
-  Info,
+  Brain,  Info,
   MailOpen,
   PanelRight,
 } from "lucide-react"
@@ -118,7 +116,6 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isMemoryNavigation,
-  isHooksNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -864,7 +861,7 @@ function AppShellContent({
   const navState = useNavigationState()
   const isRightDockVisible = isRightDockOpen && isSessionsNavigation(navState)
 
-  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isMemoryNavigation(navState) || isHooksNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
+  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isMemoryNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
     ? 0
     : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))
   const store = useStore()
@@ -2041,9 +2038,6 @@ function AppShellContent({
     navigate(routes.view.memory())
   }, [])
 
-  const handleHooksClick = useCallback(() => {
-    navigate(routes.view.hooks())
-  }, [])
 
   // Handlers for automations view
   const handleAutomationsClick = useCallback(() => {
@@ -2701,7 +2695,6 @@ function AppShellContent({
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
                     { id: "nav:agents", title: t("sidebar.agents"), label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
                     { id: "nav:memory", title: "Memory", label: pendingMemorySuggestions ? String(pendingMemorySuggestions) : undefined, icon: Brain, variant: isMemoryNavigation(navState) ? "default" : "ghost", onClick: handleMemoryClick },
-                    { id: "nav:hooks", title: "Hooks", icon: ShieldCheck, variant: isHooksNavigation(navState) ? "default" : "ghost", onClick: handleHooksClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),
@@ -3526,7 +3519,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isMemoryNavigation(navState) && !isHooksNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isMemoryNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

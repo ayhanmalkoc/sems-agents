@@ -29,6 +29,7 @@ export const AppearanceIcon = ({ className }: IconProps) => <Palette className={
 export const InputIcon = ({ className }: IconProps) => <Keyboard className={className} />
 export const WorkspaceIcon = ({ className }: IconProps) => <Building2 className={className} />
 export const PermissionsIcon = ({ className }: IconProps) => <ShieldCheck className={className} />
+export const HooksIcon = ({ className }: IconProps) => <ShieldCheck className={className} />
 export const LabelsIcon = ({ className }: IconProps) => <Tag className={className} />
 export const MessagingSettingsIcon = ({ className }: IconProps) => <MessageSquare className={className} />
 export const ServerSettingsIcon = ({ className }: IconProps) => <Server className={className} />
@@ -47,6 +48,7 @@ export const SETTINGS_ICONS: Record<SettingsSubpage, React.ComponentType<IconPro
   input: InputIcon,
   workspace: WorkspaceIcon,
   permissions: PermissionsIcon,
+  hooks: HooksIcon,
   labels: LabelsIcon,
   messaging: MessagingSettingsIcon,
   server: ServerSettingsIcon,

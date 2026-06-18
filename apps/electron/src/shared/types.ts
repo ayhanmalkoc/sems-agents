@@ -942,10 +942,6 @@ export interface MemoryNavigationState {
   rightSidebar?: RightSidebarPanel
 }
 
-export interface HooksNavigationState {
-  navigator: 'hooks'
-  rightSidebar?: RightSidebarPanel
-}
 
 /**
  * Unified navigation state
@@ -958,7 +954,6 @@ export type NavigationState =
   | SkillsNavigationState
   | AutomationsNavigationState
   | MemoryNavigationState
-  | HooksNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -988,9 +983,6 @@ export const isMemoryNavigation = (
   state: NavigationState
 ): state is MemoryNavigationState => state.navigator === 'memory'
 
-export const isHooksNavigation = (
-  state: NavigationState
-): state is HooksNavigationState => state.navigator === 'hooks'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -1024,7 +1016,6 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     return 'automations'
   }
   if (state.navigator === 'memory') return 'memory'
-  if (state.navigator === 'hooks') return 'hooks'
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
@@ -1086,8 +1077,8 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
   // Handle memory
   if (key === 'memory') return { navigator: 'memory' }
 
-  // Handle hooks
-  if (key === 'hooks') return { navigator: 'hooks' }
+  // Backward-compatible hooks route key
+  if (key === 'hooks') return { navigator: 'settings', subpage: 'hooks' }
 
   // Handle settings
   if (key === 'settings') return { navigator: 'settings', subpage: null }

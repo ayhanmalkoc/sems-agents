@@ -1,11 +1,15 @@
 import * as React from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, RefreshCw, Settings, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown, ChevronRight, RefreshCw, Settings, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { HeaderMenu } from '@/components/ui/HeaderMenu'
+import { routes } from '@/lib/navigate'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { Switch } from '@/components/ui/switch'
+import { SettingsCard, SettingsRow, SettingsSection } from '@/components/settings'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { cn } from '@/lib/utils'
 import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookTrustRecord, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks'
@@ -47,6 +51,14 @@ function formatTimeout(timeoutMs?: number): string {
   return timeoutMs >= 1000 ? `${Math.round(timeoutMs / 1000)}s` : `${timeoutMs}ms`
 }
 
+function policyLabelKey(key: keyof HooksPolicy): string {
+  return `settings.hooks.policy.${String(key)}`
+}
+
+function policyValueLabelKey(value: unknown): string {
+  return `settings.hooks.policyValue.${String(value).replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())}`
+}
+
 function DetailRow({ label, children, mono = false }: { label: string; children: React.ReactNode; mono?: boolean }) {
   return (
     <>
@@ -73,7 +85,7 @@ function HookDetail({ item }: { item: HookListItem }) {
   )
 }
 
-function HookRowView({ item, workspaceRoot, onToggle, onReview }: { item: HookListItem; workspaceRoot?: string; onToggle: (item: HookListItem, checked: boolean) => void; onReview: (hook: CustomHookDefinition) => void }) {
+function HookRowView({ item, onToggle, onReview }: { item: HookListItem; onToggle: (item: HookListItem, checked: boolean) => void; onReview: (hook: CustomHookDefinition) => void }) {
   const [open, setOpen] = React.useState(false)
   return (
     <div className="border-t border-border/60 first:border-t-0 bg-background/70">
@@ -86,9 +98,6 @@ function HookRowView({ item, workspaceRoot, onToggle, onReview }: { item: HookLi
           </div>
         </div>
         {item.kind === 'custom' && item.trustStatus !== 'Trusted' && item.customHook && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onReview(item.customHook!)}>Review</Button>}
-        {workspaceRoot && item.kind === 'custom' && (
-          <EditPopover trigger={<Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Edit hook"><ExternalLink className="h-3.5 w-3.5" /></Button>} {...getEditConfig('hooks-edit', `${workspaceRoot}::${item.id}`)} />
-        )}
         <Switch checked={item.enabled} onCheckedChange={checked => onToggle(item, checked)} />
       </div>
       {open && <div className="px-4 pb-4"><HookDetail item={item} /></div>}
@@ -96,7 +105,8 @@ function HookRowView({ item, workspaceRoot, onToggle, onReview }: { item: HookLi
   )
 }
 
-export default function HooksHomePage() {
+export default function HooksSettingsPage() {
+  const { t } = useTranslation()
   const { activeWorkspaceId, workspaces } = useAppShellContext()
   const activeWorkspace = workspaces.find(workspace => workspace.id === activeWorkspaceId)
   const workspaceRoot = (activeWorkspace as { rootPath?: string; path?: string } | undefined)?.rootPath ?? (activeWorkspace as { path?: string } | undefined)?.path
@@ -106,7 +116,6 @@ export default function HooksHomePage() {
   const [trustRecords, setTrustRecords] = React.useState<CustomHookTrustRecord[]>([])
   const [policy, setPolicy] = React.useState<HooksPolicy | null>(null)
   const [loading, setLoading] = React.useState(false)
-  const [policyOpen, setPolicyOpen] = React.useState(false)
   const [pendingTrust, setPendingTrust] = React.useState<PendingTrustAction>(null)
 
   const refresh = React.useCallback(async () => {
@@ -174,76 +183,81 @@ export default function HooksHomePage() {
 
   const policySelect = <K extends keyof HooksPolicy>(key: K, values: HooksPolicy[K][]) => (
     <label className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 p-3 text-sm">
-      <span className="text-foreground/70">{key}</span>
+      <span className="text-foreground/70">{t(policyLabelKey(key))}</span>
       <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={policy?.[key] ?? ''} onChange={event => updatePolicy(key, event.target.value as HooksPolicy[K])}>
-        {values.map(value => <option key={String(value)} value={String(value)}>{String(value)}</option>)}
+        {values.map(value => <option key={String(value)} value={String(value)}>{t(policyValueLabelKey(value))}</option>)}
       </select>
     </label>
   )
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <PanelHeader title="Hooks" />
-      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Hooks</h2>
-            <p className="mt-2 text-sm text-foreground/60">Manage lifecycle hooks for workspace configuration. <button type="button" className="text-primary hover:underline">Learn more</button></p>
-          </div>
-          <div className="flex gap-2">
-            {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1.5 h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
-            <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className="h-4 w-4" /></Button>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-foreground/[0.04] p-2 text-foreground/55"><Settings className="h-4 w-4" /></div>
-            <div>
-              <div className="text-sm font-medium text-foreground">Workspace configuration</div>
-              <div className="mt-1 text-xs text-foreground/50">{hooks.length} built-ins · {customHooks.length} custom · {customTrusted} trusted · {customUntrusted} needs review</div>
-            </div>
-          </div>
-        </div>
-
-        <div className={cn('min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-background', loading && 'opacity-60')}>
-          {groups.length ? (
-            <div className="space-y-1 p-3">
-              {groups.map(group => (
-                <section key={group.event} className="rounded-lg px-1 py-2">
-                  <div className="flex items-start gap-3 px-2 pb-2">
-                    <span className="mt-0.5 text-foreground/35">⌘</span>
-                    <div>
-                      <h3 className="text-sm font-medium text-foreground">{group.title}</h3>
-                      <p className="mt-0.5 text-xs text-foreground/45">{group.description}</p>
-                    </div>
+      <PanelHeader title={t('settings.hooks.title')} actions={<HeaderMenu route={routes.view.settings('hooks')} />} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+          <SettingsSection title={t('settings.hooks.title')} description={t('settings.hooks.pageDescription')}>
+            <SettingsCard>
+              <SettingsRow
+                label={
+                  <span className="flex items-center gap-2">
+                    <span className="rounded-lg bg-foreground/[0.04] p-1.5 text-foreground/55"><Settings className="h-3.5 w-3.5" /></span>
+                    {t('settings.hooks.workspaceConfiguration')}
+                  </span>
+                }
+                description={`${hooks.length} built-ins · ${customHooks.length} custom · ${customTrusted} trusted · ${customUntrusted} needs review`}
+                action={
+                  <div className="flex gap-2">
+                    {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
+                    <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /></Button>
                   </div>
-                  <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-foreground/[0.018]">
-                    {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} workspaceRoot={workspaceRoot} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : <div className="p-8 text-center text-sm text-foreground/50">No hooks configured.</div>}
-        </div>
+                }
+              />
+            </SettingsCard>
+          </SettingsSection>
 
-        <div>
-          <button type="button" className="flex items-center gap-1 text-xs text-foreground/50 hover:text-foreground" onClick={() => setPolicyOpen(value => !value)}>
-            <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', policyOpen && 'rotate-90')} />
-            Advanced policy
-          </button>
-          {policyOpen && policy && (
-            <div className="mt-3 rounded-xl border border-border/70 bg-background/80 p-4">
-              <div className="grid gap-2 md:grid-cols-2">
-                {policySelect('secretGuard', ['strict', 'standard', 'off'])}
-                {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
-                {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
-                {policySelect('toolAudit', ['on', 'off'])}
-                {policySelect('memoryLearn', ['auto', 'review', 'off'])}
-                {policySelect('customHooks', ['trusted-only', 'off'])}
-              </div>
-            </div>
-          )}
+          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : undefined}>
+            <SettingsCard className={cn('overflow-hidden', loading && 'opacity-60')}>
+              {groups.length ? (
+                <div className="space-y-1 p-3">
+                  {groups.map(group => (
+                    <section key={group.event} className="rounded-lg px-1 py-2">
+                      <div className="flex items-start gap-3 px-2 pb-2">
+                        <span className="mt-0.5 text-foreground/35">⌘</span>
+                        <div>
+                          <h3 className="text-sm font-medium text-foreground">{group.title}</h3>
+                          <p className="mt-0.5 text-xs text-foreground/45">{group.description}</p>
+                        </div>
+                      </div>
+                      <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-foreground/[0.018]">
+                        {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : <div className="p-8 text-center text-sm text-foreground/50">{t('settings.hooks.empty')}</div>}
+            </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.hooks.policyTitle')} description={t('settings.hooks.policyDescription')}>
+            <SettingsCard>
+              <SettingsRow
+                label={t('settings.hooks.advancedPolicy')}
+                description={t('settings.hooks.advancedPolicyDescription')}
+              />
+              {policy && (
+                <div className="border-t border-border/60 p-4">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {policySelect('secretGuard', ['strict', 'standard', 'off'])}
+                    {policySelect('workspaceBoundary', ['block', 'ask', 'observe'])}
+                    {policySelect('prerequisiteGuard', ['enforce', 'observe'])}
+                    {policySelect('toolAudit', ['on', 'off'])}
+                    {policySelect('memoryLearn', ['auto', 'review', 'off'])}
+                    {policySelect('customHooks', ['trusted-only', 'off'])}
+                  </div>
+                </div>
+              )}
+            </SettingsCard>
+          </SettingsSection>
         </div>
       </div>
 

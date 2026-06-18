@@ -30,7 +30,7 @@ interface SettingsItem {
 
 const SETTINGS_GROUPS: Array<{ labelKey: string; ids: SettingsSubpage[] }> = [
   { labelKey: 'settings.groups.general', ids: ['app', 'appearance', 'input', 'preferences', 'shortcuts'] },
-  { labelKey: 'settings.groups.aiWorkspace', ids: ['ai', 'workspace', 'permissions', 'labels'] },
+  { labelKey: 'settings.groups.aiWorkspace', ids: ['ai', 'workspace', 'permissions', 'hooks', 'labels'] },
   { labelKey: 'settings.groups.integrations', ids: ['messaging', 'server'] },
   { labelKey: 'settings.groups.archive', ids: ['archivedSessions'] },
 ]
