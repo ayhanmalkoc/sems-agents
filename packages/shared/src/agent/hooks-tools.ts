@@ -38,7 +38,7 @@ function parseJson<T>(value: string): T { try { return JSON.parse(value) as T } 
 function commandPayload(command: string, verb: string, firstArg?: string): string { const rest = command.slice(verb.length).trim(); return firstArg ? rest.slice(firstArg.length).trim() : rest }
 
 function formatStatus(status: HookStatusSnapshot): string {
-  const lines = [`Hooks: ${status.available ? 'available' : 'unavailable'}`, `Built-ins: ${status.hooks}`, `Enabled: ${status.enabled}`, `Runs: ${status.runs}`]
+  const lines = [`Hooks: ${status.available ? 'available' : 'unavailable'}`, `Total: ${status.hooks}`, `Built-ins: ${status.builtins ?? status.hooks}`, `Custom: ${status.custom ?? 0}`, `Enabled: ${status.enabled}`, `Runs: ${status.runs}`]
   if (status.policy) lines.push('Policy:', `secretGuard=${status.policy.secretGuard}`, `workspaceBoundary=${status.policy.workspaceBoundary}`, `prerequisiteGuard=${status.policy.prerequisiteGuard}`, `toolAudit=${status.policy.toolAudit}`, `memoryLearn=${status.policy.memoryLearn}`, `customHooks=${status.policy.customHooks}`)
   if (status.reason) lines.push(`Reason: ${status.reason}`)
   return lines.join('\n')

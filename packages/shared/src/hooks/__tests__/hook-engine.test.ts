@@ -11,6 +11,8 @@ describe('builtin hooks runtime', () => {
     const workspace = tempWorkspace()
     const engine = new HookEngine(workspace)
     expect(engine.status().hooks).toBeGreaterThan(0)
+    expect(engine.status().builtins).toBe(engine.list().length)
+    expect(engine.status().custom).toBe(0)
     expect(engine.list().some(hook => hook.id === 'secret_scan_prompt')).toBe(true)
   })
 
@@ -34,9 +36,21 @@ describe('builtin hooks runtime', () => {
     const engine = new HookEngine(workspace)
     const prompt = await engine.test('secret_scan_prompt', { event: 'UserPromptSubmit', message: 'token=sk_test_123456789abcdef' })
     expect(prompt.type).toBe('block')
+    expect(prompt.message).toContain('prompt')
+    expect(prompt.message).not.toContain('tool input')
     const tool = await engine.test('secret_scan_tool_input', { event: 'PreToolUse', input: { password: 'super-secret-value-12345' } })
     expect(tool.type).toBe('block')
   })
+
+
+  it('reports prompt secret blocks as prompt content in simulations', async () => {
+    const workspace = tempWorkspace()
+    const output = await new HookEngine(workspace).simulatePrompt({ hook_event_name: 'UserPromptSubmit', prompt: 'token=sk_test_123456789abcdef' })
+    expect(output.decision).toBe('block')
+    expect(output.reason).toContain('prompt content')
+    expect(output.reason).not.toContain('tool input')
+  })
+
 
   it('merges decisions by precedence', () => {
     expect(mergeHookDecisions([{ type: 'allow' }, { type: 'ask' }, { type: 'block' }]).type).toBe('block')

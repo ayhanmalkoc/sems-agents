@@ -53,7 +53,7 @@ function parseHookOutput(value: string): HookOutput { try { const parsed = JSON.
 
 export class HookEngine {
   constructor(private readonly workspaceRootPath: string) {}
-  status(): HookStatusSnapshot { const config = getHookConfigEntries(this.workspaceRootPath); return { available: true, hooks: BUILTIN_HOOKS.length + loadCustomHooks(this.workspaceRootPath).length, enabled: config.filter(entry => entry.enabled).length + loadCustomHooks(this.workspaceRootPath).filter(hook => hook.enabled).length, runs: loadHookRuns(this.workspaceRootPath, undefined, 1000).length, policy: this.policy() } }
+  status(): HookStatusSnapshot { const config = getHookConfigEntries(this.workspaceRootPath); const customHooks = loadCustomHooks(this.workspaceRootPath); const enabledBuiltins = config.filter(entry => entry.enabled).length; const enabledCustom = customHooks.filter(hook => hook.enabled).length; return { available: true, hooks: BUILTIN_HOOKS.length + customHooks.length, builtins: BUILTIN_HOOKS.length, custom: customHooks.length, enabled: enabledBuiltins + enabledCustom, enabledBuiltins, enabledCustom, runs: loadHookRuns(this.workspaceRootPath, undefined, 1000).length, policy: this.policy() } }
   list(): Array<BuiltinHookDefinition & { enabled: boolean }> { const enabled = new Map(getHookConfigEntries(this.workspaceRootPath).map(entry => [entry.id, entry.enabled])); return BUILTIN_HOOKS.map(hook => ({ ...hook, enabled: enabled.get(hook.id) ?? true })).sort((a, b) => a.order - b.order) }
   show(hookId: string): (BuiltinHookDefinition & { enabled: boolean }) | undefined { return this.list().find(hook => hook.id === hookId) }
   policy(): HooksPolicy { return loadHooksPolicy(this.workspaceRootPath) }
@@ -62,7 +62,7 @@ export class HookEngine {
   async beforePromptSubmit(payload: HookEventPayload): Promise<HookDecision> { return fromHookOutput(await this.beforePromptSubmitOutput(payload)) }
   async beforeToolUseOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'PreToolUse' })) }
   async afterToolUseOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'PostToolUse' })) }
-  async beforePromptSubmitOutput(payload: HookEventPayload): Promise<HookOutput> { return mergeHookOutputs(await this.runEvent({ ...payload, hook_event_name: 'UserPromptSubmit' })) }
+  async beforePromptSubmitOutput(payload: HookEventPayload): Promise<HookOutput> { const input = normalizeHookInput({ ...payload, hook_event_name: 'UserPromptSubmit' }); const output = mergeHookOutputs(await this.runEvent(input)); return output.decision === 'block' && containsSecret(input.prompt) ? { ...output, reason: 'Hook blocked prompt content: sensitive credentials or secrets detected.' } : output }
   async simulateTool(payload: HookEventPayload): Promise<HookOutput & HookDecision> { const output = await this.beforeToolUseOutput(payload); return Object.assign(fromHookOutput(output), output) }
   async simulatePrompt(payload: HookEventPayload): Promise<HookOutput & HookDecision> { const output = await this.beforePromptSubmitOutput(payload); return Object.assign(fromHookOutput(output), output) }
   async emit(payload: HookEventPayload): Promise<HookDecision[]> { return (await this.runEvent(payload)).map(fromHookOutput) }

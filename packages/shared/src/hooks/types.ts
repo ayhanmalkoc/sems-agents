@@ -74,4 +74,4 @@ export interface HookEventPayload {
 }
 
 export interface HookRunRecord { id: string; hookId: string; event: HookEventName; decision: HookDecisionType; message?: string; inputSummary?: string; outputSummary?: string; decisions?: HookDecision[]; outputs?: HookOutput[]; finalDecision?: HookDecision; finalOutput?: HookOutput; matcherReason?: string; trustSource?: HookSource; sessionId?: string; toolName?: string; durationMs: number; ok: boolean; error?: string; createdAt: string }
-export interface HookStatusSnapshot { available: boolean; hooks: number; enabled: number; runs: number; policy?: HooksPolicy; reason?: string }
+export interface HookStatusSnapshot { available: boolean; hooks: number; builtins?: number; custom?: number; enabled: number; enabledBuiltins?: number; enabledCustom?: number; runs: number; policy?: HooksPolicy; reason?: string }
