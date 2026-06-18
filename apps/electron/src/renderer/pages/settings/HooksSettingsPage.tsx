@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, RefreshCw, Settings, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronRight, Settings, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -211,18 +211,20 @@ export default function HooksSettingsPage() {
                   </span>
                 }
                 description={`${hooks.length} built-ins · ${customHooks.length} custom · ${customTrusted} trusted · ${customUntrusted} needs review`}
-                action={
-                  <div className="flex gap-2">
-                    {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
-                    <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /></Button>
-                  </div>
-                }
+                action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
               />
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={<div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Custom'}</Button>{workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}</div>}>
+          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}>
             <SettingsCard className={cn('overflow-hidden', loading && 'opacity-60')}>
+              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium text-foreground">Lifecycle hooks</div>
+                  <div className="text-xs text-foreground/45">{showBuiltinHooks ? 'Showing custom and built-in hooks.' : 'Showing custom hooks only.'}</div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Custom'}</Button>
+              </div>
               {visibleGroups.length ? (
                 <div className="space-y-1 p-3">
                   {visibleGroups.map(group => (
