@@ -88,9 +88,9 @@ function HookDetail({ item }: { item: HookListItem }) {
 function HookRowView({ item, onToggle, onReview }: { item: HookListItem; onToggle: (item: HookListItem, checked: boolean) => void; onReview: (hook: CustomHookDefinition) => void }) {
   const [open, setOpen] = React.useState(false)
   return (
-    <div className="border-t border-border/60 first:border-t-0 bg-background/70">
+    <div className="border-t border-border/50 first:border-t-0 bg-background/70">
       <div className="flex items-center gap-3 px-3 py-2.5">
-        <button type="button" className="text-foreground/45 hover:text-foreground" onClick={() => setOpen(value => !value)} aria-label={open ? 'Collapse hook' : 'Expand hook'}>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
+        <button type="button" className="shrink-0 text-foreground/45 hover:text-foreground" onClick={() => setOpen(value => !value)} aria-label={open ? 'Collapse hook' : 'Expand hook'}>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm text-foreground">{item.name}</span>
@@ -100,7 +100,7 @@ function HookRowView({ item, onToggle, onReview }: { item: HookListItem; onToggl
         {item.kind === 'custom' && item.trustStatus !== 'Trusted' && item.customHook && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onReview(item.customHook!)}>Review</Button>}
         <Switch checked={item.enabled} onCheckedChange={checked => onToggle(item, checked)} />
       </div>
-      {open && <div className="px-4 pb-4"><HookDetail item={item} /></div>}
+      {open && <div className="px-4 pb-4 pl-10"><HookDetail item={item} /></div>}
     </div>
   )
 }
@@ -117,6 +117,7 @@ export default function HooksSettingsPage() {
   const [policy, setPolicy] = React.useState<HooksPolicy | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [pendingTrust, setPendingTrust] = React.useState<PendingTrustAction>(null)
+  const [showBuiltinHooks, setShowBuiltinHooks] = React.useState(false)
 
   const refresh = React.useCallback(async () => {
     if (!activeWorkspaceId) return
@@ -144,6 +145,7 @@ export default function HooksSettingsPage() {
   React.useEffect(() => { void refresh() }, [refresh])
 
   const groups = React.useMemo(() => buildHookGroups(hooks, customHooks, trustRecords, runs), [hooks, customHooks, trustRecords, runs])
+  const visibleGroups = React.useMemo(() => groups.map(group => ({ ...group, hooks: showBuiltinHooks ? group.hooks : group.hooks.filter(item => item.kind !== 'builtin') })), [groups, showBuiltinHooks])
   const customTrusted = groups.flatMap(group => group.hooks).filter(item => item.kind === 'custom' && item.trustStatus === 'Trusted').length
   const customUntrusted = customHooks.length - customTrusted
 
@@ -215,11 +217,11 @@ export default function HooksSettingsPage() {
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : undefined}>
+          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={<div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Built-in'}</Button>{workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}</div>}>
             <SettingsCard className={cn('overflow-hidden', loading && 'opacity-60')}>
-              {groups.length ? (
+              {visibleGroups.length ? (
                 <div className="space-y-1 p-3">
-                  {groups.map(group => (
+                  {visibleGroups.map(group => (
                     <section key={group.event} className="rounded-lg px-1 py-2">
                       <div className="flex items-start gap-3 px-2 pb-2">
                         <span className="mt-0.5 text-foreground/35">⌘</span>
@@ -228,9 +230,11 @@ export default function HooksSettingsPage() {
                           <p className="mt-0.5 text-xs text-foreground/45">{group.description}</p>
                         </div>
                       </div>
-                      <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-foreground/[0.018]">
-                        {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
-                      </div>
+                      {group.hooks.length ? (
+                        <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm">
+                          {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
+                        </div>
+                      ) : <div className="ml-6 rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-foreground/40">No hooks</div>}
                     </section>
                   ))}
                 </div>
