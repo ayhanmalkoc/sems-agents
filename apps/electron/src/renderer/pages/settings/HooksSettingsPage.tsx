@@ -13,7 +13,7 @@ import { SettingsCard, SettingsRow, SettingsSection } from '@/components/setting
 import { useAppShellContext } from '@/context/AppShellContext'
 import { cn } from '@/lib/utils'
 import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookTrustRecord, HookRunRecord, HooksPolicy } from '@craft-agent/shared/hooks'
-import { buildHookGroups, type HookListItem } from './hooks-ui-model'
+import { buildHookGroups, filterHookRuns, type HookListItem, type HookRunFilter } from './hooks-ui-model'
 
 type HookRow = BuiltinHookDefinition & { enabled: boolean }
 
@@ -118,6 +118,7 @@ export default function HooksSettingsPage() {
   const [loading, setLoading] = React.useState(false)
   const [pendingTrust, setPendingTrust] = React.useState<PendingTrustAction>(null)
   const [showBuiltinHooks, setShowBuiltinHooks] = React.useState(false)
+  const [runFilter, setRunFilter] = React.useState<HookRunFilter>('all')
 
   const refresh = React.useCallback(async () => {
     if (!activeWorkspaceId) return
@@ -146,6 +147,7 @@ export default function HooksSettingsPage() {
 
   const groups = React.useMemo(() => buildHookGroups(hooks, customHooks, trustRecords, runs), [hooks, customHooks, trustRecords, runs])
   const visibleGroups = React.useMemo(() => buildHookGroups(hooks, customHooks, trustRecords, runs, { includeBuiltins: showBuiltinHooks }), [hooks, customHooks, trustRecords, runs, showBuiltinHooks])
+  const recentRuns = React.useMemo(() => filterHookRuns(runs, runFilter).slice(0, 20), [runs, runFilter])
   const customTrusted = groups.flatMap(group => group.hooks).filter(item => item.kind === 'custom' && item.trustStatus === 'Trusted').length
   const customUntrusted = customHooks.length - customTrusted
 
@@ -237,6 +239,34 @@ export default function HooksSettingsPage() {
                   ))}
                 </div>
               ) : <div className="p-8 text-center text-sm text-foreground/50">{t('settings.hooks.empty')}</div>}
+            </SettingsCard>
+          </SettingsSection>
+
+
+          <SettingsSection title="Recent runs" description="Watch recent hook decisions, errors, and runtime activity." action={<div className="flex items-center gap-1">{(['all', 'blocked', 'errors'] as HookRunFilter[]).map(filter => <Button key={filter} size="sm" variant={runFilter === filter ? 'default' : 'outline'} onClick={() => setRunFilter(filter)} className="capitalize">{filter}</Button>)}</div>}>
+            <SettingsCard className="overflow-hidden">
+              {recentRuns.length ? (
+                <div className="divide-y divide-border/60">
+                  {recentRuns.map(run => (
+                    <details key={run.id} className="group">
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-foreground/[0.02]">
+                        <span className={cn('rounded-full px-2 py-0.5 text-[11px]', run.decision === 'block' || run.decision === 'ask' ? 'bg-red-500/10 text-red-600 dark:text-red-300' : run.ok ? 'bg-foreground/[0.06] text-foreground/65' : 'bg-amber-500/10 text-amber-600 dark:text-amber-300')}>{run.decision}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm text-foreground">{run.hookId}</div>
+                          <div className="truncate text-xs text-foreground/45">{run.event}{run.toolName ? ` · ${run.toolName}` : ''} · {run.ok ? 'ok' : 'error'} · {run.durationMs}ms</div>
+                        </div>
+                        <div className="text-xs text-foreground/40">{new Date(run.createdAt).toLocaleString()}</div>
+                      </summary>
+                      <div className="space-y-2 border-t border-border/50 bg-foreground/[0.015] px-4 py-3 text-xs text-foreground/65">
+                        {run.message && <div><span className="font-medium text-foreground/45">Reason:</span> {run.message}</div>}
+                        {run.error && <div><span className="font-medium text-foreground/45">Error:</span> {run.error}</div>}
+                        {run.inputSummary && <div><div className="mb-1 font-medium text-foreground/45">Input</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.inputSummary}</pre></div>}
+                        {run.outputSummary && <div><div className="mb-1 font-medium text-foreground/45">Output</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.outputSummary}</pre></div>}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ) : <div className="p-8 text-center text-sm text-foreground/50">No hook runs</div>}
             </SettingsCard>
           </SettingsSection>
 

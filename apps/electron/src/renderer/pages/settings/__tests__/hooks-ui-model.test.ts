@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { buildHookGroups, getCustomHookTrustStatus } from '../hooks-ui-model.ts'
+import { buildHookGroups, filterHookRuns, getCustomHookTrustStatus } from '../hooks-ui-model.ts'
 import type { BuiltinHookDefinition, CustomHookDefinition, CustomHookTrustRecord, HookRunRecord } from '@craft-agent/shared/hooks'
 
 const custom: CustomHookDefinition = {
@@ -57,6 +57,19 @@ describe('hooks ui model', () => {
     const changed: CustomHookTrustRecord = { hookId: custom.id, trusted: false, hash: 'abc', reason: 'Hook configuration changed; trust review required.' }
     expect(getCustomHookTrustStatus(custom, changed)).toBe('Changed')
   })
+
+
+  it('filters hook runs for recent runs view', () => {
+    const runs: HookRunRecord[] = [
+      { id: 'old', hookId: 'a', event: 'PreToolUse', decision: 'observe', durationMs: 1, ok: true, createdAt: '2026-06-17T00:00:00.000Z' },
+      { id: 'blocked', hookId: 'b', event: 'PreToolUse', decision: 'block', durationMs: 2, ok: true, createdAt: '2026-06-18T00:00:00.000Z' },
+      { id: 'error', hookId: 'c', event: 'PostToolUse', decision: 'observe', durationMs: 3, ok: false, error: 'failed', createdAt: '2026-06-18T01:00:00.000Z' },
+    ]
+    expect(filterHookRuns(runs, 'all').map(run => run.id)).toEqual(['error', 'blocked', 'old'])
+    expect(filterHookRuns(runs, 'blocked').map(run => run.id)).toEqual(['blocked'])
+    expect(filterHookRuns(runs, 'errors').map(run => run.id)).toEqual(['error'])
+  })
+
 
   it('adds last run to matching hook rows', () => {
     const run: HookRunRecord = { id: 'run-1', hookId: 'custom-pretool', event: 'PreToolUse', decision: 'observe', durationMs: 2, ok: true, createdAt: '2026-06-17T00:00:00.000Z' }

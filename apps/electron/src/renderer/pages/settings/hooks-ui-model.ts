@@ -23,6 +23,16 @@ export type HookListItem = {
 
 export type HookGroup = { event: HookEventName; title: string; description: string; hooks: HookListItem[] }
 
+
+export type HookRunFilter = 'all' | 'blocked' | 'errors'
+
+export function filterHookRuns(runs: HookRunRecord[], filter: HookRunFilter): HookRunRecord[] {
+  const sorted = [...runs].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  if (filter === 'blocked') return sorted.filter(run => run.decision === 'block' || run.decision === 'ask')
+  if (filter === 'errors') return sorted.filter(run => !run.ok || !!run.error)
+  return sorted
+}
+
 export const EVENT_GROUPS: Array<{ event: HookEventName; title: string; description: string }> = [
   { event: 'SessionStart', title: 'Session start', description: 'When a new session starts' },
   { event: 'UserPromptSubmit', title: 'User prompt submit', description: 'When the user sends a prompt' },
