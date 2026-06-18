@@ -119,6 +119,8 @@ export default function HooksSettingsPage() {
   const [pendingTrust, setPendingTrust] = React.useState<PendingTrustAction>(null)
   const [showBuiltinHooks, setShowBuiltinHooks] = React.useState(false)
   const [runFilter, setRunFilter] = React.useState<HookRunFilter>('all')
+  const [showRuns, setShowRuns] = React.useState(false)
+  const [showPolicy, setShowPolicy] = React.useState(false)
 
   const refresh = React.useCallback(async () => {
     if (!activeWorkspaceId) return
@@ -243,40 +245,57 @@ export default function HooksSettingsPage() {
           </SettingsSection>
 
 
-          <SettingsSection title="Recent runs" description="Watch recent hook decisions, errors, and runtime activity." action={<div className="flex items-center gap-1">{(['all', 'blocked', 'errors'] as HookRunFilter[]).map(filter => <Button key={filter} size="sm" variant={runFilter === filter ? 'default' : 'outline'} onClick={() => setRunFilter(filter)} className="capitalize">{filter}</Button>)}</div>}>
+          <SettingsSection title="Recent runs" description="Watch recent hook decisions, errors, and runtime activity.">
             <SettingsCard className="overflow-hidden">
-              {recentRuns.length ? (
-                <div className="divide-y divide-border/60">
-                  {recentRuns.map(run => (
-                    <details key={run.id} className="group">
-                      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-foreground/[0.02]">
-                        <span className={cn('rounded-full px-2 py-0.5 text-[11px]', run.decision === 'block' || run.decision === 'ask' ? 'bg-red-500/10 text-red-600 dark:text-red-300' : run.ok ? 'bg-foreground/[0.06] text-foreground/65' : 'bg-amber-500/10 text-amber-600 dark:text-amber-300')}>{run.decision}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm text-foreground">{run.hookId}</div>
-                          <div className="truncate text-xs text-foreground/45">{run.event}{run.toolName ? ` · ${run.toolName}` : ''} · {run.ok ? 'ok' : 'error'} · {run.durationMs}ms</div>
-                        </div>
-                        <div className="text-xs text-foreground/40">{new Date(run.createdAt).toLocaleString()}</div>
-                      </summary>
-                      <div className="space-y-2 border-t border-border/50 bg-foreground/[0.015] px-4 py-3 text-xs text-foreground/65">
-                        {run.message && <div><span className="font-medium text-foreground/45">Reason:</span> {run.message}</div>}
-                        {run.error && <div><span className="font-medium text-foreground/45">Error:</span> {run.error}</div>}
-                        {run.inputSummary && <div><div className="mb-1 font-medium text-foreground/45">Input</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.inputSummary}</pre></div>}
-                        {run.outputSummary && <div><div className="mb-1 font-medium text-foreground/45">Output</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.outputSummary}</pre></div>}
-                      </div>
-                    </details>
-                  ))}
+              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setShowRuns(value => !value)}>
+                <span className="text-foreground/45">{showRuns ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground">Run history</div>
+                  <div className="text-xs text-foreground/45">{runs.length ? `${runs.length} recorded hook runs. Open to inspect recent decisions.` : 'No hook runs recorded yet.'}</div>
                 </div>
-              ) : <div className="p-8 text-center text-sm text-foreground/50">No hook runs</div>}
+              </button>
+              {showRuns && (
+                <>
+                  <div className="flex items-center gap-1 border-t border-border/60 p-3">
+                    {(['all', 'blocked', 'errors'] as HookRunFilter[]).map(filter => <Button key={filter} size="sm" variant={runFilter === filter ? 'default' : 'outline'} onClick={() => setRunFilter(filter)} className="capitalize">{filter}</Button>)}
+                  </div>
+                  {recentRuns.length ? (
+                    <div className="divide-y divide-border/60 border-t border-border/60">
+                      {recentRuns.map(run => (
+                        <details key={run.id} className="group">
+                          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-foreground/[0.02]">
+                            <span className={cn('rounded-full px-2 py-0.5 text-[11px]', run.decision === 'block' || run.decision === 'ask' ? 'bg-red-500/10 text-red-600 dark:text-red-300' : run.ok ? 'bg-foreground/[0.06] text-foreground/65' : 'bg-amber-500/10 text-amber-600 dark:text-amber-300')}>{run.decision}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm text-foreground">{run.hookId}</div>
+                              <div className="truncate text-xs text-foreground/45">{run.event}{run.toolName ? ` · ${run.toolName}` : ''} · {run.ok ? 'ok' : 'error'} · {run.durationMs}ms</div>
+                            </div>
+                            <div className="text-xs text-foreground/40">{new Date(run.createdAt).toLocaleString()}</div>
+                          </summary>
+                          <div className="space-y-2 border-t border-border/50 bg-foreground/[0.015] px-4 py-3 text-xs text-foreground/65">
+                            {run.message && <div><span className="font-medium text-foreground/45">Reason:</span> {run.message}</div>}
+                            {run.error && <div><span className="font-medium text-foreground/45">Error:</span> {run.error}</div>}
+                            {run.inputSummary && <div><div className="mb-1 font-medium text-foreground/45">Input</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.inputSummary}</pre></div>}
+                            {run.outputSummary && <div><div className="mb-1 font-medium text-foreground/45">Output</div><pre className="max-h-28 overflow-auto rounded-md bg-background p-2 font-mono text-[11px]">{run.outputSummary}</pre></div>}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  ) : <div className="border-t border-border/60 p-8 text-center text-sm text-foreground/50">No hook runs</div>}
+                </>
+              )}
             </SettingsCard>
           </SettingsSection>
 
           <SettingsSection title={t('settings.hooks.policyTitle')} description={t('settings.hooks.policyDescription')}>
-            <SettingsCard>
-              <SettingsRow
-                label={t('settings.hooks.advancedPolicy')}
-                description={t('settings.hooks.advancedPolicyDescription')}
-              />
-              {policy && (
+            <SettingsCard className="overflow-hidden">
+              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setShowPolicy(value => !value)}>
+                <span className="text-foreground/45">{showPolicy ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-foreground">{t('settings.hooks.advancedPolicy')}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.hooks.advancedPolicyDescription')}</div>
+                </div>
+              </button>
+              {showPolicy && policy && (
                 <div className="border-t border-border/60 p-4">
                   <div className="grid gap-2 md:grid-cols-2">
                     {policySelect('secretGuard', ['strict', 'standard', 'off'])}
