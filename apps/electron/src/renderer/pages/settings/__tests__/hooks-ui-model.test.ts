@@ -38,6 +38,18 @@ describe('hooks ui model', () => {
     expect(groups.map(group => group.title)).toEqual(['Before tool use', 'After tool use', 'Session complete'])
   })
 
+  it('orders OpenAI-style lifecycle events before Craft-specific events', () => {
+    const groups = buildHookGroups([
+      item({ id: 'permission_request', event: 'PermissionRequest' }),
+      item({ id: 'pre_compact', event: 'PreCompact' }),
+      item({ id: 'subagent_start', event: 'SubagentStart' }),
+      item({ id: 'stop', event: 'Stop' }),
+      item({ id: 'file_changed', event: 'FileChanged' }),
+    ], [])
+    expect(groups.map(group => group.title)).toEqual(['Permission request', 'Before compaction', 'Subagent start', 'Stop', 'File changed'])
+  })
+
+
   it('marks missing, matching, and changed trust states', () => {
     expect(getCustomHookTrustStatus(custom, undefined)).toBe('Untrusted')
     const trusted: CustomHookTrustRecord = { hookId: custom.id, trusted: true, hash: 'abc' }

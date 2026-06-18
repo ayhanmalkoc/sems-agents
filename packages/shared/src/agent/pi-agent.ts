@@ -1132,9 +1132,9 @@ export class PiAgent extends BaseAgent {
         this.resetPrerequisiteState();
       }
 
-      // Fire PostToolUse / PostToolUseFailure hook events (fire-and-forget)
+      // Fire PostToolUse hook events, including failed tool runs (fire-and-forget)
       if (agentEvent.type === 'tool_result') {
-        const hookEvent: HookEventName = agentEvent.isError ? 'PostToolUseFailure' : 'PostToolUse';
+        const hookEvent: HookEventName = 'PostToolUse';
         const hookPayload: HookEventPayload = {
           hook_event_name: hookEvent,
           tool_name: agentEvent.toolName ?? (event.toolName as string) ?? 'unknown',

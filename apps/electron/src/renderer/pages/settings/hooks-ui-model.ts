@@ -24,11 +24,16 @@ export type HookListItem = {
 export type HookGroup = { event: HookEventName; title: string; description: string; hooks: HookListItem[] }
 
 export const EVENT_GROUPS: Array<{ event: HookEventName; title: string; description: string }> = [
-  { event: 'PreToolUse', title: 'Before tool use', description: 'Before a tool is run' },
-  { event: 'PostToolUse', title: 'After tool use', description: 'After a tool has run' },
-  { event: 'TurnStop', title: 'Before compaction', description: 'Before conversation compaction or turn stop' },
   { event: 'SessionStart', title: 'Session start', description: 'When a new session starts' },
   { event: 'UserPromptSubmit', title: 'User prompt submit', description: 'When the user sends a prompt' },
+  { event: 'PreToolUse', title: 'Before tool use', description: 'Before a tool is run' },
+  { event: 'PermissionRequest', title: 'Permission request', description: 'Before an approval request is shown' },
+  { event: 'PostToolUse', title: 'After tool use', description: 'After a tool has run' },
+  { event: 'PreCompact', title: 'Before compaction', description: 'Before conversation compaction' },
+  { event: 'PostCompact', title: 'After compaction', description: 'After conversation compaction' },
+  { event: 'SubagentStart', title: 'Subagent start', description: 'When a subagent starts' },
+  { event: 'SubagentStop', title: 'Subagent stop', description: 'When a subagent stops' },
+  { event: 'Stop', title: 'Stop', description: 'Before an agent turn stops' },
   { event: 'SessionComplete', title: 'Session complete', description: 'When a session completes' },
   { event: 'AutomationRun', title: 'Automation run', description: 'When an automation runs' },
   { event: 'FileChanged', title: 'File changed', description: 'When a watched file changes' },
@@ -49,12 +54,13 @@ export function buildHookGroups(
   customHooks: CustomHookDefinition[],
   trustRecords: CustomHookTrustRecord[] = [],
   runs: HookRunRecord[] = [],
+  options: { includeBuiltins?: boolean } = { includeBuiltins: true },
 ): HookGroup[] {
   const trustByHook = new Map(trustRecords.map(record => [record.hookId, record]))
   const lastRunByHook = new Map<string, HookRunRecord>()
   for (const run of runs) if (!lastRunByHook.has(run.hookId)) lastRunByHook.set(run.hookId, run)
   const rows: HookListItem[] = [
-    ...builtins.map(hook => ({
+    ...((options.includeBuiltins ?? true) ? builtins.map(hook => ({
       id: hook.id,
       name: hook.name,
       event: hook.event,
@@ -66,7 +72,7 @@ export function buildHookGroups(
       description: hook.description,
       builtinHook: hook,
       lastRun: lastRunByHook.get(hook.id),
-    })),
+    })) : []),
     ...customHooks.map(hook => ({
       id: hook.id,
       name: hook.name,

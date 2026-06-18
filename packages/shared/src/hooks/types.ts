@@ -1,4 +1,4 @@
-export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'TurnStop' | 'SessionComplete' | 'AutomationRun' | 'FileChanged'
+export type HookEventName = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PermissionRequest' | 'PostToolUse' | 'PreCompact' | 'PostCompact' | 'SubagentStart' | 'SubagentStop' | 'Stop' | 'SessionComplete' | 'AutomationRun' | 'FileChanged'
 export type HookMode = 'observe' | 'enforce' | 'mutate' | 'ask'
 export type HookDecisionType = 'allow' | 'block' | 'ask' | 'addContext' | 'mutate' | 'redact' | 'observe'
 export type HookOutputDecision = 'allow' | 'block' | 'ask' | 'modify' | 'add_context' | 'redact' | 'observe'

@@ -145,7 +145,7 @@ export default function HooksSettingsPage() {
   React.useEffect(() => { void refresh() }, [refresh])
 
   const groups = React.useMemo(() => buildHookGroups(hooks, customHooks, trustRecords, runs), [hooks, customHooks, trustRecords, runs])
-  const visibleGroups = React.useMemo(() => groups.map(group => ({ ...group, hooks: showBuiltinHooks ? group.hooks : group.hooks.filter(item => item.kind !== 'builtin') })), [groups, showBuiltinHooks])
+  const visibleGroups = React.useMemo(() => buildHookGroups(hooks, customHooks, trustRecords, runs, { includeBuiltins: showBuiltinHooks }), [hooks, customHooks, trustRecords, runs, showBuiltinHooks])
   const customTrusted = groups.flatMap(group => group.hooks).filter(item => item.kind === 'custom' && item.trustStatus === 'Trusted').length
   const customUntrusted = customHooks.length - customTrusted
 
@@ -209,7 +209,7 @@ export default function HooksSettingsPage() {
                 description={`${hooks.length} built-ins · ${customHooks.length} custom · ${customTrusted} trusted · ${customUntrusted} needs review`}
                 action={
                   <div className="flex gap-2">
-                    {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
+                    {workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />Create</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-create', workspaceRoot)} />}
                     <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /></Button>
                   </div>
                 }
@@ -217,7 +217,7 @@ export default function HooksSettingsPage() {
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={<div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Built-in'}</Button>{workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="mr-1 h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}</div>}>
+          <SettingsSection title={t('settings.hooks.lifecycleTitle')} description={t('settings.hooks.lifecycleDescription')} action={<div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => setShowBuiltinHooks(value => !value)}>{showBuiltinHooks ? 'All' : 'Custom'}</Button>{workspaceRoot ? <EditPopover trigger={<Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{t('settings.hooks.editHooks')}</Button>} onInlineComplete={refresh} {...getEditConfig('hooks-edit', `${workspaceRoot}::workspace hooks`)} /> : null}</div>}>
             <SettingsCard className={cn('overflow-hidden', loading && 'opacity-60')}>
               {visibleGroups.length ? (
                 <div className="space-y-1 p-3">
@@ -230,11 +230,9 @@ export default function HooksSettingsPage() {
                           <p className="mt-0.5 text-xs text-foreground/45">{group.description}</p>
                         </div>
                       </div>
-                      {group.hooks.length ? (
-                        <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm">
-                          {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
-                        </div>
-                      ) : <div className="ml-6 rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-foreground/40">No hooks</div>}
+                      <div className="ml-6 overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm">
+                        {group.hooks.map(item => <HookRowView key={`${item.kind}:${item.id}`} item={item} onToggle={toggleHook} onReview={hook => setPendingTrust({ hook, enableAfterTrust: false })} />)}
+                      </div>
                     </section>
                   ))}
                 </div>

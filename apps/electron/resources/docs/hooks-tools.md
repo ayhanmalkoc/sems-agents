@@ -50,6 +50,25 @@ Valid decisions: `allow`, `block`, `ask`, `modify`, `add_context`, `redact`, `ob
 
 Legacy internal camelCase payloads are normalized into this contract before hooks run.
 
+
+## Lifecycle Events
+
+Craft supports the Codex-style lifecycle set plus Craft product events:
+
+- `SessionStart` - session starts.
+- `UserPromptSubmit` - user submits a prompt.
+- `PreToolUse` - before a tool runs.
+- `PermissionRequest` - before an approval request is shown.
+- `PostToolUse` - after a tool runs, including failures with error context.
+- `PreCompact` - before conversation compaction.
+- `PostCompact` - after conversation compaction.
+- `SubagentStart` - subagent starts.
+- `SubagentStop` - subagent stops.
+- `Stop` - before an agent turn stops.
+- `SessionComplete` - session completion and memory learning.
+- `AutomationRun` - automation run audit.
+- `FileChanged` - watched file change.
+
 ## Commands
 
 - `hooks status` - summarize availability, enabled count, custom count, and run count.
@@ -82,7 +101,7 @@ Legacy internal camelCase payloads are normalized into this contract before hook
 - `tool_prerequisite_guard` - preserves existing documentation prerequisite checks.
 - `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
 - `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
-- `validation_summary_on_turn_stop` - captures turn-stop validation context.
+- `validation_summary_on_stop` - captures stop validation context.
 - `memory_learn_on_session_complete` - delegates session completion memory learning to the memory engine.
 - `automation_run_audit` - links automation run metadata into hook audit history.
 
