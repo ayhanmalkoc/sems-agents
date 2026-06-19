@@ -54,9 +54,9 @@ type WorkingMemoryNote = {
 
 type HygieneItem = { kind: 'duplicate' | 'stale'; memoryId: string; relatedMemoryId?: string; reason: string }
 
-type Filters = { type: string; scope: string; sourceSessionId: string; status: string }
+type Filters = { type: string; scope: string; status: string }
 
-const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', sourceSessionId: '', status: 'pending' }
+const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', status: 'pending' }
 
 type MemoryAutomationMode = 'auto' | 'review' | 'off'
 function parseMemoryAutomationMode(content: string): MemoryAutomationMode {
@@ -90,54 +90,6 @@ function badge(text: string) {
 
 function aiButton(label: React.ReactNode, variant: 'default' | 'outline' = 'outline') {
   return <Button size="sm" variant={variant}><Sparkles className="h-3.5 w-3.5" />{label}</Button>
-}
-
-function auditRow(label: string, value?: string) {
-  if (!value) return null
-  const isSession = label === 'sourceSessionId' || label === 'sessionId'
-  return (
-    <div className="grid gap-1 sm:grid-cols-[120px_1fr]">
-      <span className="text-foreground/40">{label}</span>
-      {isSession ? (
-        <button type="button" className="truncate text-left text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(value))}>{value}</button>
-      ) : (
-        <span className="truncate text-foreground/65">{value}</span>
-      )}
-    </div>
-  )
-}
-
-function AuditDetails({ item }: { item: MemoryRecord | MemorySuggestion }) {
-  const [open, setOpen] = React.useState(false)
-  const suggestion = item as MemorySuggestion
-  return (
-    <div className="mt-3 border-t border-border/60 pt-3">
-      <button type="button" className="flex items-center gap-1 text-xs text-foreground/45 hover:text-foreground/70" onClick={() => setOpen(value => !value)}>
-        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        Audit details
-      </button>
-      {open && (
-        <div className="mt-2 space-y-1 rounded-xl bg-foreground/[0.03] p-3 text-xs">
-          {auditRow('id', item.id)}
-          {auditRow('type', item.type)}
-          {auditRow('scope', item.scope)}
-          {auditRow('sourceSessionId', item.sourceSessionId)}
-          {auditRow('sessionId', item.sessionId)}
-          {auditRow('agentProfileId', item.agentProfileId)}
-          {auditRow('confidence', item.confidence)}
-          {auditRow('status', item.status)}
-          {auditRow('supersedes', item.supersedes?.join(', '))}
-          {auditRow('createdBy', item.createdBy)}
-          {auditRow('createdAt', item.createdAt)}
-          {auditRow('updatedBy', item.updatedBy)}
-          {auditRow('updatedAt', item.updatedAt)}
-          {auditRow('decidedBy', suggestion.decidedBy)}
-          {auditRow('decidedAt', suggestion.decidedAt)}
-          {auditRow('memoryId', suggestion.memoryId)}
-        </div>
-      )}
-    </div>
-  )
 }
 
 function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
@@ -175,10 +127,8 @@ function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: Me
       {expanded && (
         <div className="mt-3 border-t border-border/60 pt-3">
           <div className="flex flex-wrap gap-2 text-[11px] text-foreground/45">
-            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
-            {memory.confidence && <span>confidence: {memory.confidence}</span>}
+            <span>{memory.updatedAt ? 'Updated' : 'Learned'} {new Date(memory.updatedAt ?? memory.createdAt).toLocaleDateString()}</span>
           </div>
-          <AuditDetails item={memory} />
         </div>
       )}
     </div>
@@ -215,29 +165,10 @@ function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: Memor
       {expanded && (
         <div className="mt-3 border-t border-border/60 pt-3">
           <div className="flex flex-wrap gap-2 text-[11px] text-foreground/45">
-            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(suggestion.sourceSessionId))}>source: {suggestion.sourceSessionId}</button>
+            <span>Review before saving to long-term memory.</span>
           </div>
-          <AuditDetails item={suggestion} />
         </div>
       )}
-    </div>
-  )
-}
-
-function WorkingCard({ note }: { note: WorkingMemoryNote }) {
-  return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="truncate text-sm font-medium text-foreground">{note.title}</h3>
-        {badge(note.scope)}
-        {note.day && badge(note.day)}
-      </div>
-      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{note.content}</p>
-      <p className="mt-2 text-xs text-foreground/45">Temporary context only. Use Review or Edit with the agent to promote durable learnings.</p>
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
-        <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(note.sourceSessionId))}>source: {note.sourceSessionId}</button>
-        {note.tags?.map(tag => <span key={tag}>#{tag}</span>)}
-      </div>
     </div>
   )
 }
@@ -262,7 +193,6 @@ function selectOptions(values: string[]) {
 function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters, tab: 'memories' | 'suggestions') {
   if (filters.type !== 'all' && item.type !== filters.type) return false
   if (filters.scope !== 'all' && item.scope !== filters.scope) return false
-  if (filters.sourceSessionId.trim() && !item.sourceSessionId.toLowerCase().includes(filters.sourceSessionId.trim().toLowerCase())) return false
   if (tab === 'suggestions' && filters.status !== 'all' && (item as MemorySuggestion).status !== filters.status) return false
   return true
 }
@@ -270,7 +200,7 @@ function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters,
 function matchesQuery(item: MemoryRecord | MemorySuggestion | WorkingMemoryNote, query: string) {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
-  const haystack = [item.id, item.title, item.content, item.sourceSessionId, ...(item.tags ?? [])].join(' ').toLowerCase()
+  const haystack = [item.title, item.content, ...(item.tags ?? [])].join(' ').toLowerCase()
   return haystack.includes(needle)
 }
 
@@ -284,7 +214,6 @@ export default function MemorySettingsPage() {
   const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
   const [loading, setLoading] = React.useState(false)
   const [activityOpen, setActivityOpen] = React.useState(false)
-  const [policyOpen, setPolicyOpen] = React.useState(false)
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -373,7 +302,6 @@ export default function MemorySettingsPage() {
   const visibleSuggestions = suggestions
     .filter(suggestion => matchesFilters(suggestion, { ...filters, status: 'all' }, 'suggestions') && matchesQuery(suggestion, query))
     .sort((left, right) => (left.status === 'pending' ? 0 : 1) - (right.status === 'pending' ? 0 : 1))
-  const visibleWorkingNotes = workingNotes.filter(note => matchesQuery(note, query))
   const hygieneItems = React.useMemo(() => buildHygieneItems(memories), [memories])
   const staleCount = memories.filter(memory => memory.status === 'stale').length
   const activeSuggestions = visibleSuggestions.filter(suggestion => suggestion.status === 'pending')
@@ -428,7 +356,6 @@ export default function MemorySettingsPage() {
                 <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={filters.scope} onChange={event => setFilters(value => ({ ...value, scope: event.target.value }))}>
                   {scopeOptions.map(value => <option key={value} value={value}>scope: {value}</option>)}
                 </select>
-                <Input value={filters.sourceSessionId} onChange={event => setFilters(value => ({ ...value, sourceSessionId: event.target.value }))} placeholder="Source session" className="h-8 w-40 text-xs" />
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
               </div>
               <div className={cn('grid gap-3 p-3 lg:grid-cols-2', loading && 'opacity-60')}>
@@ -447,13 +374,12 @@ export default function MemorySettingsPage() {
             </SettingsSection>
           )}
 
-          {hygieneItems.length > 0 && (
+          {(hygieneItems.length > 0 || staleCount > 0) && (
             <SettingsSection title={t('settings.memory.needsAttentionTitle')} description={t('settings.memory.needsAttentionDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
-              <SettingsCard className="p-4 text-sm">
-                <div className="space-y-1 text-xs text-foreground/60">
-                  {hygieneItems.map(item => (
-                    <div key={`${item.kind}-${item.memoryId}-${item.relatedMemoryId ?? ''}`}>{item.kind}: {item.memoryId}{item.relatedMemoryId ? ` ↔ ${item.relatedMemoryId}` : ''} — {item.reason}</div>
-                  ))}
+              <SettingsCard className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div>
+                  <div className="text-sm font-medium text-foreground">{hygieneItems.length + staleCount} cleanup suggestion{hygieneItems.length + staleCount === 1 ? '' : 's'}</div>
+                  <div className="text-xs text-foreground/45">The brain found stale or overlapping knowledge. Review before changing anything.</div>
                 </div>
               </SettingsCard>
             </SettingsSection>
@@ -464,48 +390,41 @@ export default function MemorySettingsPage() {
               <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setActivityOpen(value => !value)}>
                 <span className="text-foreground/45">{activityOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.workingMemoryTitle')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.workingMemorySummary', { count: workingNotes.length })}</div>
+                  <div className="text-sm font-medium text-foreground">Brain activity</div>
+                  <div className="text-xs text-foreground/45">{workingNotes.length} temporary note{workingNotes.length === 1 ? '' : 's'} · {suggestionHistory.length} reviewed suggestion{suggestionHistory.length === 1 ? '' : 's'}</div>
                 </div>
               </button>
               {activityOpen && (
-                <div className="space-y-3 border-t border-border/60 p-3">
+                <div className="border-t border-border/60 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-foreground/[0.025] p-3">
-                    <p className="text-xs text-foreground/50">{t('settings.memory.workingMemoryDescription')}</p>
+                    <p className="text-xs text-foreground/50">Temporary notes are scratch context, not durable knowledge.</p>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button>
                       <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button>
                     </div>
                   </div>
-                  {visibleWorkingNotes.length ? visibleWorkingNotes.map(note => <WorkingCard key={note.id} note={note} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noWorkingNotes')}</div>}
-                  {suggestionHistory.length > 0 && <div className="pt-2 text-xs text-foreground/45">{suggestionHistory.length} {t('settings.memory.suggestionHistory')}</div>}
                 </div>
               )}
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title={t('settings.memory.policyTitle')} description={t('settings.memory.policyDescription')}>
-            <SettingsCard className="overflow-hidden">
-              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setPolicyOpen(value => !value)}>
-                <span className="text-foreground/45">{policyOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.memoryAutomation')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.currentMode', { mode: modeLabel(memoryMode) })}</div>
+          <SettingsSection title="Brain mode" description="Control how Craft learns from completed work.">
+            <SettingsCard className="p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-foreground">Learning mode</div>
+                  <div className="text-xs text-foreground/45">Current mode: {modeLabel(memoryMode)}</div>
                 </div>
-              </button>
-              {policyOpen && (
-                <div className="border-t border-border/60 p-4">
-                  <SettingsSegmentedControl
-                    value={memoryMode}
-                    onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
-                    options={[
-                      { value: 'auto', label: t('settings.memory.mode.auto') },
-                      { value: 'review', label: t('settings.memory.mode.review') },
-                      { value: 'off', label: t('settings.memory.mode.off') },
-                    ]}
-                  />
-                </div>
-              )}
+                <SettingsSegmentedControl
+                  value={memoryMode}
+                  onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
+                  options={[
+                    { value: 'auto', label: t('settings.memory.mode.auto') },
+                    { value: 'review', label: t('settings.memory.mode.review') },
+                    { value: 'off', label: t('settings.memory.mode.off') },
+                  ]}
+                />
+              </div>
             </SettingsCard>
           </SettingsSection>
         </div>
