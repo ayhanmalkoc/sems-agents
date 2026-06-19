@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactFlow, { Background, Controls, MiniMap, Position, type Edge, type Node } from 'reactflow'
+import ReactFlow, { Background, Controls, Handle, MiniMap, Position, type Edge, type Node, type NodeProps } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { Brain, Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -182,23 +182,68 @@ function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: Me
   )
 }
 
-function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[]): { nodes: Node[]; edges: Edge[] } {
+function memoryPreview(content: string, max = 72) {
+  const compact = content.replace(/\s+/g, ' ').trim()
+  return compact.length > max ? `${compact.slice(0, max)}…` : compact
+}
+
+function MemoryNode({ data }: NodeProps<{ memory: MemoryRecord; selected: boolean }>) {
+  const memory = data.memory
+  return (
+    <div className={cn('w-56 rounded-2xl border bg-background/95 p-3 text-left shadow-sm transition duration-150', data.selected ? 'scale-[1.03] border-primary/70 shadow-lg shadow-primary/10' : 'border-border/80 hover:border-primary/35')}>
+      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-primary/40" />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
+          <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-foreground/55">{memoryPreview(memory.content)}</div>
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1">{badge(memory.type)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
+      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/40" />
+    </div>
+  )
+}
+
+function CenterMemoryNode() {
+  return (
+    <div className="flex h-32 w-32 items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-center shadow-lg shadow-primary/10">
+      <div>
+        <Brain className="mx-auto h-5 w-5 text-primary" />
+        <div className="mt-2 text-xs font-semibold text-foreground">Workspace memory</div>
+      </div>
+      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/50" />
+    </div>
+  )
+}
+
+function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], selectedId: string): { nodes: Node[]; edges: Edge[] } {
   const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
+  const types = Array.from(new Set(mapMemories.map(memory => memory.type || 'memory'))).sort()
+  const typeIndex = new Map(types.map((type, index) => [type, index]))
+  const typeCounts = new Map<string, number>()
   const nodeIds = new Set(mapMemories.map(memory => memory.id))
-  const radius = Math.max(220, Math.min(520, mapMemories.length * 14))
-  const nodes = mapMemories.map((memory, index) => {
-    const angle = (index / Math.max(mapMemories.length, 1)) * Math.PI * 2
-    const ring = index === 0 ? 0 : radius + (index % 3) * 44
-    return {
+  const nodes: Node[] = [{ id: '__workspace_memory__', type: 'center', position: { x: 0, y: 0 }, data: {}, draggable: false, selectable: false }]
+  for (const memory of mapMemories) {
+    const type = memory.type || 'memory'
+    const clusterIndex = typeIndex.get(type) ?? 0
+    const clusterCount = Math.max(types.length, 1)
+    const withinTypeIndex = typeCounts.get(type) ?? 0
+    typeCounts.set(type, withinTypeIndex + 1)
+    const baseAngle = (clusterIndex / clusterCount) * Math.PI * 2 - Math.PI / 2
+    const spread = Math.min(0.85, Math.PI / Math.max(clusterCount, 2))
+    const offset = ((withinTypeIndex % 7) - 3) * (spread / 6)
+    const ring = 260 + Math.floor(withinTypeIndex / 7) * 170 + (withinTypeIndex % 2) * 48
+    const angle = baseAngle + offset
+    nodes.push({
       id: memory.id,
+      type: 'memory',
       position: { x: Math.round(Math.cos(angle) * ring), y: Math.round(Math.sin(angle) * ring) },
-      data: { label: memory.title || memory.id },
-      className: cn('!rounded-2xl !border-border/80 !bg-background !px-3 !py-2 !text-xs !shadow-sm', memory.status === 'stale' && '!border-amber-500/50 !bg-amber-500/5'),
+      data: { memory, selected: memory.id === selectedId },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
-    }
-  })
-  const edges: Edge[] = []
+    })
+  }
+  const edges: Edge[] = mapMemories.map(memory => ({ id: `core-${memory.id}`, source: '__workspace_memory__', target: memory.id, type: 'smoothstep', className: '!stroke-primary/15' }))
   const seen = new Set<string>()
   const addEdge = (source: string, target: string, label: string) => {
     if (source === target || !nodeIds.has(source) || !nodeIds.has(target)) return
@@ -215,7 +260,7 @@ function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[])
       if (tagOverlap) addEdge(left.id, right.id, 'tag')
       else if (left.type && left.type === right.type) addEdge(left.id, right.id, 'type')
       else if (left.sourceSessionId && left.sourceSessionId === right.sourceSessionId) addEdge(left.id, right.id, 'session')
-      if (edges.length > mapMemories.length * 2) break
+      if (edges.length > mapMemories.length * 3) break
     }
   }
   for (const item of hygieneItems) {
@@ -224,10 +269,9 @@ function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[])
   return { nodes, edges }
 }
 
-function MemoryDetailPanel({ memory, workspaceRoot, onDelete, onRefresh }: { memory?: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
-  if (!memory) return <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-border p-6 text-center text-sm text-foreground/45">Select a memory to inspect details.</div>
+function FloatingMemoryDetail({ memory, workspaceRoot, onDelete, onRefresh, onClose }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void; onClose: () => void }) {
   return (
-    <div className="h-full rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+    <div className="absolute right-4 top-4 z-10 w-[min(420px,calc(100%-2rem))] rounded-2xl border border-border/80 bg-background/95 p-4 shadow-2xl backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{memory.title}</h3>
@@ -236,9 +280,10 @@ function MemoryDetailPanel({ memory, workspaceRoot, onDelete, onRefresh }: { mem
         <div className="flex shrink-0 gap-1">
           {workspaceRoot && <EditPopover trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>} onInlineComplete={onRefresh} {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)} />}
           <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
+      <p className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
         <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
         {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
@@ -248,32 +293,30 @@ function MemoryDetailPanel({ memory, workspaceRoot, onDelete, onRefresh }: { mem
   )
 }
 
+const memoryNodeTypes = { memory: MemoryNode, center: CenterMemoryNode }
+
 function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
-  const [selectedId, setSelectedId] = React.useState(memories[0]?.id ?? '')
+  const [selectedId, setSelectedId] = React.useState('')
   React.useEffect(() => {
-    if (!memories.length) setSelectedId('')
-    else if (!memories.some(memory => memory.id === selectedId)) setSelectedId(memories[0].id)
+    if (selectedId && !memories.some(memory => memory.id === selectedId)) setSelectedId('')
   }, [memories, selectedId])
-  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems), [memories, hygieneItems])
+  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, selectedId), [memories, hygieneItems, selectedId])
   const selectedMemory = memories.find(memory => memory.id === selectedId)
   if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
   return (
-    <div className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="h-[520px] overflow-hidden rounded-2xl border border-border/70 bg-foreground/[0.015]">
-        <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable nodesConnectable={false} elementsSelectable onNodeClick={(_, node) => setSelectedId(node.id)} proOptions={{ hideAttribution: true }}>
-          <Background gap={24} size={1} />
-          <Controls showInteractive={false} />
-          <MiniMap pannable zoomable nodeStrokeWidth={3} className="!bg-background/95" />
+    <div className="p-3">
+      <div className="relative h-[640px] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_center,rgba(125,125,125,0.08),transparent_55%)]">
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={memoryNodeTypes} fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable nodesConnectable={false} elementsSelectable onNodeClick={(_, node) => node.id !== '__workspace_memory__' && setSelectedId(node.id)} onPaneClick={() => setSelectedId('')} proOptions={{ hideAttribution: true }}>
+          <Background gap={28} size={1} />
+          <Controls showInteractive={false} position="bottom-left" />
+          <MiniMap pannable zoomable nodeStrokeWidth={3} position="bottom-right" className="!bg-background/95" />
         </ReactFlow>
+        {selectedMemory && <FloatingMemoryDetail memory={selectedMemory} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} onClose={() => setSelectedId('')} />}
       </div>
-      <div className="min-h-[260px]">
-        <MemoryDetailPanel memory={selectedMemory} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} />
-        {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
-      </div>
+      {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
     </div>
   )
 }
-
 function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: MemorySuggestion; onApprove: (id: string) => void; onReject: (id: string) => void }) {
   const pending = suggestion.status === 'pending'
   const decidedLabel = suggestion.status === 'approved' ? 'Approved' : 'Rejected'
