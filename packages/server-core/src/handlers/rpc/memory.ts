@@ -1,6 +1,6 @@
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
-import { approveMemorySuggestion, clearWorkingMemoryNotes, deleteMemory, loadMemories, loadMemorySuggestions, loadWorkingMemoryNotes, rejectMemorySuggestion, searchMemories, type WorkingMemoryScope } from '@craft-agent/shared/memory'
+import { approveMemorySuggestion, clearWorkingMemoryNotes, deleteMemory, loadMemories, loadMemoryBrainActivity, loadMemorySuggestions, loadWorkingMemoryNotes, rejectMemorySuggestion, searchMemories, type WorkingMemoryScope } from '@craft-agent/shared/memory'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
@@ -8,6 +8,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.memory.GET,
   RPC_CHANNELS.memory.GET_SUGGESTIONS,
   RPC_CHANNELS.memory.GET_WORKING,
+  RPC_CHANNELS.memory.GET_ACTIVITY,
   RPC_CHANNELS.memory.SEARCH,
   RPC_CHANNELS.memory.DELETE,
   RPC_CHANNELS.memory.APPROVE,
@@ -31,6 +32,7 @@ export function registerMemoryHandlers(server: RpcServer, deps: HandlerDeps): vo
   server.handle(RPC_CHANNELS.memory.GET, async (_ctx, workspaceId: string) => loadMemories(workspaceRoot(workspaceId)))
   server.handle(RPC_CHANNELS.memory.GET_SUGGESTIONS, async (_ctx, workspaceId: string) => loadMemorySuggestions(workspaceRoot(workspaceId)))
   server.handle(RPC_CHANNELS.memory.GET_WORKING, async (_ctx, workspaceId: string) => loadWorkingMemoryNotes(workspaceRoot(workspaceId)))
+  server.handle(RPC_CHANNELS.memory.GET_ACTIVITY, async (_ctx, workspaceId: string) => loadMemoryBrainActivity(workspaceRoot(workspaceId)))
   server.handle(RPC_CHANNELS.memory.SEARCH, async (_ctx, workspaceId: string, query: string) => searchMemories(loadMemories(workspaceRoot(workspaceId)), query))
   server.handle(RPC_CHANNELS.memory.DELETE, async (_ctx, workspaceId: string, memoryId: string) => {
     deleteMemory(workspaceRoot(workspaceId), memoryId)

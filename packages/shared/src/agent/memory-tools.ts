@@ -36,6 +36,8 @@ export interface MemoryLearnSummary {
   suggested: MemorySuggestion[]
   skipped: number
   reasons?: string[]
+  taskId?: string
+  taskStatus?: 'running' | 'done' | 'failed' | 'skipped'
 }
 
 const MemorySchema = z.object({
@@ -114,6 +116,7 @@ function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
     `Memory learn summary: mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
   ]
+  if (summary.taskId) lines.push(`Task: ${summary.taskId} status=${summary.taskStatus ?? 'running'}`)
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(', ')}`, 'Created:', ...summary.created.map(formatMemory))
   if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(', ')}`, 'Suggested:', ...summary.suggested.map(formatSuggestion))
   if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.slice(0, 10).map(reason => `- ${reason}`))

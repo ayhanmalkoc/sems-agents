@@ -414,6 +414,7 @@ export const CHANNEL_MAP = {
   getMemories: invoke(RPC_CHANNELS.memory.GET),
   getMemorySuggestions: invoke(RPC_CHANNELS.memory.GET_SUGGESTIONS),
   getWorkingMemoryNotes: invoke(RPC_CHANNELS.memory.GET_WORKING),
+  getMemoryBrainActivity: invoke(RPC_CHANNELS.memory.GET_ACTIVITY),
   searchMemories: invoke(RPC_CHANNELS.memory.SEARCH),
   deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
   approveMemorySuggestion: invoke(RPC_CHANNELS.memory.APPROVE),

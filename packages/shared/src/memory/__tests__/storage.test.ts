@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { addWorkingMemoryNote, approveMemorySuggestion, clearWorkingMemoryNotes, createMemory, createMemorySuggestion, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemoryOrSuggestion, loadMemories, loadMemoryAutoSuggestState, loadMemorySuggestions, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, updateMemory, updateMemoryAutoSuggestSessionState } from '../index.ts'
+import { addWorkingMemoryNote, approveMemorySuggestion, clearWorkingMemoryNotes, createMemory, createMemorySuggestion, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemoryOrSuggestion, loadMemories, loadMemoryAutoSuggestState, loadMemoryBrainActivity, loadMemorySuggestions, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, startMemoryBrainActivity, updateMemory, updateMemoryAutoSuggestSessionState, updateMemoryBrainActivity } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -95,6 +95,17 @@ describe('memory storage', () => {
     expect(items.some(item => item.kind === 'duplicate' && item.memoryId === duplicate.id)).toBe(true)
     expect(items.some(item => item.kind === 'stale' && item.memoryId === stale.id)).toBe(true)
     expect(hasSimilarMemoryOrSuggestion(loadMemories(ws), [], { type: base.type, title: base.title, content: base.content, sourceSessionId: base.sourceSessionId })).toBe(true)
+  })
+
+
+  it('tracks memory brain activity', () => {
+    const ws = tempWs()
+    const activity = startMemoryBrainActivity(ws, { mode: 'review', reason: 'manual refresh', sourceSessionIds: ['s1'], summary: 'Starting' })
+    expect(activity.status).toBe('running')
+    expect(loadMemoryBrainActivity(ws)[0]?.id).toBe(activity.id)
+    const done = updateMemoryBrainActivity(ws, activity.id, { status: 'done', completedAt: '2026-06-16T00:01:00.000Z', summary: 'Done' })
+    expect(done.status).toBe('done')
+    expect(loadMemoryBrainActivity(ws)[0]?.summary).toBe('Done')
   })
 
   it('supports working memory add list and clear', () => {

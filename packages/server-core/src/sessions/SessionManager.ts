@@ -40,7 +40,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, loadMemoryBrainActivity, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -128,6 +128,8 @@ type MemoryBrainTaskResult = {
   suggested: MemorySuggestion[]
   skipped: number
   reasons: string[]
+  taskId?: string
+  taskStatus?: 'running' | 'done' | 'failed' | 'skipped'
 }
 
 type MemoryLearnMode = 'auto' | 'review' | 'off-as-review'
@@ -147,6 +149,27 @@ type LearnMemorySession = {
   messages: Array<Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }>
   name?: string
   systemPromptPreset?: 'default' | 'mini' | string
+}
+
+const MEMORY_BRAIN_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /(api[_-]?key|token|password|passwd|secret|bearer)\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
+
+function redactMemoryBrainText(value: string): string {
+  return MEMORY_BRAIN_SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), value)
+}
+
+function formatMemoryBrainSessionContext(targets: LearnMemorySession[]): string {
+  return targets.map(target => {
+    const messages = target.messages
+      .filter(message => message.role === 'user' || message.role === 'assistant' || message.type === 'user' || message.type === 'assistant')
+      .slice(-18)
+      .map(message => {
+        const role = message.role ?? message.type ?? 'message'
+        const content = redactMemoryBrainText(String(message.content ?? '')).replace(/\s+/g, ' ').slice(0, 700)
+        return `- ${role}: ${content}`
+      })
+      .join('\n')
+    return [`Session ${target.id}${target.name ? ` (${target.name})` : ''}:`, messages || '- no readable messages'].join('\n')
+  }).join('\n\n')
 }
 
 const automationToolConfigMutexes = new Map<string, Promise<void>>()
@@ -7005,6 +7028,10 @@ export class SessionManager implements ISessionManager {
       }
     }
 
+    if (reason === 'complete' && managed.systemPromptPreset === 'mini') {
+      this.completeMemoryBrainActivityForSession(managed)
+    }
+
     // 3. Auto-complete mini agent sessions to avoid session list clutter
     //    Mini agents are spawned from EditPopovers for quick config edits
     //    and should automatically move to 'done' when finished
@@ -7048,6 +7075,20 @@ export class SessionManager implements ISessionManager {
     this.persistSession(managed)
   }
 
+
+  private completeMemoryBrainActivityForSession(managed: ManagedSession): void {
+    const activity = loadMemoryBrainActivity(managed.workspace.rootPath)
+    const row = activity.find(item => item.taskSessionId === managed.id && item.status === 'running')
+    if (!row) return
+    const finalMessage = this.getLastFinalAssistantMessageId(managed.messages)
+    updateMemoryBrainActivity(managed.workspace.rootPath, row.id, {
+      status: 'done',
+      completedAt: new Date().toISOString(),
+      summary: finalMessage ? 'Memory Brain task completed.' : 'Memory Brain task stopped without a final summary.',
+    })
+    this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/brain-activity.json')
+  }
+
   private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): Promise<MemoryLearnResult> {
     if (mode === 'off-as-review') {
       return { mode, processed: 0, created: [], suggested: [], skipped: targets.length, reasons: ['memory automation is off'] }
@@ -7058,37 +7099,78 @@ export class SessionManager implements ISessionManager {
   private async runMemoryBrainTask(input: MemoryBrainTaskInput): Promise<MemoryBrainTaskResult> {
     const targets = input.targets.filter(target => target.systemPromptPreset !== 'mini')
     const skipped = input.targets.length - targets.length
+    const workspaceRoot = input.managed.workspace.rootPath
     if (targets.length === 0) {
-      return { mode: input.mode, processed: 0, created: [], suggested: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'] }
+      const activity = startMemoryBrainActivity(workspaceRoot, {
+        status: 'skipped',
+        mode: input.mode,
+        reason: input.reason,
+        sourceSessionIds: input.targets.map(target => target.id),
+        completedAt: new Date().toISOString(),
+        summary: 'No eligible non-mini sessions.',
+      })
+      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
+      return { mode: input.mode, processed: 0, created: [], suggested: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'], taskId: activity.id, taskStatus: 'skipped' }
     }
 
     const sessionIds = targets.map(target => target.id)
-    const taskSession = await this.createSession(input.managed.workspace.id, {
-      name: `Memory brain: ${input.reason}`,
-      model: input.managed.model,
-      llmConnection: input.managed.llmConnection,
-      systemPromptPreset: 'mini',
-      permissionMode: 'allow-all',
-      workingDirectory: input.managed.workspace.rootPath,
+    const activity = startMemoryBrainActivity(workspaceRoot, {
+      mode: input.mode,
+      reason: input.reason,
+      sourceSessionIds: sessionIds,
+      summary: 'Starting Memory Brain task.',
     })
+    this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
+
+    let taskSession: Session
+    try {
+      taskSession = await this.createSession(input.managed.workspace.id, {
+        name: `Memory brain: ${input.reason}`,
+        model: input.managed.model,
+        llmConnection: input.managed.llmConnection,
+        systemPromptPreset: 'mini',
+        permissionMode: 'allow-all',
+        workingDirectory: input.managed.workspace.rootPath,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'failed', completedAt: new Date().toISOString(), error: message, summary: 'Memory Brain task failed to create.' })
+      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
+      return { mode: input.mode, processed: targets.length, created: [], suggested: [], skipped: targets.length, reasons: [message], taskId: activity.id, taskStatus: 'failed' }
+    }
 
     const modeInstruction = input.mode === 'auto'
       ? 'Use memory create for only strong durable facts. If uncertain, do not write.'
-      : 'Use memory suggest-from-session/create suggestions only for durable candidates that need review. Do not approve them.'
+      : 'Create pending memory suggestions only when a durable learning needs review. Do not approve them.'
     const targetInstruction = sessionIds.length === 1 ? sessionIds[0] : sessionIds.join(', ')
+    const sessionContext = formatMemoryBrainSessionContext(targets)
+    const explicitPrompt = input.explicitPrompt ? redactMemoryBrainText(input.explicitPrompt).slice(0, 1200) : undefined
     const prompt = [
       'You are the Memory Brain for this workspace.',
-      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool only. Do not edit JSON files directly.',
+      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for create/update/search/hygiene only. Do not edit JSON files directly.',
+      'Do not call memory learn or memory suggest-from-session from inside this Memory Brain task; this task already received the bounded session context below.',
       modeInstruction,
-      'Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',
+      'Search existing memory before writing. Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',
       'If existing memory already covers the fact, do not create a duplicate.',
       `Reason: ${input.reason}.`,
       `Target session id(s): ${targetInstruction}.`,
-      ...(input.explicitPrompt ? [`Explicit remember prompt: ${input.explicitPrompt}`] : []),
+      ...(explicitPrompt ? [`Explicit remember prompt: ${explicitPrompt}`] : []),
+      'Bounded redacted session context:',
+      sessionContext,
       'Finish with a concise summary: processed, created ids, suggested ids, skipped count, reasons.',
     ].join('\n')
 
-    await this.sendMessage(taskSession.id, prompt)
+    try {
+      updateMemoryBrainActivity(workspaceRoot, activity.id, { taskSessionId: taskSession.id, summary: `Memory Brain task started: ${taskSession.id}` })
+      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
+      await this.sendMessage(taskSession.id, prompt)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'failed', completedAt: new Date().toISOString(), error: message, summary: 'Memory Brain task failed to start.' })
+      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
+      return { mode: input.mode, processed: targets.length, created: [], suggested: [], skipped: targets.length, reasons: [message], taskId: activity.id, taskStatus: 'failed' }
+    }
+
     return {
       mode: input.mode,
       processed: targets.length,
@@ -7096,6 +7178,8 @@ export class SessionManager implements ISessionManager {
       suggested: [],
       skipped,
       reasons: [`memory brain task started: ${taskSession.id}`],
+      taskId: activity.id,
+      taskStatus: 'running',
     }
   }
 

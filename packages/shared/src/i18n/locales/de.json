@@ -1711,5 +1711,16 @@
   "settings.hooks.policyValue.on": "On",
   "settings.hooks.policyValue.auto": "Auto",
   "settings.hooks.policyValue.review": "Review",
-  "settings.hooks.policyValue.trustedOnly": "Trusted only"
+  "settings.hooks.policyValue.trustedOnly": "Trusted only",
+  "settings.memory.policyUpdated": "Memory policy updated",
+  "settings.memory.policyUpdateFailed": "Failed to update memory policy",
+  "settings.memory.cleanupSummary": "{{count}} cleanup suggestion",
+  "settings.memory.cleanupDescription": "The brain found stale or overlapping knowledge. Review before changing anything.",
+  "settings.memory.brainActivityTitle": "Brain activity",
+  "settings.memory.brainActivitySummary": "{{tasks}} brain tasks · {{notes}} temporary notes · {{reviewed}} reviewed suggestions",
+  "settings.memory.noBrainActivity": "No Memory Brain activity yet.",
+  "settings.memory.temporaryNotesDescription": "Temporary notes are scratch context, not durable knowledge.",
+  "settings.memory.brainModeTitle": "Brain mode",
+  "settings.memory.brainModeDescription": "Control how Craft learns from completed work. Refresh Memory can still start a review task when automatic learning is off.",
+  "settings.memory.learningMode": "Learning mode"
 }

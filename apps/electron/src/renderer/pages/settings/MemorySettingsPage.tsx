@@ -54,6 +54,19 @@ type WorkingMemoryNote = {
 
 type HygieneItem = { kind: 'duplicate' | 'stale'; memoryId: string; relatedMemoryId?: string; reason: string }
 
+type MemoryBrainActivity = {
+  id: string
+  status: 'running' | 'done' | 'failed' | 'skipped'
+  reason: string
+  mode: MemoryAutomationMode | 'off-as-review'
+  sourceSessionIds: string[]
+  taskSessionId?: string
+  startedAt: string
+  completedAt?: string
+  summary?: string
+  error?: string
+}
+
 type Filters = { type: string; scope: string; status: string }
 
 const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', status: 'pending' }
@@ -78,10 +91,10 @@ function serializeMemoryAutomationMode(content: string, mode: MemoryAutomationMo
   return JSON.stringify(prefs, null, 2)
 }
 
-function modeLabel(mode: MemoryAutomationMode): string {
-  if (mode === 'auto') return 'Auto-save'
-  if (mode === 'review') return 'Review first'
-  return 'Off'
+function modeLabel(mode: MemoryAutomationMode, t: (key: string) => string): string {
+  if (mode === 'auto') return t('settings.memory.mode.auto')
+  if (mode === 'review') return t('settings.memory.mode.review')
+  return t('settings.memory.mode.off')
 }
 
 function badge(text: string) {
@@ -205,6 +218,7 @@ export default function MemorySettingsPage() {
   const [memories, setMemories] = React.useState<MemoryRecord[]>([])
   const [suggestions, setSuggestions] = React.useState<MemorySuggestion[]>([])
   const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
+  const [brainActivity, setBrainActivity] = React.useState<MemoryBrainActivity[]>([])
   const [loading, setLoading] = React.useState(false)
   const [activityOpen, setActivityOpen] = React.useState(false)
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
@@ -216,15 +230,17 @@ export default function MemorySettingsPage() {
     if (!activeWorkspaceId) return
     setLoading(true)
     try {
-      const [memoryRows, suggestionRows, workingRows, preferences] = await Promise.all([
+      const [memoryRows, suggestionRows, workingRows, activityRows, preferences] = await Promise.all([
         query.trim() ? window.electronAPI.searchMemories(activeWorkspaceId, query.trim()) : window.electronAPI.getMemories(activeWorkspaceId),
         window.electronAPI.getMemorySuggestions(activeWorkspaceId),
         window.electronAPI.getWorkingMemoryNotes(activeWorkspaceId),
+        window.electronAPI.getMemoryBrainActivity(activeWorkspaceId),
         window.electronAPI.readPreferences().catch(() => ({ content: '{}' })),
       ])
       setMemories(memoryRows as MemoryRecord[])
       setSuggestions(suggestionRows as MemorySuggestion[])
       setWorkingNotes(workingRows as WorkingMemoryNote[])
+      setBrainActivity(activityRows as MemoryBrainActivity[])
       const content = (preferences as { content?: string }).content || '{}'
       setPreferencesContent(content)
       setMemoryMode(parseMemoryAutomationMode(content))
@@ -311,9 +327,9 @@ export default function MemorySettingsPage() {
       setPreferencesContent(next)
       setMemoryMode(mode)
       window.dispatchEvent(new CustomEvent('craft:preferences-updated'))
-      toast.success('Memory policy updated')
+      toast.success(t('settings.memory.policyUpdated'))
     } else {
-      toast.error('Failed to update memory policy', { description: result.error })
+      toast.error(t('settings.memory.policyUpdateFailed'), { description: result.error })
     }
   }
 
@@ -333,7 +349,7 @@ export default function MemorySettingsPage() {
                 <div><div className="text-lg font-semibold text-foreground">{memories.length}</div><div className="text-xs text-foreground/50">{t('settings.memory.savedMemoriesMetric')}</div></div>
                 <div><div className="text-lg font-semibold text-foreground">{pendingCount}</div><div className="text-xs text-foreground/50">{t('settings.memory.pendingSuggestionsMetric')}</div></div>
                 <div><div className="text-lg font-semibold text-foreground">{hygieneItems.length + staleCount}</div><div className="text-xs text-foreground/50">{t('settings.memory.needsAttentionMetric')}</div></div>
-                <div><div className="text-lg font-semibold text-foreground">{modeLabel(memoryMode)}</div><div className="text-xs text-foreground/50">{t('settings.memory.automationModeMetric')}</div></div>
+                <div><div className="text-lg font-semibold text-foreground">{modeLabel(memoryMode, t)}</div><div className="text-xs text-foreground/50">{t('settings.memory.automationModeMetric')}</div></div>
               </div>
             </SettingsCard>
           </SettingsSection>
@@ -374,8 +390,8 @@ export default function MemorySettingsPage() {
             <SettingsSection title={t('settings.memory.needsAttentionTitle')} description={t('settings.memory.needsAttentionDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
               <SettingsCard className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div>
-                  <div className="text-sm font-medium text-foreground">{hygieneItems.length + staleCount} cleanup suggestion{hygieneItems.length + staleCount === 1 ? '' : 's'}</div>
-                  <div className="text-xs text-foreground/45">The brain found stale or overlapping knowledge. Review before changing anything.</div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.memory.cleanupSummary', { count: hygieneItems.length + staleCount })}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</div>
                 </div>
               </SettingsCard>
             </SettingsSection>
@@ -386,14 +402,29 @@ export default function MemorySettingsPage() {
               <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setActivityOpen(value => !value)}>
                 <span className="text-foreground/45">{activityOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">Brain activity</div>
-                  <div className="text-xs text-foreground/45">{workingNotes.length} temporary note{workingNotes.length === 1 ? '' : 's'} Â· {suggestionHistory.length} reviewed suggestion{suggestionHistory.length === 1 ? '' : 's'}</div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.memory.brainActivityTitle')}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: workingNotes.length, reviewed: suggestionHistory.length })}</div>
                 </div>
               </button>
               {activityOpen && (
-                <div className="border-t border-border/60 p-3">
+                <div className="space-y-3 border-t border-border/60 p-3">
+                  <div className="space-y-2">
+                    {brainActivity.slice(0, 5).map(item => (
+                      <div key={item.id} className="rounded-xl border border-border/60 bg-background p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-foreground">{item.reason}</div>
+                            <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.taskSessionId ?? item.id}</div>
+                          </div>
+                          {badge(item.status)}
+                        </div>
+                        {(item.summary || item.error) && <p className="mt-2 text-xs text-foreground/55">{item.error ?? item.summary}</p>}
+                      </div>
+                    ))}
+                    {brainActivity.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-sm text-foreground/50">{t('settings.memory.noBrainActivity')}</div>}
+                  </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-foreground/[0.025] p-3">
-                    <p className="text-xs text-foreground/50">Temporary notes are scratch context, not durable knowledge.</p>
+                    <p className="text-xs text-foreground/50">{t('settings.memory.temporaryNotesDescription')}</p>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button>
                       <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button>
@@ -404,12 +435,12 @@ export default function MemorySettingsPage() {
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title="Brain mode" description="Control how Craft learns from completed work.">
+          <SettingsSection title={t('settings.memory.brainModeTitle')} description={t('settings.memory.brainModeDescription')}>
             <SettingsCard className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-medium text-foreground">Learning mode</div>
-                  <div className="text-xs text-foreground/45">Current mode: {modeLabel(memoryMode)}</div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.memory.learningMode')}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.memory.currentMode', { mode: modeLabel(memoryMode, t) })}</div>
                 </div>
                 <SettingsSegmentedControl
                   value={memoryMode}

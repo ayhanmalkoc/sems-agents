@@ -109,6 +109,26 @@ export interface WorkingMemoryJson {
   notes: WorkingMemoryNote[]
 }
 
+export type MemoryBrainActivityStatus = 'running' | 'done' | 'failed' | 'skipped'
+
+export interface MemoryBrainActivity {
+  id: string
+  status: MemoryBrainActivityStatus
+  reason: string
+  mode: 'auto' | 'review' | 'off-as-review'
+  sourceSessionIds: string[]
+  taskSessionId?: string
+  startedAt: string
+  completedAt?: string
+  summary?: string
+  error?: string
+}
+
+export interface MemoryBrainActivityJson {
+  version: 1
+  activity: MemoryBrainActivity[]
+}
+
 export interface MemoryHygieneItem {
   kind: 'duplicate' | 'stale'
   memoryId: string
