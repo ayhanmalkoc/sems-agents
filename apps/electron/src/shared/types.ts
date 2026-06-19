@@ -937,10 +937,6 @@ export interface AutomationsNavigationState {
   rightSidebar?: RightSidebarPanel
 }
 
-export interface MemoryNavigationState {
-  navigator: 'memory'
-  rightSidebar?: RightSidebarPanel
-}
 
 
 /**
@@ -953,7 +949,6 @@ export type NavigationState =
   | SettingsNavigationState
   | SkillsNavigationState
   | AutomationsNavigationState
-  | MemoryNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -979,9 +974,6 @@ export const isAutomationsNavigation = (
   state: NavigationState
 ): state is AutomationsNavigationState => state.navigator === 'automations'
 
-export const isMemoryNavigation = (
-  state: NavigationState
-): state is MemoryNavigationState => state.navigator === 'memory'
 
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
@@ -1015,7 +1007,6 @@ export const getNavigationStateKey = (state: NavigationState): string => {
     }
     return 'automations'
   }
-  if (state.navigator === 'memory') return 'memory'
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
@@ -1075,7 +1066,7 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
   }
 
   // Handle memory
-  if (key === 'memory') return { navigator: 'memory' }
+  if (key === 'memory') return { navigator: 'settings', subpage: 'memory' }
 
   // Backward-compatible hooks route key
   if (key === 'hooks') return { navigator: 'settings', subpage: 'hooks' }

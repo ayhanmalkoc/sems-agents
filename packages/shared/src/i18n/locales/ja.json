@@ -958,6 +958,8 @@
   "settings.messaging.bindings.openSession": "開く",
   "settings.messaging.bindings.title": "アクティブなバインディング",
   "settings.messaging.bindings.unbind": "Disconnect",
+  "settings.memory.title": "Memory",
+  "settings.memory.description": "Workspace memory and learning settings",
   "settings.messaging.description": "Telegram、WhatsApp、Larkを接続",
   "settings.messaging.lark.apiType": "Open Platform API",
   "settings.messaging.lark.appIdLabel": "App ID",

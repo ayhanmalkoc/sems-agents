@@ -21,6 +21,7 @@ import InputSettingsPage from './InputSettingsPage'
 import WorkspaceSettingsPage from './WorkspaceSettingsPage'
 import PermissionsSettingsPage from './PermissionsSettingsPage'
 import HooksSettingsPage from './HooksSettingsPage'
+import MemorySettingsPage from './MemorySettingsPage'
 import LabelsSettingsPage from './LabelsSettingsPage'
 import MessagingSettingsPage from './MessagingSettingsPage'
 import ServerSettingsPage from './ServerSettingsPage'
@@ -40,6 +41,7 @@ export const SETTINGS_PAGE_COMPONENTS: Record<SettingsSubpage, ComponentType> = 
   workspace: WorkspaceSettingsPage,
   permissions: PermissionsSettingsPage,
   hooks: HooksSettingsPage,
+  memory: MemorySettingsPage,
   labels: LabelsSettingsPage,
   messaging: MessagingSettingsPage,
   server: ServerSettingsPage,

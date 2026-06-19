@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Brain, Check, ChevronDown, ChevronRight, Search, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
+import { HeaderMenu } from '@/components/ui/HeaderMenu'
 import { Button } from '@/components/ui/button'
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { Input } from '@/components/ui/input'
@@ -231,7 +232,7 @@ function matchesQuery(item: MemoryRecord | MemorySuggestion | WorkingMemoryNote,
   return haystack.includes(needle)
 }
 
-export default function MemoryHomePage() {
+export default function MemorySettingsPage() {
   const { activeWorkspaceId, workspaces } = useAppShellContext()
   const [tab, setTab] = React.useState<Tab>('memories')
   const [query, setQuery] = React.useState('')
@@ -330,8 +331,8 @@ export default function MemoryHomePage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <PanelHeader title="Memory" />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+      <PanelHeader title="Memory" actions={<HeaderMenu route={routes.view.settings('memory')} />} />
+      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-6">
         <div className="rounded-3xl border border-border/70 bg-card/70 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-start gap-3">

@@ -958,6 +958,8 @@
   "settings.messaging.bindings.openSession": "打开",
   "settings.messaging.bindings.title": "活跃绑定",
   "settings.messaging.bindings.unbind": "Disconnect",
+  "settings.memory.title": "Memory",
+  "settings.memory.description": "Workspace memory and learning settings",
   "settings.messaging.description": "连接 Telegram、WhatsApp、飞书 / Lark",
   "settings.messaging.lark.apiType": "Open Platform API",
   "settings.messaging.lark.appIdLabel": "App ID",

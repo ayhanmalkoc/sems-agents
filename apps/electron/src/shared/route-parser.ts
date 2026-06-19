@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'memory' | 'settings'
+export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'settings'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -209,9 +209,9 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
     return null
   }
 
-  // Memory navigator
+  // Backward-compatible memory route -> Settings > Memory
   if (first === 'memory') {
-    return segments.length === 1 ? { navigator: 'memory', details: null } : null
+    return segments.length === 1 ? { navigator: 'settings', details: { type: 'memory', id: 'memory' } } : null
   }
 
   // Backward-compatible hooks route -> Settings > Hooks
@@ -281,7 +281,6 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
  * Build a compound route string from parsed state
  */
 export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
-  if (parsed.navigator === 'memory') return 'memory'
   if (parsed.navigator === 'settings') {
     if (!parsed.details) return 'settings'
     return `settings/${parsed.details.type}`
@@ -407,10 +406,6 @@ export function parseRoute(route: string): ParsedRoute | null {
  * Convert a parsed compound route to ParsedRoute format (type: 'view')
  */
 function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute {
-  // Memory
-  if (compound.navigator === 'memory') {
-    return { type: 'view', name: 'memory', params: {} }
-  }
   // Settings
   if (compound.navigator === 'settings') {
     const subpage = compound.details?.type || 'app'
@@ -528,10 +523,6 @@ export function parseRouteToNavigationState(
  * Convert a ParsedCompoundRoute to NavigationState
  */
 function convertCompoundToNavigationState(compound: ParsedCompoundRoute): NavigationState {
-  // Memory
-  if (compound.navigator === 'memory') {
-    return { navigator: 'memory' }
-  }
   // Settings
   if (compound.navigator === 'settings') {
     if (!compound.details) {
@@ -672,7 +663,7 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
       }
       return { navigator: 'automations', details: null }
     case 'memory':
-      return { navigator: 'memory' }
+      return { navigator: 'settings', subpage: 'memory' }
     case 'hooks':
       return { navigator: 'settings', subpage: 'hooks' }
     case 'session':
@@ -788,10 +779,6 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
       automationFilter: state.filter ?? undefined,
       details: state.details ? { type: 'automation', id: state.details.automationId } : null,
     }
-  }
-
-  if (state.navigator === 'memory') {
-    return { navigator: 'memory', details: null }
   }
 
   // Sessions

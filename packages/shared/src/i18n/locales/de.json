@@ -958,6 +958,8 @@
   "settings.messaging.bindings.openSession": "Öffnen",
   "settings.messaging.bindings.title": "Aktive Bindungen",
   "settings.messaging.bindings.unbind": "Disconnect",
+  "settings.memory.title": "Memory",
+  "settings.memory.description": "Workspace memory and learning settings",
   "settings.messaging.description": "Telegram, WhatsApp, Lark verbinden",
   "settings.messaging.lark.apiType": "Open Platform API",
   "settings.messaging.lark.appIdLabel": "App ID",
