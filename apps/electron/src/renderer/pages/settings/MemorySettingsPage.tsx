@@ -190,17 +190,13 @@ function memoryPreview(content: string, max = 72) {
 function MemoryNode({ data }: NodeProps<{ memory: MemoryRecord; selected: boolean }>) {
   const memory = data.memory
   return (
-    <div className="group relative">
-      <div className={cn('max-w-44 rounded-full border bg-background/95 px-3 py-2 text-left shadow-sm transition duration-150', data.selected ? 'scale-[1.04] border-primary/70 shadow-lg shadow-primary/10' : 'border-border/80 hover:border-primary/35')}>
+    <div className="relative flex items-center gap-2 rounded-full px-1 py-1">
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-primary/40" />
-      <div className="truncate text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
+      <span className={cn('h-3 w-3 rounded-full bg-primary/70 shadow-[0_0_18px_rgba(99,102,241,0.35)] transition', data.selected && 'scale-125 bg-primary shadow-[0_0_28px_rgba(99,102,241,0.55)]')} />
+      <div className={cn('max-w-40 truncate rounded-full border bg-background/90 px-3 py-1.5 text-xs font-semibold text-foreground/80 shadow-sm transition', data.selected ? 'border-primary/60 text-foreground shadow-primary/10' : 'border-border/70 hover:border-primary/35')}>
+        {memory.title || memory.id}
+      </div>
       <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/40" />
-      </div>
-      <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-2xl border border-border/80 bg-background/95 p-3 text-left shadow-xl group-hover:block">
-        <div className="text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
-        <div className="mt-1 line-clamp-3 text-[11px] leading-4 text-foreground/60">{memoryPreview(memory.content, 120)}</div>
-        <div className="mt-2 flex flex-wrap gap-1">{badge(memory.type)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
-      </div>
     </div>
   )
 }
@@ -217,7 +213,7 @@ function CenterMemoryNode() {
   )
 }
 
-function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], selectedId: string, rotation: number): { nodes: Node[]; edges: Edge[] } {
+function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], activeId: string, rotation: number): { nodes: Node[]; edges: Edge[] } {
   const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
   const types = Array.from(new Set(mapMemories.map(memory => memory.type || 'memory'))).sort()
   const typeIndex = new Map(types.map((type, index) => [type, index]))
@@ -239,7 +235,7 @@ function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[],
       id: memory.id,
       type: 'memory',
       position: { x: Math.round(Math.cos(angle) * ring), y: Math.round(Math.sin(angle) * ring) },
-      data: { memory, selected: memory.id === selectedId },
+      data: { memory, selected: memory.id === activeId },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     })
@@ -270,40 +266,48 @@ function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[],
   return { nodes, edges }
 }
 
-function FloatingMemoryDetail({ memory, workspaceRoot, onDelete, onRefresh, onClose }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void; onClose: () => void }) {
+function FloatingMemoryDetail({ memory, expanded, workspaceRoot, onDelete, onRefresh, onClose, onExpand }: { memory: MemoryRecord; expanded: boolean; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void; onClose: () => void; onExpand: () => void }) {
   return (
-    <div className="absolute right-4 top-4 z-10 w-[min(420px,calc(100%-2rem))] rounded-2xl border border-border/80 bg-background/95 p-4 shadow-2xl backdrop-blur">
+    <button type="button" className={cn('absolute right-4 top-4 z-10 w-[min(380px,calc(100%-2rem))] rounded-2xl border border-border/80 bg-background/95 p-4 text-left shadow-2xl backdrop-blur transition', expanded && 'w-[min(520px,calc(100%-2rem))]')} onClick={onExpand}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{memory.title}</h3>
-          <div className="mt-2 flex flex-wrap gap-1.5">{badge(memory.type)}{badge(memory.scope)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
+          <p className={cn('mt-2 text-xs leading-5 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-3')}>{expanded ? memory.content : memoryPreview(memory.content, 180)}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">{badge(memory.type)}{memory.status === 'stale' && badge('stale')}{memory.confidence && badge(memory.confidence)}</div>
         </div>
-        <div className="flex shrink-0 gap-1">
-          {workspaceRoot && <EditPopover trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>} onInlineComplete={onRefresh} {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)} />}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}><Trash2 className="h-4 w-4" /></Button>
+        <div className="flex shrink-0 gap-1" onClick={event => event.stopPropagation()}>
+          {expanded && workspaceRoot && <EditPopover trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>} onInlineComplete={onRefresh} {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)} />}
+          {expanded && <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}><Trash2 className="h-4 w-4" /></Button>}
           <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
       </div>
-      <p className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
-        <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
-        {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
-      </div>
-      <AuditDetails item={memory} />
-    </div>
+      {expanded && (
+        <>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45" onClick={event => event.stopPropagation()}>
+            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
+            {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
+          </div>
+          <AuditDetails item={memory} />
+        </>
+      )}
+      {!expanded && <div className="mt-3 text-[11px] text-foreground/35">Click card to expand</div>}
+    </button>
   )
 }
 
 const memoryNodeTypes = { memory: MemoryNode, center: CenterMemoryNode }
 
 function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
-  const [selectedId, setSelectedId] = React.useState('')
+  const [previewId, setPreviewId] = React.useState('')
+  const [expandedId, setExpandedId] = React.useState('')
   const [rotation, setRotation] = React.useState(0)
   React.useEffect(() => {
-    if (selectedId && !memories.some(memory => memory.id === selectedId)) setSelectedId('')
-  }, [memories, selectedId])
-  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, selectedId, rotation), [memories, hygieneItems, selectedId, rotation])
-  const selectedMemory = memories.find(memory => memory.id === selectedId)
+    if (previewId && !memories.some(memory => memory.id === previewId)) setPreviewId('')
+    if (expandedId && !memories.some(memory => memory.id === expandedId)) setExpandedId('')
+  }, [memories, previewId, expandedId])
+  const activeId = expandedId || previewId
+  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, activeId, rotation), [memories, hygieneItems, activeId, rotation])
+  const activeMemory = memories.find(memory => memory.id === activeId)
   if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
   return (
     <div className="p-3">
@@ -312,12 +316,12 @@ function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh 
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate left" onClick={() => setRotation(value => value - Math.PI / 12)}><RotateCcw className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate right" onClick={() => setRotation(value => value + Math.PI / 12)}><RotateCw className="h-4 w-4" /></Button>
         </div>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={memoryNodeTypes} fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable nodesConnectable={false} elementsSelectable onNodeClick={(_, node) => node.id !== '__workspace_memory__' && setSelectedId(node.id)} onPaneClick={() => setSelectedId('')} proOptions={{ hideAttribution: true }}>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={memoryNodeTypes} fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable nodesConnectable={false} elementsSelectable onNodeMouseEnter={(_, node) => { if (node.id !== '__workspace_memory__') { setPreviewId(node.id); setExpandedId('') } }} onNodeClick={(_, node) => { if (node.id !== '__workspace_memory__') { setPreviewId(node.id); setExpandedId('') } }} onPaneClick={() => { setPreviewId(''); setExpandedId('') }} proOptions={{ hideAttribution: true }}>
           <Background gap={28} size={1} />
           <Controls showInteractive={false} position="bottom-left" />
           <MiniMap pannable zoomable nodeStrokeWidth={3} position="bottom-right" className="!bg-background/95" />
         </ReactFlow>
-        {selectedMemory && <FloatingMemoryDetail memory={selectedMemory} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} onClose={() => setSelectedId('')} />}
+        {activeMemory && <FloatingMemoryDetail memory={activeMemory} expanded={expandedId === activeMemory.id} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} onClose={() => { setPreviewId(''); setExpandedId('') }} onExpand={() => setExpandedId(activeMemory.id)} />}
       </div>
       {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
     </div>
