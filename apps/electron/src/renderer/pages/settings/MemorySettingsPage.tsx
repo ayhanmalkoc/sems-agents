@@ -141,62 +141,65 @@ function AuditDetails({ item }: { item: MemoryRecord | MemorySuggestion }) {
 }
 
 function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
+  const [expanded, setExpanded] = React.useState(false)
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-medium text-foreground">{memory.title}</h3>
-            {badge(memory.type)}
-            {badge(memory.scope)}
-            {badge(memory.status ?? 'active')}
-            {memory.confidence && badge(memory.confidence)}
+    <div className={cn('group rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm transition hover:border-primary/25 hover:bg-foreground/[0.015]', expanded && 'border-primary/30 bg-foreground/[0.018]')}>
+      <button type="button" className="block w-full text-left" onClick={() => setExpanded(value => !value)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-primary/70" />
+              <h3 className="truncate text-sm font-medium text-foreground">{memory.title}</h3>
+            </div>
+            <p className={cn('mt-2 text-sm leading-6 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-2')}>{memory.content}</p>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
+          <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100" onClick={event => event.stopPropagation()}>
+            {workspaceRoot && (
+              <EditPopover
+                trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>}
+                onInlineComplete={onRefresh}
+                {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)}
+              />
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/40 hover:text-destructive" onClick={() => onDelete(memory.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {badge(memory.type)}
+          {memory.status === 'stale' && badge('stale')}
+          {memory.tags?.slice(0, expanded ? undefined : 3).map(tag => <span key={tag} className="text-[11px] text-foreground/40">#{tag}</span>)}
+        </div>
+      </button>
+      {expanded && (
+        <div className="mt-3 border-t border-border/60 pt-3">
+          <div className="flex flex-wrap gap-2 text-[11px] text-foreground/45">
             <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
-            {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
+            {memory.confidence && <span>confidence: {memory.confidence}</span>}
           </div>
           <AuditDetails item={memory} />
         </div>
-        <div className="flex shrink-0 gap-1">
-          {workspaceRoot && (
-            <EditPopover
-              trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs">Edit</Button>}
-              onInlineComplete={onRefresh}
-              {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)}
-            />
-          )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
 
 function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: MemorySuggestion; onApprove: (id: string) => void; onReject: (id: string) => void }) {
+  const [expanded, setExpanded] = React.useState(false)
   const pending = suggestion.status === 'pending'
   const decidedLabel = suggestion.status === 'approved' ? 'Approved' : 'Rejected'
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+    <div className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm transition hover:border-primary/25">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setExpanded(value => !value)}>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Suggestion</span>
             <h3 className="truncate text-sm font-medium text-foreground">{suggestion.title}</h3>
-            {badge(suggestion.status)}
-            {badge(suggestion.type)}
-            {badge(suggestion.scope)}
-            {suggestion.confidence && badge(suggestion.confidence)}
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{suggestion.content}</p>
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
-            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(suggestion.sourceSessionId))}>source: {suggestion.sourceSessionId}</button>
-            {suggestion.reason && <span>reason: {suggestion.reason}</span>}
-          </div>
-          <AuditDetails item={suggestion} />
-        </div>
+          <p className={cn('mt-2 text-sm leading-6 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-2')}>{suggestion.content}</p>
+          {suggestion.reason && <p className="mt-2 line-clamp-2 text-xs text-foreground/40">Why: {suggestion.reason}</p>}
+        </button>
         <div className="flex shrink-0 gap-1">
           {pending ? (
             <>
@@ -208,10 +211,18 @@ function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: Memor
           )}
         </div>
       </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">{badge(suggestion.type)}{suggestion.confidence && badge(suggestion.confidence)}</div>
+      {expanded && (
+        <div className="mt-3 border-t border-border/60 pt-3">
+          <div className="flex flex-wrap gap-2 text-[11px] text-foreground/45">
+            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(suggestion.sourceSessionId))}>source: {suggestion.sourceSessionId}</button>
+          </div>
+          <AuditDetails item={suggestion} />
+        </div>
+      )}
     </div>
   )
 }
-
 
 function WorkingCard({ note }: { note: WorkingMemoryNote }) {
   return (
@@ -420,7 +431,7 @@ export default function MemorySettingsPage() {
                 <Input value={filters.sourceSessionId} onChange={event => setFilters(value => ({ ...value, sourceSessionId: event.target.value }))} placeholder="Source session" className="h-8 w-40 text-xs" />
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
               </div>
-              <div className={cn('space-y-3 p-3', loading && 'opacity-60')}>
+              <div className={cn('grid gap-3 p-3 lg:grid-cols-2', loading && 'opacity-60')}>
                 {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
               </div>
             </SettingsCard>
