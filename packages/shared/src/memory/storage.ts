@@ -11,9 +11,11 @@ const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
 const WORKING_NOTES_FILE = 'working-notes.json'
 const BRAIN_ACTIVITY_FILE = 'brain-activity.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
+const ACTIVITY_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /\b(api[_-]?key|token|password|passwd|secret|bearer)\b\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
 
 function nowIso(): string { return new Date().toISOString() }
 function makeId(prefix: string): string { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` }
+function redactActivityText(value: string | undefined): string | undefined { return value ? ACTIVITY_SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), value).slice(0, 1000) : value }
 
 export function getMemoryDir(workspaceRootPath: string): string { return join(workspaceRootPath, MEMORY_DIR) }
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
@@ -279,6 +281,7 @@ export function saveMemoryBrainActivity(workspaceRootPath: string, activity: Mem
   const path = getMemoryBrainActivityPath(workspaceRootPath)
   ensureDir(path)
   const next = activity
+    .map(item => ({ ...item, summary: redactActivityText(item.summary), error: redactActivityText(item.error) }))
     .slice()
     .sort((a, b) => (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0))
     .slice(0, 100)

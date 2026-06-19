@@ -220,7 +220,7 @@ export default function MemorySettingsPage() {
   const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
   const [brainActivity, setBrainActivity] = React.useState<MemoryBrainActivity[]>([])
   const [loading, setLoading] = React.useState(false)
-  const [activityOpen, setActivityOpen] = React.useState(false)
+  const [advancedOpen, setAdvancedOpen] = React.useState(false)
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -306,17 +306,19 @@ export default function MemorySettingsPage() {
     }
   }
 
-  const pendingCount = suggestions.filter(item => item.status === 'pending').length
   const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories') && matchesQuery(memory, query))
   const visibleSuggestions = suggestions
     .filter(suggestion => matchesFilters(suggestion, { ...filters, status: 'all' }, 'suggestions') && matchesQuery(suggestion, query))
     .sort((left, right) => (left.status === 'pending' ? 0 : 1) - (right.status === 'pending' ? 0 : 1))
   const hygieneItems = React.useMemo(() => buildHygieneItems(memories), [memories])
   const staleCount = memories.filter(memory => memory.status === 'stale').length
+  const duplicateItems = hygieneItems.filter(item => item.kind === 'duplicate')
+  const staleItems = hygieneItems.filter(item => item.kind === 'stale')
   const visibleMemoryCards = visibleMemories.slice(0, 10)
   const hiddenMemoryCount = Math.max(visibleMemories.length - visibleMemoryCards.length, 0)
   const activeSuggestions = visibleSuggestions.filter(suggestion => suggestion.status === 'pending')
-  const suggestionHistory = visibleSuggestions.filter(suggestion => suggestion.status !== 'pending')
+  const attentionCount = hygieneItems.length + staleCount
+  const selectedModeDescriptionKey = memoryMode === 'auto' ? 'settings.memory.mode.autoDescription' : memoryMode === 'review' ? 'settings.memory.mode.reviewDescription' : 'settings.memory.mode.offDescription'
   const typeOptions = selectOptions(memories.map(item => item.type))
   const scopeOptions = selectOptions(memories.map(item => item.scope))
 
@@ -344,13 +346,27 @@ export default function MemorySettingsPage() {
               <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
             </div>
           )}>
-            <SettingsCard>
-              <div className="grid gap-3 p-4 sm:grid-cols-4">
-                <div><div className="text-lg font-semibold text-foreground">{memories.length}</div><div className="text-xs text-foreground/50">{t('settings.memory.savedMemoriesMetric')}</div></div>
-                <div><div className="text-lg font-semibold text-foreground">{pendingCount}</div><div className="text-xs text-foreground/50">{t('settings.memory.pendingSuggestionsMetric')}</div></div>
-                <div><div className="text-lg font-semibold text-foreground">{hygieneItems.length + staleCount}</div><div className="text-xs text-foreground/50">{t('settings.memory.needsAttentionMetric')}</div></div>
-                <div><div className="text-lg font-semibold text-foreground">{modeLabel(memoryMode, t)}</div><div className="text-xs text-foreground/50">{t('settings.memory.automationModeMetric')}</div></div>
+            <SettingsCard className="p-4 text-sm text-foreground/55">{t('settings.memory.minimalIntro')}</SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.memory.brainModeTitle')} description={t('settings.memory.brainModeDescription')}>
+            <SettingsCard className="p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.memory.learningMode')}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.memory.currentMode', { mode: modeLabel(memoryMode, t) })}</div>
+                </div>
+                <SettingsSegmentedControl
+                  value={memoryMode}
+                  onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
+                  options={[
+                    { value: 'auto', label: t('settings.memory.mode.auto') },
+                    { value: 'review', label: t('settings.memory.mode.review') },
+                    { value: 'off', label: t('settings.memory.mode.off') },
+                  ]}
+                />
               </div>
+              <p className="mt-3 text-xs text-foreground/50">{t(selectedModeDescriptionKey)}</p>
             </SettingsCard>
           </SettingsSection>
 
@@ -386,29 +402,20 @@ export default function MemorySettingsPage() {
             </SettingsSection>
           )}
 
-          {(hygieneItems.length > 0 || staleCount > 0) && (
-            <SettingsSection title={t('settings.memory.needsAttentionTitle')} description={t('settings.memory.needsAttentionDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
-              <SettingsCard className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.cleanupSummary', { count: hygieneItems.length + staleCount })}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</div>
-                </div>
-              </SettingsCard>
-            </SettingsSection>
-          )}
-
-          <SettingsSection title={t('settings.memory.activityTitle')} description={t('settings.memory.activityDescription')}>
+          <SettingsSection title={t('settings.memory.advancedTitle')} description={t('settings.memory.advancedDescription')}>
             <SettingsCard className="overflow-hidden">
-              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setActivityOpen(value => !value)}>
-                <span className="text-foreground/45">{activityOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
+              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setAdvancedOpen(value => !value)}>
+                <span className="text-foreground/45">{advancedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.brainActivityTitle')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: workingNotes.length, reviewed: suggestionHistory.length })}</div>
+                  <div className="text-sm font-medium text-foreground">{t('settings.memory.advancedTitle')}</div>
+                  <div className="text-xs text-foreground/45">{t('settings.memory.advancedSummary', { tasks: brainActivity.length, attention: attentionCount, notes: workingNotes.length })}</div>
                 </div>
+                {attentionCount > 0 && <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">{attentionCount}</span>}
               </button>
-              {activityOpen && (
-                <div className="space-y-3 border-t border-border/60 p-3">
+              {advancedOpen && (
+                <div className="space-y-4 border-t border-border/60 p-3">
                   <div className="space-y-2">
+                    <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.brainActivityTitle')}</div>
                     {brainActivity.slice(0, 5).map(item => (
                       <div key={item.id} className="rounded-xl border border-border/60 bg-background p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -423,8 +430,29 @@ export default function MemorySettingsPage() {
                     ))}
                     {brainActivity.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-sm text-foreground/50">{t('settings.memory.noBrainActivity')}</div>}
                   </div>
+
+                  {attentionCount > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.cleanupSuggestionsTitle')}</div>
+                          <div className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</div>
+                        </div>
+                        {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{duplicateItems.length}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.duplicates')}</div></div>
+                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{staleItems.length + staleCount}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.stale')}</div></div>
+                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">0</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.conflicts')}</div></div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-foreground/[0.025] p-3">
-                    <p className="text-xs text-foreground/50">{t('settings.memory.temporaryNotesDescription')}</p>
+                    <div>
+                      <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.temporaryNotesTitle')}</div>
+                      <p className="text-xs text-foreground/50">{t('settings.memory.temporaryNotesDescription')}</p>
+                    </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button>
                       <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button>
@@ -432,26 +460,6 @@ export default function MemorySettingsPage() {
                   </div>
                 </div>
               )}
-            </SettingsCard>
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.memory.brainModeTitle')} description={t('settings.memory.brainModeDescription')}>
-            <SettingsCard className="p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.learningMode')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.currentMode', { mode: modeLabel(memoryMode, t) })}</div>
-                </div>
-                <SettingsSegmentedControl
-                  value={memoryMode}
-                  onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
-                  options={[
-                    { value: 'auto', label: t('settings.memory.mode.auto') },
-                    { value: 'review', label: t('settings.memory.mode.review') },
-                    { value: 'off', label: t('settings.memory.mode.off') },
-                  ]}
-                />
-              </div>
             </SettingsCard>
           </SettingsSection>
         </div>

@@ -49,7 +49,7 @@ function fns(): MemoryFns {
     approve: async () => ({ suggestion: { ...suggestion, status: 'approved', memoryId: memory.id }, memory }),
     reject: async () => ({ ...suggestion, status: 'rejected' }),
     listSuggestions: async () => [suggestion],
-    learn: async () => ({ mode: 'review', processed: 1, created: [], suggested: [suggestion], skipped: 0, reasons: [] }),
+    learn: async () => ({ mode: 'review', processed: 1, created: [], suggested: [suggestion], skipped: 0, reasons: [], taskId: 'brain-1', taskStatus: 'running' }),
   }
 }
 
@@ -78,7 +78,8 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('working-clear session', fns())).content[0].text).toContain('Cleared 1')
     expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created 1 memory suggestion')
     const learn = (await executeMemoryCommand('learn current', fns())).content[0].text
-    expect(learn).toContain('Memory learn summary: mode=review processed=1 created=0 suggested=1 skipped=0')
+    expect(learn).toContain('Memory learn summary: delegated to Memory Brain mode=review processed=1 created=0 suggested=1 skipped=0')
+    expect(learn).toContain('Task: brain-1 status=running')
     expect(learn).toContain('Suggested ids: sug-1')
     expect((await executeMemoryCommand('approve sug-1', fns())).content[0].text).toContain('Approved suggestion')
     expect((await executeMemoryCommand('reject sug-1', fns())).content[0].text).toContain('Rejected suggestion')
@@ -103,6 +104,6 @@ describe('memory tool', () => {
 
     const empty = fns()
     empty.suggestFromSession = async () => []
-    expect((await executeMemoryCommand('suggest-from-session session-1', empty)).content[0].text).toBe('Memory Brain returned no pending suggestions')
+    expect((await executeMemoryCommand('suggest-from-session session-1', empty)).content[0].text).toContain('Memory Brain returned no pending suggestions yet')
   })
 })

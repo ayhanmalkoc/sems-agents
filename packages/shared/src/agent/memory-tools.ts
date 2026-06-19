@@ -82,7 +82,7 @@ function formatSuggestion(suggestion: MemorySuggestion): string {
   return `- ${parts.join(' ')}\n  ${content}`
 }
 function formatSuggestions(suggestions: MemorySuggestion[]): string {
-  if (suggestions.length === 0) return 'Memory Brain returned no pending suggestions'
+  if (suggestions.length === 0) return 'Memory Brain returned no pending suggestions yet. If a task was started, pending suggestions may appear after it completes.'
   return suggestions.map(formatSuggestion).join('\n')
 }
 
@@ -114,9 +114,10 @@ function formatStatus(status: MemoryStatusSnapshot): string {
 
 function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
-    `Memory learn summary: mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
+    `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
   ]
   if (summary.taskId) lines.push(`Task: ${summary.taskId} status=${summary.taskStatus ?? 'running'}`)
+  if (summary.taskId && summary.created.length === 0 && summary.suggested.length === 0 && summary.taskStatus === 'running') lines.push('Memory Brain task runs asynchronously; created/suggested items may appear after completion.')
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(', ')}`, 'Created:', ...summary.created.map(formatMemory))
   if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(', ')}`, 'Suggested:', ...summary.suggested.map(formatSuggestion))
   if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.slice(0, 10).map(reason => `- ${reason}`))
@@ -197,7 +198,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       if (!sessionId) return failure('suggest-from-session requires a session id')
       const result = await fns.suggestFromSession(sessionId)
       const suggestions = Array.isArray(result) ? result : [result]
-      if (suggestions.length === 0) return success('Memory Brain returned no pending suggestions')
+      if (suggestions.length === 0) return success('Memory Brain returned no pending suggestions yet. If a task was started, pending suggestions may appear after it completes.')
       return success(`Created ${suggestions.length} memory suggestion${suggestions.length === 1 ? '' : 's'}\n${formatSuggestions(suggestions)}`)
     }
     if (verb === 'learn') {

@@ -5552,6 +5552,17 @@ export class SessionManager implements ISessionManager {
     return undefined
   }
 
+
+  private getLastFinalAssistantMessageContent(messages: Message[]): string | undefined {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.role === 'assistant' && !msg.isIntermediate) {
+        return redactMemoryBrainText(String(msg.content ?? '')).replace(/\s+/g, ' ').slice(0, 600)
+      }
+    }
+    return undefined
+  }
+
   /**
    * Set which session the user is actively viewing.
    * Called when user navigates to a session. Used to determine whether to mark
@@ -7080,11 +7091,11 @@ export class SessionManager implements ISessionManager {
     const activity = loadMemoryBrainActivity(managed.workspace.rootPath)
     const row = activity.find(item => item.taskSessionId === managed.id && item.status === 'running')
     if (!row) return
-    const finalMessage = this.getLastFinalAssistantMessageId(managed.messages)
+    const finalSummary = this.getLastFinalAssistantMessageContent(managed.messages)
     updateMemoryBrainActivity(managed.workspace.rootPath, row.id, {
       status: 'done',
       completedAt: new Date().toISOString(),
-      summary: finalMessage ? 'Memory Brain task completed.' : 'Memory Brain task stopped without a final summary.',
+      summary: finalSummary || 'Memory Brain task completed.',
     })
     this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/brain-activity.json')
   }

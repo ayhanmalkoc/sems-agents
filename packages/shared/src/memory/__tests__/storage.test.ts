@@ -100,9 +100,10 @@ describe('memory storage', () => {
 
   it('tracks memory brain activity', () => {
     const ws = tempWs()
-    const activity = startMemoryBrainActivity(ws, { mode: 'review', reason: 'manual refresh', sourceSessionIds: ['s1'], summary: 'Starting' })
+    const activity = startMemoryBrainActivity(ws, { mode: 'review', reason: 'manual refresh', sourceSessionIds: ['s1'], summary: 'Starting token=abcdef1234567890' })
     expect(activity.status).toBe('running')
     expect(loadMemoryBrainActivity(ws)[0]?.id).toBe(activity.id)
+    expect(loadMemoryBrainActivity(ws)[0]?.summary).toContain('[REDACTED]')
     const done = updateMemoryBrainActivity(ws, activity.id, { status: 'done', completedAt: '2026-06-16T00:01:00.000Z', summary: 'Done' })
     expect(done.status).toBe('done')
     expect(loadMemoryBrainActivity(ws)[0]?.summary).toBe('Done')
