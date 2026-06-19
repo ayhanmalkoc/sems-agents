@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Brain, Check, ChevronDown, ChevronRight, Search, Trash2, X } from 'lucide-react'
+import ReactFlow, { Background, Controls, MiniMap, Position, type Edge, type Node } from 'reactflow'
+import 'reactflow/dist/style.css'
+import { Brain, Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -59,6 +61,9 @@ type Filters = { type: string; scope: string; sourceSessionId: string; status: s
 const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', sourceSessionId: '', status: 'pending' }
 
 type MemoryAutomationMode = 'auto' | 'review' | 'off'
+type MemoryViewMode = 'map' | 'list'
+
+const MAX_MAP_MEMORIES = 100
 
 function parseMemoryAutomationMode(content: string): MemoryAutomationMode {
   try {
@@ -87,6 +92,10 @@ function modeLabel(mode: MemoryAutomationMode): string {
 
 function badge(text: string) {
   return <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-[11px] text-foreground/55">{text}</span>
+}
+
+function aiButton(label: React.ReactNode, variant: 'default' | 'outline' = 'outline') {
+  return <Button size="sm" variant={variant}><Sparkles className="h-3.5 w-3.5" />{label}</Button>
 }
 
 function auditRow(label: string, value?: string) {
@@ -168,6 +177,98 @@ function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: Me
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[]): { nodes: Node[]; edges: Edge[] } {
+  const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
+  const nodeIds = new Set(mapMemories.map(memory => memory.id))
+  const radius = Math.max(220, Math.min(520, mapMemories.length * 14))
+  const nodes = mapMemories.map((memory, index) => {
+    const angle = (index / Math.max(mapMemories.length, 1)) * Math.PI * 2
+    const ring = index === 0 ? 0 : radius + (index % 3) * 44
+    return {
+      id: memory.id,
+      position: { x: Math.round(Math.cos(angle) * ring), y: Math.round(Math.sin(angle) * ring) },
+      data: { label: memory.title || memory.id },
+      className: cn('!rounded-2xl !border-border/80 !bg-background !px-3 !py-2 !text-xs !shadow-sm', memory.status === 'stale' && '!border-amber-500/50 !bg-amber-500/5'),
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    }
+  })
+  const edges: Edge[] = []
+  const seen = new Set<string>()
+  const addEdge = (source: string, target: string, label: string) => {
+    if (source === target || !nodeIds.has(source) || !nodeIds.has(target)) return
+    const key = [source, target].sort().join('::')
+    if (seen.has(key)) return
+    seen.add(key)
+    edges.push({ id: `${label}-${key}`, source, target, label, type: 'smoothstep', className: '!stroke-border', labelStyle: { fill: 'currentColor', fontSize: 10, opacity: 0.55 } })
+  }
+  for (let i = 0; i < mapMemories.length; i += 1) {
+    for (let j = i + 1; j < mapMemories.length; j += 1) {
+      const left = mapMemories[i]
+      const right = mapMemories[j]
+      const tagOverlap = (left.tags ?? []).some(tag => (right.tags ?? []).includes(tag))
+      if (tagOverlap) addEdge(left.id, right.id, 'tag')
+      else if (left.type && left.type === right.type) addEdge(left.id, right.id, 'type')
+      else if (left.sourceSessionId && left.sourceSessionId === right.sourceSessionId) addEdge(left.id, right.id, 'session')
+      if (edges.length > mapMemories.length * 2) break
+    }
+  }
+  for (const item of hygieneItems) {
+    if (item.relatedMemoryId) addEdge(item.memoryId, item.relatedMemoryId, item.kind)
+  }
+  return { nodes, edges }
+}
+
+function MemoryDetailPanel({ memory, workspaceRoot, onDelete, onRefresh }: { memory?: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
+  if (!memory) return <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-border p-6 text-center text-sm text-foreground/45">Select a memory to inspect details.</div>
+  return (
+    <div className="h-full rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-foreground">{memory.title}</h3>
+          <div className="mt-2 flex flex-wrap gap-1.5">{badge(memory.type)}{badge(memory.scope)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          {workspaceRoot && <EditPopover trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>} onInlineComplete={onRefresh} {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)} />}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground/70">{memory.content}</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45">
+        <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
+        {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
+      </div>
+      <AuditDetails item={memory} />
+    </div>
+  )
+}
+
+function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
+  const [selectedId, setSelectedId] = React.useState(memories[0]?.id ?? '')
+  React.useEffect(() => {
+    if (!memories.length) setSelectedId('')
+    else if (!memories.some(memory => memory.id === selectedId)) setSelectedId(memories[0].id)
+  }, [memories, selectedId])
+  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems), [memories, hygieneItems])
+  const selectedMemory = memories.find(memory => memory.id === selectedId)
+  if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
+  return (
+    <div className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="h-[520px] overflow-hidden rounded-2xl border border-border/70 bg-foreground/[0.015]">
+        <ReactFlow nodes={nodes} edges={edges} fitView nodesDraggable nodesConnectable={false} elementsSelectable onNodeClick={(_, node) => setSelectedId(node.id)} proOptions={{ hideAttribution: true }}>
+          <Background gap={24} size={1} />
+          <Controls showInteractive={false} />
+          <MiniMap pannable zoomable nodeStrokeWidth={3} className="!bg-background/95" />
+        </ReactFlow>
+      </div>
+      <div className="min-h-[260px]">
+        <MemoryDetailPanel memory={selectedMemory} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} />
+        {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
       </div>
     </div>
   )
@@ -271,6 +372,7 @@ export default function MemorySettingsPage() {
   const [loading, setLoading] = React.useState(false)
   const [activityOpen, setActivityOpen] = React.useState(false)
   const [policyOpen, setPolicyOpen] = React.useState(false)
+  const [memoryViewMode, setMemoryViewMode] = React.useState<MemoryViewMode>('map')
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -387,8 +489,8 @@ export default function MemorySettingsPage() {
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
           <SettingsSection title={t('settings.memory.title')} description={t('settings.memory.pageDescription')} action={workspaceRoot && (
             <div className="flex gap-2">
-              <EditPopover trigger={<Button size="sm" variant="outline">{t('settings.memory.refreshMemory')}</Button>} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
-              <EditPopover trigger={<Button size="sm">{t('settings.memory.create')}</Button>} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
+              <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
+              <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
             </div>
           )}>
             <SettingsCard>
@@ -401,7 +503,7 @@ export default function MemorySettingsPage() {
             </SettingsCard>
           </SettingsSection>
 
-          <SettingsSection title={t('settings.memory.savedMemoriesTitle')} description={t('settings.memory.savedMemoriesDescription')} action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline">{t('settings.memory.edit')}</Button>} onInlineComplete={refresh} {...getEditConfig('memory-edit', `${workspaceRoot}::workspace memory`)} />}>
+          <SettingsSection title={t('settings.memory.savedMemoriesTitle')} description={t('settings.memory.savedMemoriesDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.edit'))} onInlineComplete={refresh} {...getEditConfig('memory-edit', `${workspaceRoot}::workspace memory`)} />}>
             <SettingsCard className="overflow-hidden">
               <div className="flex flex-wrap items-center gap-2 border-b border-border/60 p-3">
                 <div className="relative min-w-56 flex-1">
@@ -416,15 +518,29 @@ export default function MemorySettingsPage() {
                 </select>
                 <Input value={filters.sourceSessionId} onChange={event => setFilters(value => ({ ...value, sourceSessionId: event.target.value }))} placeholder="Source session" className="h-8 w-40 text-xs" />
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
+                <SettingsSegmentedControl
+                  value={memoryViewMode}
+                  onValueChange={value => setMemoryViewMode(value as MemoryViewMode)}
+                  options={[
+                    { value: 'map', label: t('settings.memory.map') },
+                    { value: 'list', label: t('settings.memory.list') },
+                  ]}
+                />
               </div>
-              <div className={cn('space-y-3 p-3', loading && 'opacity-60')}>
-                {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
+              <div className={cn(loading && 'opacity-60')}>
+                {memoryViewMode === 'map' ? (
+                  <MemoryMap memories={visibleMemories} hygieneItems={hygieneItems} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />
+                ) : (
+                  <div className="space-y-3 p-3">
+                    {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
+                  </div>
+                )}
               </div>
             </SettingsCard>
           </SettingsSection>
 
           {activeSuggestions.length > 0 && (
-            <SettingsSection title={t('settings.memory.suggestionsTitle')} description={t('settings.memory.suggestionsDescription')} action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline">{t('settings.memory.review')}</Button>} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
+            <SettingsSection title={t('settings.memory.suggestionsTitle')} description={t('settings.memory.suggestionsDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.review'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
               <SettingsCard className="p-3">
                 <div className="space-y-3">
                   {activeSuggestions.map(suggestion => <SuggestionCard key={suggestion.id} suggestion={suggestion} onApprove={approve} onReject={reject} />)}
@@ -434,7 +550,7 @@ export default function MemorySettingsPage() {
           )}
 
           {hygieneItems.length > 0 && (
-            <SettingsSection title={t('settings.memory.needsAttentionTitle')} description={t('settings.memory.needsAttentionDescription')} action={workspaceRoot && <EditPopover trigger={<Button size="sm" variant="outline">{t('settings.memory.reviewCleanup')}</Button>} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
+            <SettingsSection title={t('settings.memory.needsAttentionTitle')} description={t('settings.memory.needsAttentionDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
               <SettingsCard className="p-4 text-sm">
                 <div className="space-y-1 text-xs text-foreground/60">
                   {hygieneItems.map(item => (

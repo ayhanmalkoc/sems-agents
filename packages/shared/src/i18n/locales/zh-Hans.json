@@ -972,6 +972,8 @@
   "settings.memory.edit": "Edit",
   "settings.memory.searchPlaceholder": "Search memories",
   "settings.memory.reset": "Reset",
+  "settings.memory.map": "Map",
+  "settings.memory.list": "List",
   "settings.memory.noSavedMemories": "No saved memories match.",
   "settings.memory.suggestionsTitle": "Suggestions",
   "settings.memory.suggestionsDescription": "Review pending memories before they become durable.",
