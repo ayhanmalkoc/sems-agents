@@ -40,7 +40,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, getMemoryAutoSuggestSessionState, getMemoryContentHash, updateMemoryAutoSuggestSessionState, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, hasSimilarMemoryOrSuggestion, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryConfidence, type MemoryType } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -111,60 +111,23 @@ export { sanitizeForTitle }
 type AutomationsConfigJson = { version?: number; automations?: Record<string, Record<string, unknown>[]>; [key: string]: unknown }
 type AutomationToolItemServer = Record<string, unknown> & { id: string; event: string; matcherIndex: number; enabled: boolean; actions: import('@craft-agent/shared/automations').AutomationAction[] }
 
-const MEMORY_AUTO_SUGGEST_COOLDOWN_MS = 10 * 60 * 1000
+type MemoryBrainTaskMode = 'auto' | 'review'
 
-const MEMORY_CANDIDATE_RULES: Array<{ type: MemoryType; title: string; patterns: RegExp[]; strongPatterns?: RegExp[] }> = [
-  { type: 'project_decision', title: 'Project decision', patterns: [/\bkarar\b/i, /kararla�t�rd�k/i, /anla�t�k/i, /bundan sonra .*?(yap|kullan|ilerle)/i, /\bdecision\b/i, /\bagreed\b/i], strongPatterns: [/karar (verdik|netle�ti)/i, /kararla�t�rd�k/i, /anla�t�k/i, /\bagreed\b/i] },
-  { type: 'user_preference', title: 'User preference', patterns: [/\btercih\b/i, /istemiyorum/i, /istiyorum/i, /seviyorum/i, /bundan sonra/i, /\bprefer\b/i, /don't want/i], strongPatterns: [/bundan sonra/i, /tercih (ediyorum|ederim)/i, /I prefer/i, /don't want/i] },
-  { type: 'error_resolution', title: 'Error resolution', patterns: [/\bhata\b/i, /\bsebep\b/i, /��z�m/i, /��zd�k/i, /d�zeldi/i, /\bfix\b/i, /\bbug\b/i, /\berror\b/i], strongPatterns: [/(hata|bug|error).*?(��z�m|sebep|fix|d�zeldi)/i, /(��z�m|fix).*?(hata|bug|error)/i] },
-  { type: 'workflow_learning', title: 'Workflow learning', patterns: [/workflow/i, /\bkomut\b/i, /\btest\b/i, /s�re�/i, /ak��/i, /validasyon/i, /\bcommand\b/i], strongPatterns: [/(test|komut|workflow|ak��).*?(�al��t�r|kullan|do�rula)/i] },
-]
-
-const MEMORY_NOISE_PATTERNS = [/^(tamam|ok|okay|evet|hay�r|devam|done|ge�ti|ba�la)[.!\s]*$/i, /^qa (done|tamam|ge�ti)/i, /^test sonucu/i, /^commit push$/i]
-
-function extractMemoryCandidateText(message: Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }): string | undefined {
-  const role = message.role ?? message.type
-  if (role !== 'user' && role !== 'assistant') return undefined
-  const text = message.content.trim().replace(/```[\s\S]*?```/g, '').replace(/\s+/g, ' ')
-  if (text.length < 24) return undefined
-  if (MEMORY_NOISE_PATTERNS.some(pattern => pattern.test(text))) return undefined
-  return text.slice(0, 800)
+type MemoryBrainTaskInput = {
+  managed: ManagedSession
+  targets: LearnMemorySession[]
+  mode: MemoryBrainTaskMode
+  reason: string
+  explicitPrompt?: string
 }
 
-function classifyMemoryCandidate(text: string): { type: MemoryType; title: string; confidence: MemoryConfidence } | undefined {
-  const rule = MEMORY_CANDIDATE_RULES.find(item => item.patterns.some(pattern => pattern.test(text)))
-  if (!rule) return undefined
-  const confidence: MemoryConfidence = rule.strongPatterns?.some(pattern => pattern.test(text)) || text.length > 140 ? 'high' : 'medium'
-  return { type: rule.type, title: rule.title, confidence }
-}
-
-function curateMemoryCandidateContent(text: string): string {
-  const cleaned = text.replace(/^(tamam|evet|peki|�imdi|simdi|ok|okay|not:)[,\s]+/i, '').trim()
-  const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).filter(Boolean)
-  const signal = sentences.find(part => MEMORY_CANDIDATE_RULES.some(rule => rule.patterns.some(pattern => pattern.test(part))))
-  const sentence = signal ?? sentences.find(part => part.length >= 24) ?? cleaned
-  return sentence.replace(/\s+/g, ' ').slice(0, 360).trim()
-}
-
-function buildMemoryCandidates(messages: Array<Pick<Message, 'content'> & { role?: Message['role']; type?: Message['role'] }>, sessionId: string, sessionName?: string): Array<{ type: MemoryType; title: string; content: string; confidence: MemoryConfidence; hash: string }> {
-  const seen = new Set<string>()
-  return messages
-    .slice(-30)
-    .map(extractMemoryCandidateText)
-    .filter((text): text is string => Boolean(text))
-    .map(text => ({ text: curateMemoryCandidateContent(text), classification: classifyMemoryCandidate(text) }))
-    .filter((candidate): candidate is { text: string; classification: { type: MemoryType; title: string; confidence: MemoryConfidence } } => Boolean(candidate.classification) && candidate.text.length >= 24)
-    .filter(candidate => {
-      const key = `${candidate.classification.type}:${candidate.text.toLowerCase().slice(0, 120)}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .map(candidate => {
-      const title = `${candidate.classification.title}: ${sessionName ?? sessionId}`
-      return { type: candidate.classification.type, title, content: candidate.text, confidence: candidate.classification.confidence, hash: getMemoryContentHash({ type: candidate.classification.type, title, content: candidate.text, sourceSessionId: sessionId }) }
-    })
-    .slice(0, 3)
+type MemoryBrainTaskResult = {
+  mode: MemoryLearnMode
+  processed: number
+  created: MemoryRecord[]
+  suggested: MemorySuggestion[]
+  skipped: number
+  reasons: string[]
 }
 
 type MemoryLearnMode = 'auto' | 'review' | 'off-as-review'
@@ -4247,28 +4210,13 @@ export class SessionManager implements ISessionManager {
               return count
             },
             suggestFromSession: async (sessionId) => {
-              const target = this.sessions.get(sessionId)
-              if (!target) throw new Error(`Session not found: ${sessionId}`)
-              const memories = loadMemories(managed.workspace.rootPath)
-              const existingSuggestions = loadMemorySuggestions(managed.workspace.rootPath)
-              const candidates = buildMemoryCandidates(target.messages, sessionId, target.name)
-                .filter(candidate => !hasSimilarMemoryOrSuggestion(memories, existingSuggestions, { type: candidate.type, title: candidate.title, content: candidate.content, sourceSessionId: sessionId }))
-              if (candidates.length === 0) return []
-              const createdAt = new Date().toISOString()
-              const suggestions = candidates.map(candidate => createMemorySuggestion(managed.workspace.rootPath, {
-                type: candidate.type,
-                scope: 'session',
-                title: candidate.title,
-                content: candidate.content,
-                confidence: candidate.confidence,
-                reason: 'Detected from session language; review before approval.',
-                sourceSessionId: sessionId,
-                createdBy: 'memory tool',
-                createdAt,
-                sessionId,
-              }))
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/suggestions.json')
-              return suggestions
+              const result = await this.runMemoryBrainTask({
+                managed,
+                targets: this.resolveMemoryLearnTargets(managed, sessionId),
+                mode: 'review',
+                reason: 'suggest-from-session',
+              })
+              return result.suggested
             },
             approve: async (suggestionId) => {
               const result = approveMemorySuggestion(managed.workspace.rootPath, suggestionId, 'memory tool')
@@ -4312,7 +4260,22 @@ export class SessionManager implements ISessionManager {
             simulateTool: async (payload) => new HookEngine(managed.workspace.rootPath).simulateTool(payload),
             simulatePrompt: async (payload) => new HookEngine(managed.workspace.rootPath).simulatePrompt(payload),
             afterToolUse: async (payload) => new HookEngine(managed.workspace.rootPath).afterToolUse(payload),
-            beforePromptSubmit: async (payload) => new HookEngine(managed.workspace.rootPath).beforePromptSubmit(payload),
+            beforePromptSubmit: async (payload) => {
+              const decision = await new HookEngine(managed.workspace.rootPath).beforePromptSubmit(payload)
+              if (decision.type === 'mutate' && /explicit remember/i.test(decision.message ?? '')) {
+                const memoryMode = resolveMemoryAutomationMode(loadPreferences())
+                if (memoryMode !== 'off') {
+                  void this.runMemoryBrainTask({
+                    managed,
+                    targets: [managed],
+                    mode: memoryMode,
+                    reason: 'explicit remember prompt',
+                    explicitPrompt: typeof payload.prompt === 'string' ? payload.prompt : typeof payload.message === 'string' ? payload.message : undefined,
+                  })
+                }
+              }
+              return decision
+            },
             customList: async () => loadCustomHooks(managed.workspace.rootPath),
             customShow: async (hookId) => getCustomHook(managed.workspace.rootPath, hookId),
             customCreate: async (hook) => {
@@ -7036,7 +6999,7 @@ export class SessionManager implements ISessionManager {
       }
       try {
         void new HookEngine(managed.workspace.rootPath).emit({ event: 'Stop', sessionId, hookId: 'memory_learn_on_stop', metadata: { reason: 'session_complete', finalMessageId: currentFinalMessageId } }).catch(error => sessionLog.warn('[Hooks] Stop memory hook failed:', error))
-        this.maybeAutoSuggestMemory(managed, currentFinalMessageId)
+        void this.learnMemoryOnStop(managed, currentFinalMessageId)
       } catch (error) {
         sessionLog.warn(`Auto memory suggestion skipped for session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`)
       }
@@ -7085,76 +7048,63 @@ export class SessionManager implements ISessionManager {
     this.persistSession(managed)
   }
 
-  private learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): MemoryLearnResult {
-    const workspaceRoot = managed.workspace.rootPath
-    const created: ReturnType<typeof createMemory>[] = []
-    const suggested: ReturnType<typeof createMemorySuggestion>[] = []
-    const reasons: string[] = []
-    let skipped = 0
-    const now = new Date().toISOString()
-    const memories = loadMemories(workspaceRoot)
-    const suggestions = loadMemorySuggestions(workspaceRoot)
+  private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): Promise<MemoryLearnResult> {
+    if (mode === 'off-as-review') {
+      return { mode, processed: 0, created: [], suggested: [], skipped: targets.length, reasons: ['memory automation is off'] }
+    }
+    return this.runMemoryBrainTask({ managed, targets, mode, reason: 'memory learn command' })
+  }
 
-    for (const target of targets) {
-      if (target.workspace.id !== managed.workspace.id) {
-        skipped += 1
-        reasons.push(`${target.id}: different workspace`)
-        continue
-      }
-      if (target.systemPromptPreset === 'mini') {
-        skipped += 1
-        reasons.push(`${target.id}: mini session`)
-        continue
-      }
-      const candidates = buildMemoryCandidates(target.messages, target.id, target.name)
-        .filter(candidate => !hasSimilarMemoryOrSuggestion(memories, suggestions, { type: candidate.type, title: candidate.title, content: candidate.content, sourceSessionId: target.id }))
-        .slice(0, 3)
-
-      if (candidates.length === 0) {
-        skipped += 1
-        reasons.push(`${target.id}: no strong new candidates`)
-        continue
-      }
-
-      for (const candidate of candidates) {
-        if (mode === 'auto') {
-          const memory = createMemory(workspaceRoot, {
-            type: candidate.type,
-            scope: 'session',
-            title: candidate.title,
-            content: candidate.content,
-            confidence: candidate.confidence,
-            sourceSessionId: target.id,
-            createdBy: 'memory learn',
-            createdAt: now,
-            sessionId: target.id,
-          })
-          created.push(memory)
-          memories.push(memory)
-        } else {
-          const suggestion = createMemorySuggestion(workspaceRoot, {
-            type: candidate.type,
-            scope: 'session',
-            title: candidate.title,
-            content: candidate.content,
-            confidence: candidate.confidence,
-            reason: mode === 'off-as-review'
-              ? 'Manually learned while automatic memory is off; review before approval.'
-              : 'Manually learned from session history; review before approval.',
-            sourceSessionId: target.id,
-            createdBy: 'memory learn',
-            createdAt: now,
-            sessionId: target.id,
-          })
-          suggested.push(suggestion)
-          suggestions.push(suggestion)
-        }
-      }
+  private async runMemoryBrainTask(input: MemoryBrainTaskInput): Promise<MemoryBrainTaskResult> {
+    const targets = input.targets.filter(target => target.systemPromptPreset !== 'mini')
+    const skipped = input.targets.length - targets.length
+    if (targets.length === 0) {
+      return { mode: input.mode, processed: 0, created: [], suggested: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'] }
     }
 
-    if (created.length) this.notifyConfigFileChange(workspaceRoot, 'memory/memories.json')
-    if (suggested.length) this.notifyConfigFileChange(workspaceRoot, 'memory/suggestions.json')
-    return { mode, processed: targets.length, created, suggested, skipped, reasons }
+    const sessionIds = targets.map(target => target.id)
+    const taskSession = await this.createSession(input.managed.workspace.id, {
+      name: `Memory brain: ${input.reason}`,
+      model: input.managed.model,
+      llmConnection: input.managed.llmConnection,
+      systemPromptPreset: 'mini',
+      permissionMode: 'allow-all',
+      workingDirectory: input.managed.workspace.rootPath,
+    })
+
+    const modeInstruction = input.mode === 'auto'
+      ? 'Use memory create for only strong durable facts. If uncertain, do not write.'
+      : 'Use memory suggest-from-session/create suggestions only for durable candidates that need review. Do not approve them.'
+    const targetInstruction = sessionIds.length === 1 ? sessionIds[0] : sessionIds.join(', ')
+    const prompt = [
+      'You are the Memory Brain for this workspace.',
+      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool only. Do not edit JSON files directly.',
+      modeInstruction,
+      'Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',
+      'If existing memory already covers the fact, do not create a duplicate.',
+      `Reason: ${input.reason}.`,
+      `Target session id(s): ${targetInstruction}.`,
+      ...(input.explicitPrompt ? [`Explicit remember prompt: ${input.explicitPrompt}`] : []),
+      'Finish with a concise summary: processed, created ids, suggested ids, skipped count, reasons.',
+    ].join('\n')
+
+    await this.sendMessage(taskSession.id, prompt)
+    return {
+      mode: input.mode,
+      processed: targets.length,
+      created: [],
+      suggested: [],
+      skipped,
+      reasons: [`memory brain task started: ${taskSession.id}`],
+    }
+  }
+
+  private async learnMemoryOnStop(managed: ManagedSession, lastFinalAssistantMessageId: string | undefined): Promise<void> {
+    if (!lastFinalAssistantMessageId) return
+    if (managed.systemPromptPreset === 'mini') return
+    const memoryAutomationMode = resolveMemoryAutomationMode(loadPreferences())
+    if (memoryAutomationMode === 'off') return
+    await this.runMemoryBrainTask({ managed, targets: [managed], mode: memoryAutomationMode, reason: 'session_complete' })
   }
 
   private resolveMemoryLearnTargets(managed: ManagedSession, target: string): LearnMemorySession[] {
@@ -7183,67 +7133,6 @@ export class SessionManager implements ISessionManager {
     const session = this.sessions.get(normalized)
     if (!session) throw new Error(`Session not found: ${normalized}`)
     return [session]
-  }
-
-  private maybeAutoSuggestMemory(managed: ManagedSession, lastFinalAssistantMessageId: string | undefined): void {
-    if (!lastFinalAssistantMessageId) return
-    if (managed.systemPromptPreset === 'mini') return
-    const memoryAutomationMode = resolveMemoryAutomationMode(loadPreferences())
-    if (memoryAutomationMode === 'off') return
-
-    const workspaceRoot = managed.workspace.rootPath
-    const previous = getMemoryAutoSuggestSessionState(workspaceRoot, managed.id)
-    if (previous?.lastScannedMessageId === lastFinalAssistantMessageId) return
-    const lastRunMs = previous?.lastRunAt ? Date.parse(previous.lastRunAt) : 0
-    if (lastRunMs && Date.now() - lastRunMs < MEMORY_AUTO_SUGGEST_COOLDOWN_MS) return
-
-    const previousHashes = new Set(previous?.contentHashes ?? [])
-    const memories = loadMemories(workspaceRoot)
-    const suggestions = loadMemorySuggestions(workspaceRoot)
-    const candidates = buildMemoryCandidates(managed.messages, managed.id, managed.name)
-      .filter(candidate => !previousHashes.has(candidate.hash))
-      .filter(candidate => !hasSimilarMemoryOrSuggestion(memories, suggestions, { type: candidate.type, title: candidate.title, content: candidate.content, sourceSessionId: managed.id }))
-      .slice(0, 3)
-
-    const now = new Date().toISOString()
-    if (candidates.length === 0) {
-      updateMemoryAutoSuggestSessionState(workspaceRoot, { sessionId: managed.id, lastScannedMessageId: lastFinalAssistantMessageId, lastRunAt: now, contentHashes: [...previousHashes] })
-      return
-    }
-
-    const nextHashes = new Set(previousHashes)
-    for (const candidate of candidates) {
-      if (memoryAutomationMode === 'auto') {
-        createMemory(workspaceRoot, {
-          type: candidate.type,
-          scope: 'session',
-          title: candidate.title,
-          content: candidate.content,
-          confidence: candidate.confidence,
-          sourceSessionId: managed.id,
-          createdBy: 'auto memory',
-          createdAt: now,
-          sessionId: managed.id,
-        })
-      } else {
-        createMemorySuggestion(workspaceRoot, {
-          type: candidate.type,
-          scope: 'session',
-          title: candidate.title,
-          content: candidate.content,
-          confidence: candidate.confidence,
-          reason: 'Automatically suggested from completed session; review before approval.',
-          sourceSessionId: managed.id,
-          createdBy: 'auto memory suggestion',
-          createdAt: now,
-          sessionId: managed.id,
-        })
-      }
-      nextHashes.add(candidate.hash)
-    }
-    updateMemoryAutoSuggestSessionState(workspaceRoot, { sessionId: managed.id, lastScannedMessageId: lastFinalAssistantMessageId, lastRunAt: now, contentHashes: [...nextHashes] })
-    this.notifyConfigFileChange(workspaceRoot, memoryAutomationMode === 'auto' ? 'memory/memories.json' : 'memory/suggestions.json')
-    this.notifyConfigFileChange(workspaceRoot, 'memory/auto-suggest-state.json')
   }
 
   /**

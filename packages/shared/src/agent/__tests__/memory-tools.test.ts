@@ -65,7 +65,7 @@ describe('memory tool', () => {
     expect(search).toContain('sourceSessionId=session-1')
   })
 
-  it('handles mutations and candidates', async () => {
+  it('handles mutations and brain learning', async () => {
     expect((await executeMemoryCommand('create {"type":"project_decision","scope":"workspace","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Created memory')
     expect((await executeMemoryCommand('update mem-1 {"title":"Next"}', fns())).content[0].text).toContain('Next')
     expect((await executeMemoryCommand('delete mem-1', fns())).content[0].text).toContain('Deleted memory mem-1')
@@ -96,13 +96,13 @@ describe('memory tool', () => {
     expect(scanResult.content[0].text).toContain('learn is not available')
   })
 
-  it('formats multiple and empty suggestion results', async () => {
+  it('formats multiple and empty brain suggestion results', async () => {
     const multiple = fns()
     multiple.suggestFromSession = async () => [suggestion, { ...suggestion, id: 'sug-2', title: 'Second' }]
     expect((await executeMemoryCommand('suggest-from-session session-1', multiple)).content[0].text).toContain('Created 2 memory suggestions')
 
     const empty = fns()
     empty.suggestFromSession = async () => []
-    expect((await executeMemoryCommand('suggest-from-session session-1', empty)).content[0].text).toBe('No strong memory candidates found')
+    expect((await executeMemoryCommand('suggest-from-session session-1', empty)).content[0].text).toBe('Memory Brain returned no pending suggestions')
   })
 })

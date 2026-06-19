@@ -110,7 +110,8 @@ Legacy internal camelCase payloads are normalized into this contract before hook
 - `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
 - `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
 - `validation_summary_on_stop` - captures stop validation context.
-- `memory_learn_on_stop` - delegates session completion memory learning to the memory engine when `Stop` metadata marks session completion.
+- `memory_learn_on_stop` - starts a Memory Brain mini-agent task when `Stop` metadata marks session completion.
+- `memory_explicit_remember_on_prompt` - detects explicit remember requests on `UserPromptSubmit` for the Memory Brain flow.
 
 ## Custom Hook Schema
 

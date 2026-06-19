@@ -7,7 +7,8 @@ export const BUILTIN_HOOKS: BuiltinHookDefinition[] = [
   { id: 'workspace_boundary_guard', name: 'Workspace boundary guard', description: 'Flags risky workspace-boundary operations before tool execution.', event: 'PreToolUse', mode: 'ask', source: 'builtin', scope: 'workspace', order: 40 },
   { id: 'tool_audit_log', name: 'Tool audit log', description: 'Records tool execution decisions, duration, and errors.', event: 'PostToolUse', mode: 'observe', source: 'builtin', scope: 'workspace', order: 900 },
   { id: 'validation_summary_on_stop', name: 'Validation summary on stop', description: 'Captures validation/test summary context before an agent turn stops.', event: 'Stop', mode: 'observe', source: 'builtin', scope: 'session', order: 910 },
-  { id: 'memory_learn_on_stop', name: 'Memory learn on stop', description: 'Delegates memory learning when stop metadata marks session completion.', event: 'Stop', mode: 'mutate', source: 'builtin', scope: 'workspace', order: 920 },
+  { id: 'memory_learn_on_stop', name: 'Memory learn on stop', description: 'Delegates completed sessions to the Memory Brain agent task.', event: 'Stop', mode: 'mutate', source: 'builtin', scope: 'workspace', order: 920 },
+  { id: 'memory_explicit_remember_on_prompt', name: 'Memory explicit remember on prompt', description: 'Detects explicit remember requests and delegates them to the Memory Brain flow.', event: 'UserPromptSubmit', mode: 'mutate', source: 'builtin', scope: 'workspace', order: 930 },
 ]
 
 export function getBuiltinHook(id: string): BuiltinHookDefinition | undefined {

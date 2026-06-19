@@ -6,13 +6,13 @@ Use the `memory` tool to manage persistent, scoped workspace memory. Product rul
 
 Memory is agent-managed with user oversight. When a task depends on prior project decisions, user preferences, workflows, or past error fixes, run `memory search <query>` before answering.
 
-- If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly.
-- If you infer a possible learning from a session, use `memory suggest-from-session <sessionId>` unless the user explicitly asked to save it.
+- If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly after checking for duplicates and secrets.
+- If learning is inferred from a session, use `memory suggest-from-session <sessionId>` or `memory learn ...`; these commands delegate review to the Memory Brain mini-agent task.
 - Automatic memory follows the workspace preference `memoryAutomationMode`:
-  - `auto` saves strong completed-session candidates directly as curated memory.
-  - `review` queues strong candidates as pending suggestions.
+  - `auto` lets the Memory Brain mini-agent save only strong durable completed-session learnings.
+  - `review` lets the Memory Brain mini-agent queue durable learnings as pending suggestions.
   - `off` skips automatic memory.
-- Default is `auto`. Legacy `autoSuggestMemories: false` maps to `off`.
+- Default is `auto`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, create a suggestion instead of approved memory.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
 - Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, hygiene, and working-memory changes.
@@ -26,8 +26,8 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory create <json>` — create an approved memory for explicit user requests.
 - `memory update <memoryId> <json>` — update one approved memory.
 - `memory delete <memoryId>` — delete one approved memory.
-- `memory suggest-from-session <sessionId>` — create up to 3 pending candidates from strong session signals.
-- `memory learn <current|recent|all|sessionId>` — manually learn from current, recent, all, or one specific session for strong memory candidates.
+- `memory suggest-from-session <sessionId>` — ask the Memory Brain mini-agent to review one session and queue pending suggestions when useful.
+- `memory learn <current|recent|all|sessionId>` — start a Memory Brain mini-agent task for current, recent, all, or one specific session.
 - `memory approve <suggestionId>` — move a pending suggestion into approved memory.
 - `memory reject <suggestionId>` — reject a pending suggestion.
 - `memory hygiene` — list duplicate/stale/conflict cleanup candidates without mutating records.
@@ -81,8 +81,8 @@ Use manual learning when automatic completion learning may have missed something
 - `memory learn recent` learns from recent loaded workspace sessions.
 - `memory learn all` learns from up to 100 workspace sessions, including sessions loaded from disk.
 - `memory learn <sessionId>` learns from one session.
-- In `auto` mode, strong learning candidates are saved as curated memory.
-- In `review` mode, strong learning candidates become pending suggestions.
+- In `auto` mode, the Memory Brain saves only strong durable learnings as curated memory.
+- In `review` mode, the Memory Brain queues durable learnings as pending suggestions.
 - In `off` mode, manual learning is still allowed and queues suggestions (`off-as-review`) because it is an explicit user action.
 - Duplicate, secret, and low-confidence guards still apply.
 - Tool output is a stable summary: `processed`, `created`, `suggested`, `skipped`, `mode`, created ids, suggested ids, and the first skip reasons.
@@ -91,9 +91,9 @@ Use manual learning when automatic completion learning may have missed something
 
 Use suggestions when you think something may be worth remembering but the user has not explicitly approved it.
 
-- `suggest-from-session` and automatic memory look for strong decision, preference, workflow, or error-resolution signals.
-- It returns `No strong memory candidates found` when the session has no durable signal.
-- In `review` mode, pending candidates are not curated memory until approved. In `auto` mode, strong candidates are saved directly.
+- `suggest-from-session` and automatic memory delegate judgment to the Memory Brain mini-agent; regex/keyword extraction is not used.
+- It returns `Memory Brain returned no pending suggestions` when no durable suggestion is queued.
+- In `review` mode, pending suggestions are not curated memory until approved. In `auto` mode, only strong durable learnings are saved directly.
 - `approve` promotes a suggestion to memory with a fresh `mem-*` id.
 - `reject` keeps the audit trail but does not create memory.
 
@@ -116,7 +116,7 @@ Working memory is a lightweight layer for short-lived session/day notes. It stay
 
 ## Hygiene
 
-Use `memory hygiene` when memory feels noisy, duplicated, or outdated. It reports cleanup candidates only. Use `merge` for duplicates, `mark-stale` for old facts, and `refresh` for updated facts. `delete` is still available but should be reserved for clearly unwanted records.
+Use `memory hygiene` when memory feels noisy, duplicated, or outdated. It reports cleanup suggestions only. Use `merge` for duplicates, `mark-stale` for old facts, and `refresh` for updated facts. `delete` is still available but should be reserved for clearly unwanted records.
 
 ## Retrieval Guidance
 

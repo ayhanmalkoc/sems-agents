@@ -80,7 +80,7 @@ function formatSuggestion(suggestion: MemorySuggestion): string {
   return `- ${parts.join(' ')}\n  ${content}`
 }
 function formatSuggestions(suggestions: MemorySuggestion[]): string {
-  if (suggestions.length === 0) return 'No strong memory candidates found'
+  if (suggestions.length === 0) return 'Memory Brain returned no pending suggestions'
   return suggestions.map(formatSuggestion).join('\n')
 }
 
@@ -194,7 +194,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       if (!sessionId) return failure('suggest-from-session requires a session id')
       const result = await fns.suggestFromSession(sessionId)
       const suggestions = Array.isArray(result) ? result : [result]
-      if (suggestions.length === 0) return success('No strong memory candidates found')
+      if (suggestions.length === 0) return success('Memory Brain returned no pending suggestions')
       return success(`Created ${suggestions.length} memory suggestion${suggestions.length === 1 ? '' : 's'}\n${formatSuggestions(suggestions)}`)
     }
     if (verb === 'learn') {

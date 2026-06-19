@@ -12,7 +12,6 @@ function ensureDir(workspaceRootPath: string): void { mkdirSync(hooksDir(workspa
 
 const LEGACY_BUILTIN_HOOK_IDS: Record<string, string> = {
   validation_summary_on_turn_stop: 'validation_summary_on_stop',
-  memory_learn_on_session_complete: 'memory_learn_on_stop',
 }
 
 function normalizeBuiltinHookId(id: string): string {
