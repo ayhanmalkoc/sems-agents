@@ -1,8 +1,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import ReactFlow, { Background, Controls, Handle, MiniMap, Position, type Edge, type Node, type NodeProps } from 'reactflow'
-import 'reactflow/dist/style.css'
-import { Brain, Check, ChevronDown, ChevronRight, RotateCcw, RotateCw, Search, Sparkles, Trash2, X } from 'lucide-react'
+import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
+import { Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -187,83 +186,45 @@ function memoryPreview(content: string, max = 72) {
   return compact.length > max ? `${compact.slice(0, max)}…` : compact
 }
 
-function MemoryNode({ data }: NodeProps<{ memory: MemoryRecord; selected: boolean }>) {
-  const memory = data.memory
-  return (
-    <div className="relative flex items-center gap-2 rounded-full px-1 py-1">
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-primary/40" />
-      <span className={cn('h-3 w-3 rounded-full bg-primary/70 shadow-[0_0_18px_rgba(99,102,241,0.35)] transition', data.selected && 'scale-125 bg-primary shadow-[0_0_28px_rgba(99,102,241,0.55)]')} />
-      <div className={cn('max-w-40 truncate rounded-full border bg-background/90 px-3 py-1.5 text-xs font-semibold text-foreground/80 shadow-sm transition', data.selected ? 'border-primary/60 text-foreground shadow-primary/10' : 'border-border/70 hover:border-primary/35')}>
-        {memory.title || memory.id}
-      </div>
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/40" />
-    </div>
-  )
-}
+type MemoryGraphElements = { elements: ElementDefinition[]; memoryById: Map<string, MemoryRecord> }
 
-function CenterMemoryNode() {
-  return (
-    <div className="flex h-32 w-32 items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-center shadow-lg shadow-primary/10">
-      <div>
-        <Brain className="mx-auto h-5 w-5 text-primary" />
-        <div className="mt-2 text-xs font-semibold text-foreground">Workspace memory</div>
-      </div>
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/50" />
-    </div>
-  )
-}
-
-function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], activeId: string, rotation: number): { nodes: Node[]; edges: Edge[] } {
+function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[]): MemoryGraphElements {
   const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
-  const types = Array.from(new Set(mapMemories.map(memory => memory.type || 'memory'))).sort()
-  const typeIndex = new Map(types.map((type, index) => [type, index]))
-  const typeCounts = new Map<string, number>()
-  const nodeIds = new Set(mapMemories.map(memory => memory.id))
-  const nodes: Node[] = [{ id: '__workspace_memory__', type: 'center', position: { x: 0, y: 0 }, data: {}, draggable: true, selectable: true }]
-  for (const memory of mapMemories) {
-    const type = memory.type || 'memory'
-    const clusterIndex = typeIndex.get(type) ?? 0
-    const clusterCount = Math.max(types.length, 1)
-    const withinTypeIndex = typeCounts.get(type) ?? 0
-    typeCounts.set(type, withinTypeIndex + 1)
-    const baseAngle = (clusterIndex / clusterCount) * Math.PI * 2 - Math.PI / 2 + rotation
-    const spread = Math.min(1.05, Math.PI / Math.max(clusterCount, 2))
-    const offset = ((withinTypeIndex % 6) - 2.5) * (spread / 5)
-    const ring = 360 + Math.floor(withinTypeIndex / 6) * 230 + (withinTypeIndex % 2) * 72
-    const angle = baseAngle + offset
-    nodes.push({
-      id: memory.id,
-      type: 'memory',
-      position: { x: Math.round(Math.cos(angle) * ring), y: Math.round(Math.sin(angle) * ring) },
-      data: { memory, selected: memory.id === activeId },
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
-    })
-  }
-  const edges: Edge[] = mapMemories.map(memory => ({ id: `core-${memory.id}`, source: '__workspace_memory__', target: memory.id, type: 'smoothstep', className: '!stroke-primary/15' }))
+  const memoryById = new Map(mapMemories.map(memory => [memory.id, memory]))
+  const nodeIds = new Set(memoryById.keys())
+  const elements: ElementDefinition[] = [
+    { data: { id: '__workspace_memory__', label: 'Workspace memory', kind: 'center' }, classes: 'center' },
+    ...mapMemories.map(memory => ({
+      data: { id: memory.id, label: memory.title || memory.id, type: memory.type || 'memory', status: memory.status ?? 'active' },
+      classes: cn('memory', memory.status === 'stale' && 'stale'),
+    })),
+  ]
   const seen = new Set<string>()
-  const addEdge = (source: string, target: string, label: string) => {
+  const addEdge = (source: string, target: string, relation: string, weight = 1) => {
     if (source === target || !nodeIds.has(source) || !nodeIds.has(target)) return
     const key = [source, target].sort().join('::')
     if (seen.has(key)) return
     seen.add(key)
-    edges.push({ id: `${label}-${key}`, source, target, label, type: 'smoothstep', className: '!stroke-border', labelStyle: { fill: 'currentColor', fontSize: 10, opacity: 0.55 } })
+    elements.push({ data: { id: `${relation}-${key}`, source, target, relation, weight }, classes: relation })
+  }
+  for (const memory of mapMemories) {
+    elements.push({ data: { id: `core-${memory.id}`, source: '__workspace_memory__', target: memory.id, relation: 'core', weight: 0.25 }, classes: 'core' })
   }
   for (let i = 0; i < mapMemories.length; i += 1) {
     for (let j = i + 1; j < mapMemories.length; j += 1) {
       const left = mapMemories[i]
       const right = mapMemories[j]
       const tagOverlap = (left.tags ?? []).some(tag => (right.tags ?? []).includes(tag))
-      if (tagOverlap) addEdge(left.id, right.id, 'tag')
-      else if (left.type && left.type === right.type) addEdge(left.id, right.id, 'type')
-      else if (left.sourceSessionId && left.sourceSessionId === right.sourceSessionId) addEdge(left.id, right.id, 'session')
-      if (edges.length > mapMemories.length * 3) break
+      if (tagOverlap) addEdge(left.id, right.id, 'tag', 1.4)
+      else if (left.type && left.type === right.type) addEdge(left.id, right.id, 'type', 0.9)
+      else if (left.sourceSessionId && left.sourceSessionId === right.sourceSessionId) addEdge(left.id, right.id, 'session', 0.7)
+      if (elements.length > mapMemories.length * 4) break
     }
   }
   for (const item of hygieneItems) {
-    if (item.relatedMemoryId) addEdge(item.memoryId, item.relatedMemoryId, item.kind)
+    if (item.relatedMemoryId) addEdge(item.memoryId, item.relatedMemoryId, item.kind, 1.6)
   }
-  return { nodes, edges }
+  return { elements, memoryById }
 }
 
 function FloatingMemoryDetail({ memory, expanded, workspaceRoot, onDelete, onRefresh, onClose, onExpand }: { memory: MemoryRecord; expanded: boolean; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void; onClose: () => void; onExpand: () => void }) {
@@ -295,38 +256,66 @@ function FloatingMemoryDetail({ memory, expanded, workspaceRoot, onDelete, onRef
   )
 }
 
-const memoryNodeTypes = { memory: MemoryNode, center: CenterMemoryNode }
-
 function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null)
+  const cyRef = React.useRef<Core | null>(null)
   const [previewId, setPreviewId] = React.useState('')
   const [expandedId, setExpandedId] = React.useState('')
-  const [rotation, setRotation] = React.useState(0)
+  const { elements, memoryById } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems), [memories, hygieneItems])
   React.useEffect(() => {
-    if (previewId && !memories.some(memory => memory.id === previewId)) setPreviewId('')
-    if (expandedId && !memories.some(memory => memory.id === expandedId)) setExpandedId('')
-  }, [memories, previewId, expandedId])
+    if (previewId && !memoryById.has(previewId)) setPreviewId('')
+    if (expandedId && !memoryById.has(expandedId)) setExpandedId('')
+  }, [memoryById, previewId, expandedId])
+  React.useEffect(() => {
+    if (!containerRef.current || !elements.length) return
+    const cy = cytoscape({
+      container: containerRef.current,
+      elements,
+      minZoom: 0.25,
+      maxZoom: 2.5,
+      wheelSensitivity: 0.18,
+      style: [
+        { selector: 'node', style: { width: 10, height: 10, 'background-color': 'hsl(var(--primary))', 'border-width': 2, 'border-color': 'rgba(255,255,255,0.55)', label: 'data(label)', color: 'hsl(var(--foreground))', 'font-size': 10, 'text-opacity': 0.72, 'text-valign': 'bottom', 'text-margin-y': 8, 'text-background-color': 'hsl(var(--background))', 'text-background-opacity': 0.72, 'text-background-padding': 3, 'text-background-shape': 'roundrectangle', 'overlay-opacity': 0 } },
+        { selector: 'node.center', style: { width: 34, height: 34, 'background-color': 'rgba(99,102,241,0.22)', 'border-width': 2, 'border-color': 'hsl(var(--primary))', 'font-size': 11, 'font-weight': 700, 'text-margin-y': 12 } },
+        { selector: 'node.stale', style: { 'background-color': 'rgba(245,158,11,0.9)' } },
+        { selector: 'node.active', style: { width: 16, height: 16, 'border-width': 4, 'border-color': 'hsl(var(--primary))', 'text-opacity': 1 } },
+        { selector: 'edge', style: { width: 1, opacity: 0.22, 'line-color': 'rgba(148,163,184,0.7)', 'curve-style': 'haystack', 'haystack-radius': 0.5 } },
+        { selector: 'edge.core', style: { opacity: 0.12, width: 1, 'line-color': 'hsl(var(--primary))' } },
+        { selector: 'edge.duplicate, edge.stale', style: { opacity: 0.45, width: 1.5, 'line-color': 'rgba(245,158,11,0.85)' } },
+      ] as any,
+    })
+    cyRef.current = cy
+    cy.layout({ name: 'cose', animate: true, animationDuration: 650, fit: true, padding: 80, randomize: true, nodeRepulsion: 160000, idealEdgeLength: 180, edgeElasticity: 80, nestingFactor: 1.2, gravity: 0.25, numIter: 900 } as cytoscape.LayoutOptions).run()
+    cy.on('mouseover tap', 'node.memory', event => {
+      const id = event.target.id()
+      setPreviewId(id)
+      setExpandedId('')
+      cy.nodes().removeClass('active')
+      event.target.addClass('active')
+    })
+    cy.on('tap', event => {
+      if (event.target === cy) {
+        setPreviewId('')
+        setExpandedId('')
+        cy.nodes().removeClass('active')
+      }
+    })
+    return () => { cy.destroy(); cyRef.current = null }
+  }, [elements])
   const activeId = expandedId || previewId
-  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, activeId, rotation), [memories, hygieneItems, activeId, rotation])
-  const activeMemory = memories.find(memory => memory.id === activeId)
+  const activeMemory = activeId ? memoryById.get(activeId) : undefined
   if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
   return (
     <div className="p-3">
       <div className="relative h-[640px] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_center,rgba(125,125,125,0.08),transparent_55%)]">
-        <div className="absolute left-4 top-4 z-10 flex gap-1 rounded-full border border-border/70 bg-background/90 p-1 shadow-sm backdrop-blur">
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate left" onClick={() => setRotation(value => value - Math.PI / 12)}><RotateCcw className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate right" onClick={() => setRotation(value => value + Math.PI / 12)}><RotateCw className="h-4 w-4" /></Button>
-        </div>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={memoryNodeTypes} fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable nodesConnectable={false} elementsSelectable onNodeMouseEnter={(_, node) => { if (node.id !== '__workspace_memory__') { setPreviewId(node.id); setExpandedId('') } }} onNodeClick={(_, node) => { if (node.id !== '__workspace_memory__') { setPreviewId(node.id); setExpandedId('') } }} onPaneClick={() => { setPreviewId(''); setExpandedId('') }} proOptions={{ hideAttribution: true }}>
-          <Background gap={28} size={1} />
-          <Controls showInteractive={false} position="bottom-left" />
-          <MiniMap pannable zoomable nodeStrokeWidth={3} position="bottom-right" className="!bg-background/95" />
-        </ReactFlow>
+        <div ref={containerRef} className="h-full w-full" />
         {activeMemory && <FloatingMemoryDetail memory={activeMemory} expanded={expandedId === activeMemory.id} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} onClose={() => { setPreviewId(''); setExpandedId('') }} onExpand={() => setExpandedId(activeMemory.id)} />}
       </div>
       {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
     </div>
   )
 }
+
 function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: MemorySuggestion; onApprove: (id: string) => void; onReject: (id: string) => void }) {
   const pending = suggestion.status === 'pending'
   const decidedLabel = suggestion.status === 'approved' ? 'Approved' : 'Rejected'
