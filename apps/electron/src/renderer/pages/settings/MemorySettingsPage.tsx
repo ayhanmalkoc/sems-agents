@@ -92,7 +92,7 @@ function aiButton(label: React.ReactNode, variant: 'default' | 'outline' = 'outl
   return <Button size="sm" variant={variant}><Sparkles className="h-3.5 w-3.5" />{label}</Button>
 }
 
-function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: MemoryRecord; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
+function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = React.useState(false)
   return (
     <div className={cn('group rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm transition hover:border-primary/25 hover:bg-foreground/[0.015]', expanded && 'border-primary/30 bg-foreground/[0.018]')}>
@@ -106,13 +106,6 @@ function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: Me
             <p className={cn('mt-2 text-sm leading-6 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-2')}>{memory.content}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100" onClick={event => event.stopPropagation()}>
-            {workspaceRoot && (
-              <EditPopover
-                trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>}
-                onInlineComplete={onRefresh}
-                {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)}
-              />
-            )}
             <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/40 hover:text-destructive" onClick={() => onDelete(memory.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -304,6 +297,8 @@ export default function MemorySettingsPage() {
     .sort((left, right) => (left.status === 'pending' ? 0 : 1) - (right.status === 'pending' ? 0 : 1))
   const hygieneItems = React.useMemo(() => buildHygieneItems(memories), [memories])
   const staleCount = memories.filter(memory => memory.status === 'stale').length
+  const visibleMemoryCards = visibleMemories.slice(0, 10)
+  const hiddenMemoryCount = Math.max(visibleMemories.length - visibleMemoryCards.length, 0)
   const activeSuggestions = visibleSuggestions.filter(suggestion => suggestion.status === 'pending')
   const suggestionHistory = visibleSuggestions.filter(suggestion => suggestion.status !== 'pending')
   const typeOptions = selectOptions(memories.map(item => item.type))
@@ -351,15 +346,16 @@ export default function MemorySettingsPage() {
                   <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('settings.memory.searchPlaceholder')} className="pl-9" />
                 </div>
                 <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={filters.type} onChange={event => setFilters(value => ({ ...value, type: event.target.value }))}>
-                  {typeOptions.map(value => <option key={value} value={value}>type: {value}</option>)}
+                  {typeOptions.map(value => <option key={value} value={value}>{t('settings.memory.filter.type')}: {value}</option>)}
                 </select>
                 <select className="h-8 rounded-md border border-border bg-background px-2 text-xs" value={filters.scope} onChange={event => setFilters(value => ({ ...value, scope: event.target.value }))}>
-                  {scopeOptions.map(value => <option key={value} value={value}>scope: {value}</option>)}
+                  {scopeOptions.map(value => <option key={value} value={value}>{t('settings.memory.filter.scope')}: {value}</option>)}
                 </select>
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
               </div>
-              <div className={cn('grid gap-3 p-3 lg:grid-cols-2', loading && 'opacity-60')}>
-                {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
+              <div className={cn('space-y-3 p-3', loading && 'opacity-60')}>
+                {visibleMemoryCards.length ? visibleMemoryCards.map(memory => <MemoryCard key={memory.id} memory={memory} onDelete={deleteOne} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
+                {hiddenMemoryCount > 0 && <div className="text-center text-xs text-foreground/45">{t('settings.memory.moreMemories', { count: hiddenMemoryCount })}</div>}
               </div>
             </SettingsCard>
           </SettingsSection>
