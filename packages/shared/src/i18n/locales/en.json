@@ -1721,8 +1721,6 @@
   "settings.memory.noBrainActivity": "No Memory Brain activity yet.",
   "settings.memory.temporaryNotesDescription": "Temporary notes are scratch context, not durable knowledge.",
   "settings.memory.brainModeTitle": "Brain mode",
-  "settings.memory.brainModeDescription": "Control how Craft learns from completed work. Refresh Memory can still start a review task when automatic learning is off.",
-  "settings.memory.learningMode": "Learning mode",
   "settings.memory.status.stale": "stale",
   "settings.memory.updated": "Updated",
   "settings.memory.learned": "Learned",
@@ -1766,7 +1764,5 @@
   "settings.memory.cleanupSuggestionsTitle": "Cleanup suggestions",
   "settings.memory.temporaryNotesTitle": "Temporary notes",
   "settings.memory.minimalIntro": "Let the Memory Brain manage learning. Use Create or Refresh Memory when you want direct control.",
-  "settings.memory.brainControlTitle": "Memory Brain controls",
-  "settings.memory.brainControlDescription": "Use AI to create or refresh durable workspace memory.",
   "settings.memory.advancedCleanupSummary": "{{attention}} cleanup suggestion(s). Nothing changes until review."
 }

@@ -337,40 +337,18 @@ export default function MemorySettingsPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <PanelHeader title={t('settings.memory.title')} actions={<HeaderMenu route={routes.view.settings('memory')} />} />
+      <PanelHeader
+        title={t('settings.memory.title')}
+        actions={(
+          <div className="flex items-center gap-2">
+            {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />}
+            {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />}
+            <HeaderMenu route={routes.view.settings('memory')} />
+          </div>
+        )}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-          <SettingsSection title={t('settings.memory.title')} description={t('settings.memory.pageDescription')}>
-            <SettingsCard>
-              <SettingsRow
-                label={t('settings.memory.brainControlTitle')}
-                description={t('settings.memory.brainControlDescription')}
-                action={workspaceRoot && (
-                  <div className="flex gap-2">
-                    <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
-                    <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
-                  </div>
-                )}
-              />
-            </SettingsCard>
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.memory.brainModeTitle')} description={t('settings.memory.brainModeDescription')}>
-            <SettingsCard>
-              <SettingsRow label={t('settings.memory.learningMode')} description={t(selectedModeDescriptionKey)}>
-                <SettingsSegmentedControl
-                  value={memoryMode}
-                  onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
-                  options={[
-                    { value: 'auto', label: t('settings.memory.mode.auto') },
-                    { value: 'review', label: t('settings.memory.mode.review') },
-                    { value: 'off', label: t('settings.memory.mode.off') },
-                  ]}
-                />
-              </SettingsRow>
-            </SettingsCard>
-          </SettingsSection>
-
           <SettingsSection title={t('settings.memory.savedMemoriesTitle')} description={t('settings.memory.savedMemoriesDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.edit'))} onInlineComplete={refresh} {...getEditConfig('memory-edit', `${workspaceRoot}::workspace memory`)} />}>
             <SettingsCard className="overflow-hidden">
               <div className="flex flex-wrap items-center gap-2 border-b border-border/60 p-3">
@@ -405,6 +383,17 @@ export default function MemorySettingsPage() {
 
           <SettingsSection title={t('settings.memory.advancedTitle')} description={t('settings.memory.advancedDescription')}>
             <SettingsCard>
+              <SettingsRow label={t('settings.memory.brainModeTitle')} description={t(selectedModeDescriptionKey)}>
+                <SettingsSegmentedControl
+                  value={memoryMode}
+                  onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
+                  options={[
+                    { value: 'auto', label: t('settings.memory.mode.auto') },
+                    { value: 'review', label: t('settings.memory.mode.review') },
+                    { value: 'off', label: t('settings.memory.mode.off') },
+                  ]}
+                />
+              </SettingsRow>
               <SettingsRow
                 label={t('settings.memory.brainActivityTitle')}
                 description={t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: workingNotes.length, reviewed: 0 })}
@@ -418,7 +407,7 @@ export default function MemorySettingsPage() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-foreground">{item.reason}</div>
-                          <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.taskSessionId ?? item.id}</div>
+                          <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} Â· {item.taskSessionId ?? item.id}</div>
                         </div>
                         {badge(item.status)}
                       </div>
