@@ -9,7 +9,7 @@ import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { Input } from '@/components/ui/input'
 import { navigate, routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
-import { SettingsCard, SettingsSection, SettingsSegmentedControl } from '@/components/settings'
+import { SettingsCard, SettingsRow, SettingsSection, SettingsSegmentedControl } from '@/components/settings'
 import { useAppShellContext } from '@/context/AppShellContext'
 
 type MemoryRecord = {
@@ -220,7 +220,7 @@ export default function MemorySettingsPage() {
   const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
   const [brainActivity, setBrainActivity] = React.useState<MemoryBrainActivity[]>([])
   const [loading, setLoading] = React.useState(false)
-  const [advancedOpen, setAdvancedOpen] = React.useState(false)
+  const [advancedOpen, setAdvancedOpen] = React.useState<'activity' | 'cleanup' | 'temporary' | null>(null)
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -340,22 +340,24 @@ export default function MemorySettingsPage() {
       <PanelHeader title={t('settings.memory.title')} actions={<HeaderMenu route={routes.view.settings('memory')} />} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-          <SettingsSection title={t('settings.memory.title')} description={t('settings.memory.pageDescription')} action={workspaceRoot && (
-            <div className="flex gap-2">
-              <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
-              <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
-            </div>
-          )}>
-            <SettingsCard className="p-4 text-sm text-foreground/55">{t('settings.memory.minimalIntro')}</SettingsCard>
+          <SettingsSection title={t('settings.memory.title')} description={t('settings.memory.pageDescription')}>
+            <SettingsCard>
+              <SettingsRow
+                label={t('settings.memory.brainControlTitle')}
+                description={t('settings.memory.brainControlDescription')}
+                action={workspaceRoot && (
+                  <div className="flex gap-2">
+                    <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
+                    <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
+                  </div>
+                )}
+              />
+            </SettingsCard>
           </SettingsSection>
 
           <SettingsSection title={t('settings.memory.brainModeTitle')} description={t('settings.memory.brainModeDescription')}>
-            <SettingsCard className="p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.learningMode')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.currentMode', { mode: modeLabel(memoryMode, t) })}</div>
-                </div>
+            <SettingsCard>
+              <SettingsRow label={t('settings.memory.learningMode')} description={t(selectedModeDescriptionKey)}>
                 <SettingsSegmentedControl
                   value={memoryMode}
                   onValueChange={value => void updateMemoryMode(value as MemoryAutomationMode)}
@@ -365,8 +367,7 @@ export default function MemorySettingsPage() {
                     { value: 'off', label: t('settings.memory.mode.off') },
                   ]}
                 />
-              </div>
-              <p className="mt-3 text-xs text-foreground/50">{t(selectedModeDescriptionKey)}</p>
+              </SettingsRow>
             </SettingsCard>
           </SettingsSection>
 
@@ -403,63 +404,54 @@ export default function MemorySettingsPage() {
           )}
 
           <SettingsSection title={t('settings.memory.advancedTitle')} description={t('settings.memory.advancedDescription')}>
-            <SettingsCard className="overflow-hidden">
-              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/[0.02]" onClick={() => setAdvancedOpen(value => !value)}>
-                <span className="text-foreground/45">{advancedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">{t('settings.memory.advancedTitle')}</div>
-                  <div className="text-xs text-foreground/45">{t('settings.memory.advancedSummary', { tasks: brainActivity.length, attention: attentionCount, notes: workingNotes.length })}</div>
+            <SettingsCard>
+              <SettingsRow
+                label={t('settings.memory.brainActivityTitle')}
+                description={t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: workingNotes.length, reviewed: 0 })}
+                onClick={() => setAdvancedOpen(advancedOpen === 'activity' ? null : 'activity')}
+                action={advancedOpen === 'activity' ? <ChevronDown className="h-4 w-4 text-foreground/40" /> : <ChevronRight className="h-4 w-4 text-foreground/40" />}
+              />
+              {advancedOpen === 'activity' && (
+                <div className="space-y-2 border-t border-border/60 p-3">
+                  {brainActivity.slice(0, 5).map(item => (
+                    <div key={item.id} className="rounded-xl border border-border/60 bg-background p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-foreground">{item.reason}</div>
+                          <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.taskSessionId ?? item.id}</div>
+                        </div>
+                        {badge(item.status)}
+                      </div>
+                      {(item.summary || item.error) && <p className="mt-2 text-xs text-foreground/55">{item.error ?? item.summary}</p>}
+                    </div>
+                  ))}
+                  {brainActivity.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-sm text-foreground/50">{t('settings.memory.noBrainActivity')}</div>}
                 </div>
-                {attentionCount > 0 && <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">{attentionCount}</span>}
-              </button>
-              {advancedOpen && (
-                <div className="space-y-4 border-t border-border/60 p-3">
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.brainActivityTitle')}</div>
-                    {brainActivity.slice(0, 5).map(item => (
-                      <div key={item.id} className="rounded-xl border border-border/60 bg-background p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-foreground">{item.reason}</div>
-                            <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.taskSessionId ?? item.id}</div>
-                          </div>
-                          {badge(item.status)}
-                        </div>
-                        {(item.summary || item.error) && <p className="mt-2 text-xs text-foreground/55">{item.error ?? item.summary}</p>}
-                      </div>
-                    ))}
-                    {brainActivity.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-sm text-foreground/50">{t('settings.memory.noBrainActivity')}</div>}
+              )}
+              <SettingsRow
+                label={t('settings.memory.cleanupSuggestionsTitle')}
+                description={t('settings.memory.advancedCleanupSummary', { attention: attentionCount })}
+                onClick={() => setAdvancedOpen(advancedOpen === 'cleanup' ? null : 'cleanup')}
+                action={<div className="flex items-center gap-2">{attentionCount > 0 && <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">{attentionCount}</span>}{advancedOpen === 'cleanup' ? <ChevronDown className="h-4 w-4 text-foreground/40" /> : <ChevronRight className="h-4 w-4 text-foreground/40" />}</div>}
+              />
+              {advancedOpen === 'cleanup' && (
+                <div className="space-y-3 border-t border-border/60 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</p>
+                    {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}
                   </div>
-
-                  {attentionCount > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.cleanupSuggestionsTitle')}</div>
-                          <div className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</div>
-                        </div>
-                        {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{duplicateItems.length}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.duplicates')}</div></div>
-                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{staleItems.length + staleCount}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.stale')}</div></div>
-                        <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">0</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.conflicts')}</div></div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-foreground/[0.025] p-3">
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-foreground/35">{t('settings.memory.temporaryNotesTitle')}</div>
-                      <p className="text-xs text-foreground/50">{t('settings.memory.temporaryNotesDescription')}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button>
-                      <Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button>
-                    </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{duplicateItems.length}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.duplicates')}</div></div>
+                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{staleItems.length + staleCount}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.stale')}</div></div>
+                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">0</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.conflicts')}</div></div>
                   </div>
                 </div>
               )}
+              <SettingsRow
+                label={t('settings.memory.temporaryNotesTitle')}
+                description={t('settings.memory.temporaryNotesDescription')}
+                action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button><Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button></div>}
+              />
             </SettingsCard>
           </SettingsSection>
         </div>

@@ -1765,5 +1765,8 @@
   "settings.memory.advancedSummary": "{{tasks}} tasks · {{attention}} needs attention · {{notes}} temporary notes",
   "settings.memory.cleanupSuggestionsTitle": "Cleanup suggestions",
   "settings.memory.temporaryNotesTitle": "Temporary notes",
-  "settings.memory.minimalIntro": "Let the Memory Brain manage learning. Use Create or Refresh Memory when you want direct control."
+  "settings.memory.minimalIntro": "Let the Memory Brain manage learning. Use Create or Refresh Memory when you want direct control.",
+  "settings.memory.brainControlTitle": "Memory Brain controls",
+  "settings.memory.brainControlDescription": "Use AI to create or refresh durable workspace memory.",
+  "settings.memory.advancedCleanupSummary": "{{attention}} cleanup suggestion(s). Nothing changes until review."
 }
