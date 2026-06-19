@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactFlow, { Background, Controls, Handle, MiniMap, Position, type Edge, type Node, type NodeProps } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Brain, Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
+import { Brain, Check, ChevronDown, ChevronRight, RotateCcw, RotateCw, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -190,16 +190,17 @@ function memoryPreview(content: string, max = 72) {
 function MemoryNode({ data }: NodeProps<{ memory: MemoryRecord; selected: boolean }>) {
   const memory = data.memory
   return (
-    <div className={cn('w-56 rounded-2xl border bg-background/95 p-3 text-left shadow-sm transition duration-150', data.selected ? 'scale-[1.03] border-primary/70 shadow-lg shadow-primary/10' : 'border-border/80 hover:border-primary/35')}>
+    <div className="group relative">
+      <div className={cn('max-w-44 rounded-full border bg-background/95 px-3 py-2 text-left shadow-sm transition duration-150', data.selected ? 'scale-[1.04] border-primary/70 shadow-lg shadow-primary/10' : 'border-border/80 hover:border-primary/35')}>
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-primary/40" />
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="truncate text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
-          <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-foreground/55">{memoryPreview(memory.content)}</div>
-        </div>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1">{badge(memory.type)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
+      <div className="truncate text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
       <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-primary/40" />
+      </div>
+      <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-64 -translate-x-1/2 rounded-2xl border border-border/80 bg-background/95 p-3 text-left shadow-xl group-hover:block">
+        <div className="text-xs font-semibold text-foreground">{memory.title || memory.id}</div>
+        <div className="mt-1 line-clamp-3 text-[11px] leading-4 text-foreground/60">{memoryPreview(memory.content, 120)}</div>
+        <div className="mt-2 flex flex-wrap gap-1">{badge(memory.type)}{badge(memory.status ?? 'active')}{memory.confidence && badge(memory.confidence)}</div>
+      </div>
     </div>
   )
 }
@@ -216,23 +217,23 @@ function CenterMemoryNode() {
   )
 }
 
-function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], selectedId: string): { nodes: Node[]; edges: Edge[] } {
+function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[], selectedId: string, rotation: number): { nodes: Node[]; edges: Edge[] } {
   const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
   const types = Array.from(new Set(mapMemories.map(memory => memory.type || 'memory'))).sort()
   const typeIndex = new Map(types.map((type, index) => [type, index]))
   const typeCounts = new Map<string, number>()
   const nodeIds = new Set(mapMemories.map(memory => memory.id))
-  const nodes: Node[] = [{ id: '__workspace_memory__', type: 'center', position: { x: 0, y: 0 }, data: {}, draggable: false, selectable: false }]
+  const nodes: Node[] = [{ id: '__workspace_memory__', type: 'center', position: { x: 0, y: 0 }, data: {}, draggable: true, selectable: true }]
   for (const memory of mapMemories) {
     const type = memory.type || 'memory'
     const clusterIndex = typeIndex.get(type) ?? 0
     const clusterCount = Math.max(types.length, 1)
     const withinTypeIndex = typeCounts.get(type) ?? 0
     typeCounts.set(type, withinTypeIndex + 1)
-    const baseAngle = (clusterIndex / clusterCount) * Math.PI * 2 - Math.PI / 2
-    const spread = Math.min(0.85, Math.PI / Math.max(clusterCount, 2))
-    const offset = ((withinTypeIndex % 7) - 3) * (spread / 6)
-    const ring = 260 + Math.floor(withinTypeIndex / 7) * 170 + (withinTypeIndex % 2) * 48
+    const baseAngle = (clusterIndex / clusterCount) * Math.PI * 2 - Math.PI / 2 + rotation
+    const spread = Math.min(1.05, Math.PI / Math.max(clusterCount, 2))
+    const offset = ((withinTypeIndex % 6) - 2.5) * (spread / 5)
+    const ring = 360 + Math.floor(withinTypeIndex / 6) * 230 + (withinTypeIndex % 2) * 72
     const angle = baseAngle + offset
     nodes.push({
       id: memory.id,
@@ -297,15 +298,20 @@ const memoryNodeTypes = { memory: MemoryNode, center: CenterMemoryNode }
 
 function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
   const [selectedId, setSelectedId] = React.useState('')
+  const [rotation, setRotation] = React.useState(0)
   React.useEffect(() => {
     if (selectedId && !memories.some(memory => memory.id === selectedId)) setSelectedId('')
   }, [memories, selectedId])
-  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, selectedId), [memories, hygieneItems, selectedId])
+  const { nodes, edges } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems, selectedId, rotation), [memories, hygieneItems, selectedId, rotation])
   const selectedMemory = memories.find(memory => memory.id === selectedId)
   if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
   return (
     <div className="p-3">
       <div className="relative h-[640px] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_center,rgba(125,125,125,0.08),transparent_55%)]">
+        <div className="absolute left-4 top-4 z-10 flex gap-1 rounded-full border border-border/70 bg-background/90 p-1 shadow-sm backdrop-blur">
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate left" onClick={() => setRotation(value => value - Math.PI / 12)}><RotateCcw className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Rotate right" onClick={() => setRotation(value => value + Math.PI / 12)}><RotateCw className="h-4 w-4" /></Button>
+        </div>
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={memoryNodeTypes} fitView fitViewOptions={{ padding: 0.22 }} nodesDraggable nodesConnectable={false} elementsSelectable onNodeClick={(_, node) => node.id !== '__workspace_memory__' && setSelectedId(node.id)} onPaneClick={() => setSelectedId('')} proOptions={{ hideAttribution: true }}>
           <Background gap={28} size={1} />
           <Controls showInteractive={false} position="bottom-left" />
