@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
 import { Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -60,10 +59,6 @@ type Filters = { type: string; scope: string; sourceSessionId: string; status: s
 const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', sourceSessionId: '', status: 'pending' }
 
 type MemoryAutomationMode = 'auto' | 'review' | 'off'
-type MemoryViewMode = 'map' | 'list'
-
-const MAX_MAP_MEMORIES = 100
-
 function parseMemoryAutomationMode(content: string): MemoryAutomationMode {
   try {
     const prefs = JSON.parse(content || '{}')
@@ -181,141 +176,6 @@ function MemoryCard({ memory, workspaceRoot, onDelete, onRefresh }: { memory: Me
   )
 }
 
-function memoryPreview(content: string, max = 72) {
-  const compact = content.replace(/\s+/g, ' ').trim()
-  return compact.length > max ? `${compact.slice(0, max)}…` : compact
-}
-
-type MemoryGraphElements = { elements: ElementDefinition[]; memoryById: Map<string, MemoryRecord> }
-
-function buildMemoryGraph(memories: MemoryRecord[], hygieneItems: HygieneItem[]): MemoryGraphElements {
-  const mapMemories = memories.slice(0, MAX_MAP_MEMORIES)
-  const memoryById = new Map(mapMemories.map(memory => [memory.id, memory]))
-  const nodeIds = new Set(memoryById.keys())
-  const elements: ElementDefinition[] = [
-    { data: { id: '__workspace_memory__', label: 'Workspace memory', kind: 'center' }, classes: 'center' },
-    ...mapMemories.map(memory => ({
-      data: { id: memory.id, label: memory.title || memory.id, type: memory.type || 'memory', status: memory.status ?? 'active' },
-      classes: cn('memory', memory.status === 'stale' && 'stale'),
-    })),
-  ]
-  const seen = new Set<string>()
-  const addEdge = (source: string, target: string, relation: string, weight = 1) => {
-    if (source === target || !nodeIds.has(source) || !nodeIds.has(target)) return
-    const key = [source, target].sort().join('::')
-    if (seen.has(key)) return
-    seen.add(key)
-    elements.push({ data: { id: `${relation}-${key}`, source, target, relation, weight }, classes: relation })
-  }
-  for (const memory of mapMemories) {
-    elements.push({ data: { id: `core-${memory.id}`, source: '__workspace_memory__', target: memory.id, relation: 'core', weight: 0.25 }, classes: 'core' })
-  }
-  for (let i = 0; i < mapMemories.length; i += 1) {
-    for (let j = i + 1; j < mapMemories.length; j += 1) {
-      const left = mapMemories[i]
-      const right = mapMemories[j]
-      const tagOverlap = (left.tags ?? []).some(tag => (right.tags ?? []).includes(tag))
-      if (tagOverlap) addEdge(left.id, right.id, 'tag', 1.4)
-      else if (left.type && left.type === right.type) addEdge(left.id, right.id, 'type', 0.9)
-      else if (left.sourceSessionId && left.sourceSessionId === right.sourceSessionId) addEdge(left.id, right.id, 'session', 0.7)
-      if (elements.length > mapMemories.length * 4) break
-    }
-  }
-  for (const item of hygieneItems) {
-    if (item.relatedMemoryId) addEdge(item.memoryId, item.relatedMemoryId, item.kind, 1.6)
-  }
-  return { elements, memoryById }
-}
-
-function FloatingMemoryDetail({ memory, expanded, workspaceRoot, onDelete, onRefresh, onClose, onExpand }: { memory: MemoryRecord; expanded: boolean; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void; onClose: () => void; onExpand: () => void }) {
-  return (
-    <button type="button" className={cn('absolute right-4 top-4 z-10 w-[min(380px,calc(100%-2rem))] rounded-2xl border border-border/80 bg-background/95 p-4 text-left shadow-2xl backdrop-blur transition', expanded && 'w-[min(520px,calc(100%-2rem))]')} onClick={onExpand}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">{memory.title}</h3>
-          <p className={cn('mt-2 text-xs leading-5 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-3')}>{expanded ? memory.content : memoryPreview(memory.content, 180)}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">{badge(memory.type)}{memory.status === 'stale' && badge('stale')}{memory.confidence && badge(memory.confidence)}</div>
-        </div>
-        <div className="flex shrink-0 gap-1" onClick={event => event.stopPropagation()}>
-          {expanded && workspaceRoot && <EditPopover trigger={<Button variant="ghost" size="sm" className="h-8 px-2 text-xs"><Sparkles className="h-3.5 w-3.5" />Edit</Button>} onInlineComplete={onRefresh} {...getEditConfig('memory-edit', `${workspaceRoot}::${memory.id}`)} />}
-          {expanded && <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45 hover:text-destructive" onClick={() => onDelete(memory.id)}><Trash2 className="h-4 w-4" /></Button>}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/45" onClick={onClose}><X className="h-4 w-4" /></Button>
-        </div>
-      </div>
-      {expanded && (
-        <>
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-foreground/45" onClick={event => event.stopPropagation()}>
-            <button type="button" className="hover:text-primary hover:underline" onClick={() => navigate(routes.view.allSessions(memory.sourceSessionId))}>source: {memory.sourceSessionId}</button>
-            {memory.tags?.map(tag => <span key={tag}>#{tag}</span>)}
-          </div>
-          <AuditDetails item={memory} />
-        </>
-      )}
-      {!expanded && <div className="mt-3 text-[11px] text-foreground/35">Click card to expand</div>}
-    </button>
-  )
-}
-
-function MemoryMap({ memories, hygieneItems, workspaceRoot, onDelete, onRefresh }: { memories: MemoryRecord[]; hygieneItems: HygieneItem[]; workspaceRoot: string; onDelete: (id: string) => void; onRefresh: () => void }) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null)
-  const cyRef = React.useRef<Core | null>(null)
-  const [previewId, setPreviewId] = React.useState('')
-  const [expandedId, setExpandedId] = React.useState('')
-  const { elements, memoryById } = React.useMemo(() => buildMemoryGraph(memories, hygieneItems), [memories, hygieneItems])
-  React.useEffect(() => {
-    if (previewId && !memoryById.has(previewId)) setPreviewId('')
-    if (expandedId && !memoryById.has(expandedId)) setExpandedId('')
-  }, [memoryById, previewId, expandedId])
-  React.useEffect(() => {
-    if (!containerRef.current || !elements.length) return
-    const cy = cytoscape({
-      container: containerRef.current,
-      elements,
-      minZoom: 0.25,
-      maxZoom: 2.5,
-      wheelSensitivity: 0.18,
-      style: [
-        { selector: 'node', style: { width: 10, height: 10, 'background-color': 'hsl(var(--primary))', 'border-width': 2, 'border-color': 'rgba(255,255,255,0.55)', label: 'data(label)', color: 'hsl(var(--foreground))', 'font-size': 10, 'text-opacity': 0.72, 'text-valign': 'bottom', 'text-margin-y': 8, 'text-background-color': 'hsl(var(--background))', 'text-background-opacity': 0.72, 'text-background-padding': 3, 'text-background-shape': 'roundrectangle', 'overlay-opacity': 0 } },
-        { selector: 'node.center', style: { width: 34, height: 34, 'background-color': 'rgba(99,102,241,0.22)', 'border-width': 2, 'border-color': 'hsl(var(--primary))', 'font-size': 11, 'font-weight': 700, 'text-margin-y': 12 } },
-        { selector: 'node.stale', style: { 'background-color': 'rgba(245,158,11,0.9)' } },
-        { selector: 'node.active', style: { width: 16, height: 16, 'border-width': 4, 'border-color': 'hsl(var(--primary))', 'text-opacity': 1 } },
-        { selector: 'edge', style: { width: 1, opacity: 0.22, 'line-color': 'rgba(148,163,184,0.7)', 'curve-style': 'haystack', 'haystack-radius': 0.5 } },
-        { selector: 'edge.core', style: { opacity: 0.12, width: 1, 'line-color': 'hsl(var(--primary))' } },
-        { selector: 'edge.duplicate, edge.stale', style: { opacity: 0.45, width: 1.5, 'line-color': 'rgba(245,158,11,0.85)' } },
-      ] as any,
-    })
-    cyRef.current = cy
-    cy.layout({ name: 'cose', animate: true, animationDuration: 650, fit: true, padding: 80, randomize: true, nodeRepulsion: 160000, idealEdgeLength: 180, edgeElasticity: 80, nestingFactor: 1.2, gravity: 0.25, numIter: 900 } as cytoscape.LayoutOptions).run()
-    cy.on('mouseover tap', 'node.memory', event => {
-      const id = event.target.id()
-      setPreviewId(id)
-      setExpandedId('')
-      cy.nodes().removeClass('active')
-      event.target.addClass('active')
-    })
-    cy.on('tap', event => {
-      if (event.target === cy) {
-        setPreviewId('')
-        setExpandedId('')
-        cy.nodes().removeClass('active')
-      }
-    })
-    return () => { cy.destroy(); cyRef.current = null }
-  }, [elements])
-  const activeId = expandedId || previewId
-  const activeMemory = activeId ? memoryById.get(activeId) : undefined
-  if (!memories.length) return <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">No saved memories yet</div>
-  return (
-    <div className="p-3">
-      <div className="relative h-[640px] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_center,rgba(125,125,125,0.08),transparent_55%)]">
-        <div ref={containerRef} className="h-full w-full" />
-        {activeMemory && <FloatingMemoryDetail memory={activeMemory} expanded={expandedId === activeMemory.id} workspaceRoot={workspaceRoot} onDelete={onDelete} onRefresh={onRefresh} onClose={() => { setPreviewId(''); setExpandedId('') }} onExpand={() => setExpandedId(activeMemory.id)} />}
-      </div>
-      {memories.length > MAX_MAP_MEMORIES && <p className="mt-2 text-xs text-foreground/45">Showing first {MAX_MAP_MEMORIES} memories. Use search/filter for a smaller map.</p>}
-    </div>
-  )
-}
-
 function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: MemorySuggestion; onApprove: (id: string) => void; onReject: (id: string) => void }) {
   const pending = suggestion.status === 'pending'
   const decidedLabel = suggestion.status === 'approved' ? 'Approved' : 'Rejected'
@@ -414,7 +274,6 @@ export default function MemorySettingsPage() {
   const [loading, setLoading] = React.useState(false)
   const [activityOpen, setActivityOpen] = React.useState(false)
   const [policyOpen, setPolicyOpen] = React.useState(false)
-  const [memoryViewMode, setMemoryViewMode] = React.useState<MemoryViewMode>('map')
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -560,23 +419,9 @@ export default function MemorySettingsPage() {
                 </select>
                 <Input value={filters.sourceSessionId} onChange={event => setFilters(value => ({ ...value, sourceSessionId: event.target.value }))} placeholder="Source session" className="h-8 w-40 text-xs" />
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
-                <SettingsSegmentedControl
-                  value={memoryViewMode}
-                  onValueChange={value => setMemoryViewMode(value as MemoryViewMode)}
-                  options={[
-                    { value: 'map', label: t('settings.memory.map') },
-                    { value: 'list', label: t('settings.memory.list') },
-                  ]}
-                />
               </div>
-              <div className={cn(loading && 'opacity-60')}>
-                {memoryViewMode === 'map' ? (
-                  <MemoryMap memories={visibleMemories} hygieneItems={hygieneItems} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />
-                ) : (
-                  <div className="space-y-3 p-3">
-                    {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
-                  </div>
-                )}
+              <div className={cn('space-y-3 p-3', loading && 'opacity-60')}>
+                {visibleMemories.length ? visibleMemories.map(memory => <MemoryCard key={memory.id} memory={memory} workspaceRoot={workspaceRoot} onDelete={deleteOne} onRefresh={refresh} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
               </div>
             </SettingsCard>
           </SettingsSection>
