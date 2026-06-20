@@ -23,13 +23,11 @@ export interface MemoryFns {
 }
 
 export interface MemoryLearnSummary {
-  mode: 'auto' | 'review' | 'off-as-review'
+  mode: 'on'
   processed: number
   created: MemoryRecord[]
   skipped: number
   reasons?: string[]
-  taskId?: string
-  taskStatus?: 'running' | 'done' | 'failed' | 'skipped'
 }
 
 const MemorySchema = z.object({
@@ -76,9 +74,8 @@ function formatHygiene(items: MemoryHygieneItem[]): string {
 function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
     `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} skipped=${summary.skipped}`,
-    'Task runs asynchronously; created/suggested counts reflect current completed output only.',
+    'The current chat agent receives bounded context and writes memory only when it finds durable facts.',
   ]
-  if (summary.taskId) lines.push(`Task: ${summary.taskId} status=${summary.taskStatus ?? 'running'}`)
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(',')}`)
   if (summary.reasons?.length) lines.push(`Reasons: ${summary.reasons.join('; ')}`)
   return lines.join('\n')

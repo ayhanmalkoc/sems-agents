@@ -21,7 +21,6 @@ import {
   SettingsCard,
   SettingsInput,
   SettingsTextarea,
-  SettingsSegmentedControl,
 } from '@/components/settings'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
@@ -37,7 +36,6 @@ interface PreferencesFormState {
   city: string
   country: string
   notes: string
-  memoryAutomationMode: 'auto' | 'review' | 'off'
 }
 
 const emptyFormState: PreferencesFormState = {
@@ -46,7 +44,6 @@ const emptyFormState: PreferencesFormState = {
   city: '',
   country: '',
   notes: '',
-  memoryAutomationMode: 'auto',
 }
 
 // Parse JSON to form state
@@ -59,7 +56,6 @@ function parsePreferences(json: string): PreferencesFormState {
       city: prefs.location?.city || '',
       country: prefs.location?.country || '',
       notes: prefs.notes || '',
-      memoryAutomationMode: prefs.memoryAutomationMode === 'auto' || prefs.memoryAutomationMode === 'review' || prefs.memoryAutomationMode === 'off' ? prefs.memoryAutomationMode : (prefs.autoSuggestMemories === false ? 'off' : 'auto'),
     }
   } catch {
     return emptyFormState
@@ -86,8 +82,6 @@ function serializePreferences(state: PreferencesFormState, base: Record<string, 
 
   if (state.notes) prefs.notes = state.notes
   else delete prefs.notes
-  prefs.memoryAutomationMode = state.memoryAutomationMode
-  delete prefs.autoSuggestMemories
   prefs.updatedAt = Date.now()
 
   return JSON.stringify(prefs, null, 2)
@@ -257,30 +251,6 @@ export default function PreferencesPage() {
                 placeholder={t("settings.preferences.countryPlaceholder")}
                 inCard
               />
-            </SettingsCard>
-          </SettingsSection>
-
-
-          {/* Memory */}
-          <SettingsSection
-            title="Memory"
-            description="Control how Craft suggests durable learnings from completed chats."
-          >
-            <SettingsCard divided={false}>
-              <div className="px-4 py-3.5">
-                <div className="mb-2 text-sm font-medium text-foreground">Memory automation</div>
-                <div className="mb-3 text-xs text-muted-foreground">Choose how completed sessions update memory.</div>
-                <SettingsSegmentedControl
-                  value={formState.memoryAutomationMode}
-                  onValueChange={(v) => updateField('memoryAutomationMode', v as PreferencesFormState['memoryAutomationMode'])}
-                  options={[
-                    { value: 'auto', label: 'Auto-save' },
-                    { value: 'review', label: 'Review first' },
-                    { value: 'off', label: 'Off' },
-                  ]}
-                  size="sm"
-                />
-              </div>
             </SettingsCard>
           </SettingsSection>
 

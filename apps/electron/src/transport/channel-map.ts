@@ -412,7 +412,6 @@ export const CHANNEL_MAP = {
 
   // Memory
   getMemories: invoke(RPC_CHANNELS.memory.GET),
-  getMemoryBrainActivity: invoke(RPC_CHANNELS.memory.GET_ACTIVITY),
   searchMemories: invoke(RPC_CHANNELS.memory.SEARCH),
   deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
   onMemoryChanged: listener(RPC_CHANNELS.memory.CHANGED),

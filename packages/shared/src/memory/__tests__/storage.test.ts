@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { createMemory, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemory, loadMemories, loadMemoryAutoSuggestState, loadMemoryBrainActivity, markMemoryStale, mergeMemories, refreshMemory, searchMemories, startMemoryBrainActivity, updateMemory, updateMemoryAutoSuggestSessionState, updateMemoryBrainActivity } from '../index.ts'
+import { createMemory, deleteMemory, findMemoryHygieneItems, getMemoryContentHash, hasSimilarMemory, loadMemories, markMemoryStale, mergeMemories, refreshMemory, searchMemories, updateMemory } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -54,13 +54,9 @@ describe('memory storage', () => {
 
 
 
-  it('stores auto-suggest state and stable content hashes', () => {
-    const ws = tempWs()
+  it('creates stable content hashes', () => {
     const hash = getMemoryContentHash({ type: 'workflow_learning', title: 'T', content: 'C', sourceSessionId: 's1' })
     expect(hash).toBe(getMemoryContentHash({ type: 'workflow_learning', title: 'T', content: 'C', sourceSessionId: 's1' }))
-    updateMemoryAutoSuggestSessionState(ws, { sessionId: 's1', lastScannedMessageId: 'm1', lastRunAt: '2026-06-16T00:00:00.000Z', contentHashes: [hash, hash] })
-    expect(loadMemoryAutoSuggestState(ws)).toHaveLength(1)
-    expect(getMemoryAutoSuggestSessionState(ws, 's1')?.contentHashes).toEqual([hash])
   })
 
 
@@ -91,16 +87,6 @@ describe('memory storage', () => {
   })
 
 
-  it('tracks memory brain activity', () => {
-    const ws = tempWs()
-    const activity = startMemoryBrainActivity(ws, { mode: 'review', reason: 'manual refresh', sourceSessionIds: ['s1'], summary: 'Starting token=abcdef1234567890' })
-    expect(activity.status).toBe('running')
-    expect(loadMemoryBrainActivity(ws)[0]?.id).toBe(activity.id)
-    expect(loadMemoryBrainActivity(ws)[0]?.summary).toContain('[REDACTED]')
-    const done = updateMemoryBrainActivity(ws, activity.id, { status: 'done', completedAt: '2026-06-16T00:01:00.000Z', summary: 'Done' })
-    expect(done.status).toBe('done')
-    expect(loadMemoryBrainActivity(ws)[0]?.summary).toBe('Done')
-  })
 
 
 

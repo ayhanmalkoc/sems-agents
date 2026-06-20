@@ -134,7 +134,6 @@ const EXPECTED_CHANNELS: string[] = [
   'memory:changed',
   'memory:delete',
   'memory:get',
-  'memory:getActivity',
   'memory:search',
   'menu:copy',
   'menu:cut',

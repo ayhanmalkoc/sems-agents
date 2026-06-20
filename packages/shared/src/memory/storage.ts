@@ -2,23 +2,17 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryStoreJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
-const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
-const BRAIN_ACTIVITY_FILE = 'brain-activity.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
-const ACTIVITY_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /\b(api[_-]?key|token|password|passwd|secret|bearer)\b\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
 
 function nowIso(): string { return new Date().toISOString() }
 function makeId(prefix: string): string { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` }
-function redactActivityText(value: string | undefined): string | undefined { return value ? ACTIVITY_SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), value).slice(0, 1000) : value }
 
 export function getMemoryDir(workspaceRootPath: string): string { return join(workspaceRootPath, MEMORY_DIR) }
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
-export function getMemoryAutoSuggestStatePath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), AUTO_SUGGEST_STATE_FILE) }
-export function getMemoryBrainActivityPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), BRAIN_ACTIVITY_FILE) }
 
 function ensureDir(path: string): void { mkdirSync(dirname(path), { recursive: true }) }
 function assertType(type: unknown): asserts type is MemoryType {
@@ -85,32 +79,6 @@ export function getMemoryContentHash(input: { type: MemoryType; title: string; c
   return createHash('sha256').update([input.type, input.title.trim(), input.content.trim(), input.sourceSessionId ?? ''].join('\n')).digest('hex')
 }
 
-export function loadMemoryAutoSuggestState(workspaceRootPath: string): MemoryAutoSuggestSessionState[] {
-  const path = getMemoryAutoSuggestStatePath(workspaceRootPath)
-  if (!existsSync(path)) return []
-  const data = readJsonFileSync<MemoryAutoSuggestStateJson | MemoryAutoSuggestSessionState[]>(path)
-  return Array.isArray(data) ? data : (Array.isArray(data.sessions) ? data.sessions : [])
-}
-
-export function saveMemoryAutoSuggestState(workspaceRootPath: string, sessions: MemoryAutoSuggestSessionState[]): void {
-  const path = getMemoryAutoSuggestStatePath(workspaceRootPath)
-  ensureDir(path)
-  atomicWriteFileSync(path, JSON.stringify({ version: 1, sessions }, null, 2) + '\n')
-}
-
-export function getMemoryAutoSuggestSessionState(workspaceRootPath: string, sessionId: string): MemoryAutoSuggestSessionState | undefined {
-  return loadMemoryAutoSuggestState(workspaceRootPath).find(item => item.sessionId === sessionId)
-}
-
-export function updateMemoryAutoSuggestSessionState(workspaceRootPath: string, next: MemoryAutoSuggestSessionState): MemoryAutoSuggestSessionState {
-  const sessions = loadMemoryAutoSuggestState(workspaceRootPath)
-  const index = sessions.findIndex(item => item.sessionId === next.sessionId)
-  const normalized: MemoryAutoSuggestSessionState = { ...next, contentHashes: Array.from(new Set(next.contentHashes)).slice(-100) }
-  if (index >= 0) sessions[index] = normalized
-  else sessions.push(normalized)
-  saveMemoryAutoSuggestState(workspaceRootPath, sessions)
-  return normalized
-}
 
 export function loadMemories(workspaceRootPath: string): MemoryRecord[] {
   const path = getMemoriesPath(workspaceRootPath)
@@ -193,49 +161,6 @@ export function findMemoryHygieneItems(memories: MemoryRecord[]): MemoryHygieneI
   return items
 }
 
-export function loadMemoryBrainActivity(workspaceRootPath: string): MemoryBrainActivity[] {
-  const path = getMemoryBrainActivityPath(workspaceRootPath)
-  if (!existsSync(path)) return []
-  const data = readJsonFileSync<MemoryBrainActivityJson | MemoryBrainActivity[]>(path)
-  const rows = Array.isArray(data) ? data : (Array.isArray(data.activity) ? data.activity : [])
-  return rows
-    .filter(item => item && typeof item.id === 'string' && typeof item.reason === 'string')
-    .sort((a, b) => (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0))
-}
-
-export function saveMemoryBrainActivity(workspaceRootPath: string, activity: MemoryBrainActivity[]): void {
-  const path = getMemoryBrainActivityPath(workspaceRootPath)
-  ensureDir(path)
-  const next = activity
-    .map(item => ({ ...item, summary: redactActivityText(item.summary), error: redactActivityText(item.error) }))
-    .slice()
-    .sort((a, b) => (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0))
-    .slice(0, 100)
-  atomicWriteFileSync(path, JSON.stringify({ version: 1, activity: next }, null, 2) + '\n')
-}
-
-export function startMemoryBrainActivity(workspaceRootPath: string, input: Omit<MemoryBrainActivity, 'id' | 'status' | 'startedAt'> & { id?: string; startedAt?: string; status?: MemoryBrainActivityStatus }): MemoryBrainActivity {
-  const activity = loadMemoryBrainActivity(workspaceRootPath)
-  const row: MemoryBrainActivity = {
-    ...input,
-    id: input.id?.trim() || makeId('brain'),
-    status: input.status ?? 'running',
-    startedAt: input.startedAt ?? nowIso(),
-    sourceSessionIds: input.sourceSessionIds.filter(Boolean),
-  }
-  saveMemoryBrainActivity(workspaceRootPath, [row, ...activity.filter(item => item.id !== row.id)])
-  return row
-}
-
-export function updateMemoryBrainActivity(workspaceRootPath: string, id: string, updates: Partial<Omit<MemoryBrainActivity, 'id' | 'startedAt'>>): MemoryBrainActivity {
-  const activity = loadMemoryBrainActivity(workspaceRootPath)
-  const index = activity.findIndex(item => item.id === id)
-  if (index < 0) throw new Error(`Memory brain activity not found: ${id}`)
-  const next: MemoryBrainActivity = { ...activity[index], ...updates }
-  activity[index] = next
-  saveMemoryBrainActivity(workspaceRootPath, activity)
-  return next
-}
 
 export function hasSimilarMemory(memories: MemoryRecord[], input: { type: MemoryType; title: string; content: string; sourceSessionId?: string }): boolean {
   const contentKey = memoryContentKey(input)

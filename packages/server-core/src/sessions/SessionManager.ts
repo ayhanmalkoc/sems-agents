@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, generateConversationSummary, isMemoryContextPressure, getContextFillPercent } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -36,11 +36,11 @@ import {
   MODEL_REGISTRY,
   type Workspace,
   type WorkspaceInfo,
-  resolveMemoryAutomationMode,
+  resolveMemoryEnabled,
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryBrainActivity, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, markMemoryStale, mergeMemories, refreshMemory, type MemoryRecord } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -111,30 +111,24 @@ export { sanitizeForTitle }
 type AutomationsConfigJson = { version?: number; automations?: Record<string, Record<string, unknown>[]>; [key: string]: unknown }
 type AutomationToolItemServer = Record<string, unknown> & { id: string; event: string; matcherIndex: number; enabled: boolean; actions: import('@craft-agent/shared/automations').AutomationAction[] }
 
-type MemoryBrainTaskMode = 'auto' | 'review'
 
 type MemoryBrainTaskInput = {
   managed: ManagedSession
   targets: LearnMemorySession[]
-  mode: MemoryBrainTaskMode
   reason: string
   explicitPrompt?: string
 }
 
 type MemoryBrainTaskResult = {
-  mode: MemoryLearnMode
+  mode: 'on'
   processed: number
   created: MemoryRecord[]
   skipped: number
   reasons: string[]
-  taskId?: string
-  taskStatus?: 'running' | 'done' | 'failed' | 'skipped'
 }
 
-type MemoryLearnMode = 'auto' | 'review' | 'off-as-review'
-
 type MemoryLearnResult = {
-  mode: MemoryLearnMode
+  mode: 'on'
   processed: number
   created: ReturnType<typeof createMemory>[]
   skipped: number
@@ -149,7 +143,7 @@ type LearnMemorySession = {
   systemPromptPreset?: 'default' | 'mini' | string
 }
 
-const MEMORY_BRAIN_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /(api[_-]?key|token|password|passwd|secret|bearer)\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
+const MEMORY_BRAIN_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /\b(api[_-]?key|token|password|passwd|secret|bearer)\b\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
 
 function redactMemoryBrainText(value: string): string {
   return MEMORY_BRAIN_SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), value)
@@ -938,6 +932,7 @@ interface ManagedSession {
   // SDK session ID for conversation continuity
   sdkSessionId?: string
   // Token usage for display
+  memoryPressureTriggered?: boolean
   tokenUsage?: {
     inputTokens: number
     outputTokens: number
@@ -4183,45 +4178,57 @@ export class SessionManager implements ISessionManager {
           memoryFns: {
             status: async () => {
               const memories = loadMemories(managed.workspace.rootPath)
-              return { available: true, memories: memories.length }
+              const enabled = resolveMemoryEnabled(loadPreferences())
+              return { available: true, enabled, memories: memories.length, reason: enabled ? undefined : 'memory is off' }
             },
             list: async () => loadMemories(managed.workspace.rootPath),
             show: async (memoryId) => loadMemories(managed.workspace.rootPath).find(memory => memory.id === memoryId),
-            search: async (query) => searchMemories(loadMemories(managed.workspace.rootPath), query),
+            search: async (query) => {
+              this.assertMemoryEnabled()
+              return searchMemories(loadMemories(managed.workspace.rootPath), query)
+            },
             create: async (input) => {
+              this.assertMemoryEnabled()
               const memory = createMemory(managed.workspace.rootPath, input)
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
             update: async (memoryId, updates) => {
+              this.assertMemoryEnabled()
               const memory = updateMemory(managed.workspace.rootPath, memoryId, updates)
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
             delete: async (memoryId) => {
+              this.assertMemoryEnabled()
               deleteMemory(managed.workspace.rootPath, memoryId)
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
             },
-            hygiene: async () => findMemoryHygieneItems(loadMemories(managed.workspace.rootPath)),
+            hygiene: async () => {
+              this.assertMemoryEnabled()
+              return findMemoryHygieneItems(loadMemories(managed.workspace.rootPath))
+            },
             merge: async (targetId, sourceId) => {
+              this.assertMemoryEnabled()
               const result = mergeMemories(managed.workspace.rootPath, targetId, sourceId, 'memory tool')
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return result
             },
             markStale: async (memoryId) => {
+              this.assertMemoryEnabled()
               const memory = markMemoryStale(managed.workspace.rootPath, memoryId, 'memory tool')
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
             refresh: async (memoryId, updates) => {
+              this.assertMemoryEnabled()
               const memory = refreshMemory(managed.workspace.rootPath, memoryId, { ...updates, updatedBy: updates.updatedBy ?? 'memory tool' })
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
             learn: async (target) => {
-              const preferenceMode = resolveMemoryAutomationMode(loadPreferences())
-              const mode: MemoryLearnMode = preferenceMode === 'auto' ? 'auto' : preferenceMode === 'off' ? 'off-as-review' : 'review'
-              return this.learnMemorySessions(managed, this.resolveMemoryLearnTargets(managed, target), mode)
+              this.assertMemoryEnabled()
+              return this.learnMemorySessions(managed, this.resolveMemoryLearnTargets(managed, target))
             },
           } satisfies MemoryFns,
           hooksFns: {
@@ -7033,50 +7040,30 @@ export class SessionManager implements ISessionManager {
     this.persistSession(managed)
   }
 
-  private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): Promise<MemoryLearnResult> {
-    if (mode === 'off-as-review') {
-      return { mode, processed: 0, created: [], skipped: targets.length, reasons: ['memory automation is off'] }
-    }
-    return this.runMemoryBrainTask({ managed, targets, mode, reason: 'memory learn command' })
+  private assertMemoryEnabled(): void {
+    if (!resolveMemoryEnabled(loadPreferences())) throw new Error('Memory is off')
+  }
+
+  private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[]): Promise<MemoryLearnResult> {
+    return this.runMemoryBrainTask({ managed, targets, reason: 'memory learn command' })
   }
 
   private async runMemoryBrainTask(input: MemoryBrainTaskInput): Promise<MemoryBrainTaskResult> {
     const targets = input.targets.filter(target => target.systemPromptPreset !== 'mini')
     const skipped = input.targets.length - targets.length
-    const workspaceRoot = input.managed.workspace.rootPath
     if (targets.length === 0) {
-      const activity = startMemoryBrainActivity(workspaceRoot, {
-        status: 'skipped',
-        mode: input.mode,
-        reason: input.reason,
-        sourceSessionIds: input.targets.map(target => target.id),
-        completedAt: new Date().toISOString(),
-        summary: 'No eligible non-mini sessions.',
-      })
-      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-      return { mode: input.mode, processed: 0, created: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'], taskId: activity.id, taskStatus: 'skipped' }
+      return { mode: 'on', processed: 0, created: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'] }
     }
 
     const sessionIds = targets.map(target => target.id)
-    const activity = startMemoryBrainActivity(workspaceRoot, {
-      mode: input.mode,
-      reason: input.reason,
-      sourceSessionIds: sessionIds,
-      summary: 'Starting Memory Brain task.',
-    })
-    this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-
-    const modeInstruction = input.mode === 'auto'
-      ? 'Use memory create for only strong durable facts. If uncertain, do not write.'
-      : 'Manual review mode: use memory create only for strong durable facts explicitly worth saving. If uncertain, do not write.'
     const targetInstruction = sessionIds.length === 1 ? sessionIds[0] : sessionIds.join(', ')
     const sessionContext = formatMemoryBrainSessionContext(targets)
     const explicitPrompt = input.explicitPrompt ? redactMemoryBrainText(input.explicitPrompt).slice(0, 1200) : undefined
     const prompt = [
       'Memory Brain curation instruction for the current chat agent.',
-      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for create/update/search/hygiene only. Do not edit JSON files directly.',
+      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for search/create/update/hygiene only. Do not edit JSON files directly.',
       'Do not call memory learn from inside this Memory Brain task; this task already received the bounded session context below.',
-      modeInstruction,
+      'Use memory create/update only for strong durable facts. If uncertain, do not write.',
       'Search existing memory before writing. Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',
       'If existing memory already covers the fact, do not create a duplicate.',
       `Reason: ${input.reason}.`,
@@ -7087,18 +7074,7 @@ export class SessionManager implements ISessionManager {
       'Finish with a concise summary: processed, created ids, skipped count, reasons.',
     ].join('\n')
 
-    updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'done', completedAt: new Date().toISOString(), summary: 'Memory curation instruction prepared for the current chat agent.' })
-    this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-
-    return {
-      mode: input.mode,
-      processed: targets.length,
-      created: [],
-      skipped,
-      reasons: [prompt],
-      taskId: activity.id,
-      taskStatus: 'done',
-    }
+    return { mode: 'on', processed: targets.length, created: [], skipped, reasons: [prompt] }
   }
 
   private resolveMemoryLearnTargets(managed: ManagedSession, target: string): LearnMemorySession[] {
@@ -7734,6 +7710,28 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private maybeQueueMemoryContextRefresh(managed: ManagedSession): void {
+    if (managed.memoryPressureTriggered) return
+    if (managed.systemPromptPreset === 'mini') return
+    if (!resolveMemoryEnabled(loadPreferences())) return
+    const usage = managed.tokenUsage
+    if (!usage || !isMemoryContextPressure(usage.inputTokens, usage.contextWindow)) return
+    managed.memoryPressureTriggered = true
+    const percent = getContextFillPercent(usage.inputTokens, usage.contextWindow)
+    this.runMemoryBrainTask({ managed, targets: [managed], reason: `context window ${percent}% full` })
+      .then(result => {
+        const prompt = result.reasons[0]
+        if (!prompt) return
+        managed.messageQueue.push({
+          message: `${prompt}
+
+This automatic Memory Brain refresh was triggered because the context window is ${percent}% full.`,
+        })
+        sessionLog.info(`Queued Memory Brain refresh for session ${managed.id} at ${percent}% context fill`)
+      })
+      .catch(error => sessionLog.warn('Failed to queue Memory Brain refresh:', error))
+  }
+
   private async processEvent(managed: ManagedSession, event: AgentEvent): Promise<void> {
     const sessionId = managed.id
     const workspaceId = managed.workspace.id
@@ -8363,6 +8361,7 @@ export class SessionManager implements ISessionManager {
           if (event.usage.contextWindow) {
             managed.tokenUsage.contextWindow = event.usage.contextWindow
           }
+          this.maybeQueueMemoryContextRefresh(managed)
         }
         break
 
@@ -8384,6 +8383,7 @@ export class SessionManager implements ISessionManager {
           if (event.usage.contextWindow) {
             managed.tokenUsage.contextWindow = event.usage.contextWindow
           }
+          this.maybeQueueMemoryContextRefresh(managed)
 
           // Send to renderer for immediate UI update
           this.sendEvent({

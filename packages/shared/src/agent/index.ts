@@ -169,3 +169,4 @@ export {
 export { setPowerShellValidatorRoot } from './powershell-validator.ts';
 
 export * from './memory-tools.ts';
+export * from './context-window.ts';

@@ -1,6 +1,6 @@
 # Memory Tools
 
-Use the `memory` tool to manage persistent, scoped workspace memory. Product rule: **the agent remembers; user control is a mode, not a bottleneck**.
+Use the `memory` tool to manage persistent, scoped workspace memory. Product rule: **Memory is either on or off. When on, the current chat agent manages durable memory with the memory tool.**
 
 ## Product Policy
 
@@ -8,11 +8,10 @@ Memory is agent-managed. When a task depends on prior project decisions, user pr
 
 - If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly after checking for duplicates and secrets.
 - If learning is inferred from session history, use `memory learn ...`; Memory Brain saves only strong durable facts and ignores weak/noisy information.
-- Automatic memory follows the workspace preference `memoryAutomationMode`:
-  - `auto` lets the current-agent Memory Brain save only strong durable completed-session learnings.
-  - `review` behaves as manual review mode: memory changes only when Create/Edit/Refresh Memory is explicitly used.
-  - `off` skips automatic memory.
-- Default is `auto`.
+- Memory follows the workspace preference `memoryEnabled`.
+  - `true` lets the current chat agent search/update memory and run Memory Brain refresh at 90% context fill.
+  - `false` blocks agent memory search/update/learn. Existing memories remain visible in Settings.
+- Default is `true`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, ignore it.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
 - Do not edit memory JSON files directly. Use the `memory` tool for create, update, refresh, hygiene, and deletion changes.
@@ -75,9 +74,8 @@ Use manual learning when automatic completion learning may have missed something
 - `memory learn recent` learns from recent loaded workspace sessions.
 - `memory learn all` learns from up to 100 workspace sessions, including sessions loaded from disk.
 - `memory learn <sessionId>` learns from one session.
-- In `auto` mode, the Memory Brain saves only strong durable learnings as curated memory.
-- In `review` mode, Memory Brain does not auto-save; use Create/Edit/Refresh Memory explicitly.
-- In `off` mode, automatic learning is disabled; direct manual memory tool actions can still run when explicitly requested.
+- When Memory is on, the Memory Brain saves only strong durable learnings as curated memory.
+- When Memory is off, `memory learn` and memory mutations are blocked.
 - Duplicate, secret, and low-confidence guards still apply.
 - Tool output is a stable summary: `processed`, `created`, `skipped`, `mode`, created ids, and the first skip reasons.
 
