@@ -12,9 +12,10 @@ export interface HooksFns {
   disable: (hookId: string) => Promise<void>
   runs: (hookId?: string) => Promise<HookRunRecord[]>
   explain: (runId: string) => Promise<HookRunRecord | undefined>
-  test: (hookId: string, payload: HookEventPayload) => Promise<HookDecision>
+  testHook: (hookId: string, payload: HookEventPayload) => Promise<HookDecision>
   policy: () => Promise<HooksPolicy>
   setPolicy: (policy: Partial<HooksPolicy>) => Promise<HooksPolicy>
+  beforeToolUse: (payload: HookEventPayload) => Promise<HookDecision>
   simulateTool: (payload: HookEventPayload) => Promise<HookDecision>
   simulatePrompt: (payload: HookEventPayload) => Promise<HookDecision>
   afterToolUse?: (payload: HookEventPayload) => Promise<HookDecision>
@@ -30,7 +31,7 @@ export interface HooksFns {
   matcherSet: (hookId: string, matcher: HookMatcher) => Promise<CustomHookDefinition>
 }
 
-const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <snake_case-json>, simulate-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.') })
+const HooksSchema = z.object({ command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], run-detail <runId>, test-hook <hookId> <json>, policy, set-policy <json>, dry-run-tool <snake_case-json>, dry-run-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.') })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
 function failure(text: string): ToolResult { return { content: [{ type: 'text', text: `Error: ${text}` }], isError: true } }
@@ -63,12 +64,12 @@ export async function executeHooksCommand(command: string, fns: HooksFns): Promi
     if (verb === 'show') { const hookId = rest[0]; if (!hookId) return failure('show requires a hook id'); const hook = await fns.show(hookId); return hook ? success(formatHook(hook)) : failure(`Hook not found: ${hookId}`) }
     if (verb === 'enable' || verb === 'disable') { const hookId = rest[0]; if (!hookId) return failure(`${verb} requires a hook id`); if (verb === 'enable') await fns.enable(hookId); else await fns.disable(hookId); return success(`${verb === 'enable' ? 'Enabled' : 'Disabled'} hook ${hookId}`) }
     if (verb === 'runs') { const runs = await fns.runs(rest[0]); return success(runs.length ? ['Hook runs:', ...runs.map(formatRun)].join('\n') : 'Hook runs: none') }
-    if (verb === 'explain' || verb === 'run-detail') { const runId = rest[0]; if (!runId) return failure(`${verb} requires a run id`); const run = await fns.explain(runId); if (!run) return failure(`Hook run not found: ${runId}`); return success([formatRun(run), run.finalDecision ? `Final: ${formatDecision(run.finalDecision)}` : undefined, run.decisions?.length ? `Decisions: ${run.decisions.map(decision => decision.type).join(' -> ')}` : undefined, run.outputs?.length ? `Outputs: ${run.outputs.map(output => output.decision).join(' -> ')}` : undefined].filter(Boolean).join('\n')) }
+    if (verb === 'run-detail') { const runId = rest[0]; if (!runId) return failure(`${verb} requires a run id`); const run = await fns.explain(runId); if (!run) return failure(`Hook run not found: ${runId}`); return success([formatRun(run), run.finalDecision ? `Final: ${formatDecision(run.finalDecision)}` : undefined, run.decisions?.length ? `Decisions: ${run.decisions.map(decision => decision.type).join(' -> ')}` : undefined, run.outputs?.length ? `Outputs: ${run.outputs.map(output => output.decision).join(' -> ')}` : undefined].filter(Boolean).join('\n')) }
     if (verb === 'policy') return success(formatPolicy(await fns.policy()))
     if (verb === 'set-policy') return success(`Updated hooks policy\n${formatPolicy(await fns.setPolicy(parseJson<Partial<HooksPolicy>>(commandPayload(trimmed, rawVerb) || '{}')))}`)
-    if (verb === 'simulate-tool') return success(formatDecision(await fns.simulateTool(parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb) || '{}'))))
-    if (verb === 'simulate-prompt') return success(formatDecision(await fns.simulatePrompt(parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb) || '{}'))))
-    if (verb === 'test') { const hookId = rest[0]; if (!hookId) return failure('test requires a hook id'); return success(formatDecision(await fns.test(hookId, parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb, hookId) || '{}')))) }
+    if (verb === 'dry-run-tool') return success(['Dry run: PreToolUse', formatDecision(await fns.simulateTool(parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb) || '{}'))), 'No tool executed.', 'No runtime side effects.'].join('\n'))
+    if (verb === 'dry-run-prompt') return success(['Dry run: UserPromptSubmit', formatDecision(await fns.simulatePrompt(parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb) || '{}'))), 'No prompt submitted.', 'No runtime side effects.'].join('\n'))
+    if (verb === 'test-hook') { const hookId = rest[0]; if (!hookId) return failure('test-hook requires a hook id'); return success(formatDecision(await fns.testHook(hookId, parseJson<HookEventPayload>(commandPayload(trimmed, rawVerb, hookId) || '{}')))) }
     if (verb === 'custom-list') { const hooks = await fns.customList(); return success(hooks.length ? ['Custom hooks:', ...hooks.map(formatCustomHook)].join('\n') : 'Custom hooks: none') }
     if (verb === 'custom-show') { const hookId = rest[0]; if (!hookId) return failure('custom-show requires a hook id'); const hook = await fns.customShow(hookId); return hook ? success(formatCustomHook(hook)) : failure(`Custom hook not found: ${hookId}`) }
     if (verb === 'custom-create') { const hook = await fns.customCreate(parseJson<CustomHookDefinition>(commandPayload(trimmed, rawVerb))); return success(`Created custom hook ${hook.id}`) }

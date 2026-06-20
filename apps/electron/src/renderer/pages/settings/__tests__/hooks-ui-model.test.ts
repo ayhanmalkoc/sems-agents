@@ -33,7 +33,7 @@ describe('hooks ui model', () => {
     const groups = buildHookGroups([
       item({ event: 'PreToolUse' }),
       item({ id: 'tool_audit_log', event: 'PostToolUse' }),
-      item({ id: 'memory_learn_on_stop', event: 'Stop' }),
+      item({ id: 'validation_summary_on_stop', event: 'Stop' }),
     ], [])
     expect(groups.map(group => group.title)).toEqual(['Before tool use', 'After tool use', 'Stop'])
   })

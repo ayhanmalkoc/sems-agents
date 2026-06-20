@@ -656,7 +656,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to create or manage workspace memory using natural language. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'For explicit durable facts or "remember this" requests, use memory create. ' +
-        'For temporary session/day context, use memory working-add. ' +
+        'For temporary session/day context, use memory session-notes-add. ' +
         'For inferred learnings from a session, use memory suggest-from-session unless the user explicitly asks to save it. ' +
         'Do not edit memory JSON files directly except as a last-resort fallback. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
@@ -679,7 +679,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
           `The user wants to edit workspace memory ${memoryId}. ` +
           'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
           'Use memory show to inspect the current record if needed. ' +
-          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, hygiene to find cleanup candidates, delete only when requested, or working-add for temporary notes. ' +
+          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, hygiene to find cleanup candidates, delete only when requested, or session-notes-add for Session Notes. ' +
           'Do not edit memory JSON files directly except as a last-resort fallback. ' +
           'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
           'Confirm clearly what changed.',
@@ -699,7 +699,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       context:
         'The user wants to review workspace memory suggestions. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. If a working note should become durable, create a memory suggestion or approved memory only when the user intent is clear. ' +
+        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. If a session note should become durable, create a memory suggestion or approved memory only when the user intent is clear. ' +
         'Do not edit memory JSON files directly except as a last-resort fallback. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
         'Confirm clearly what changed.',

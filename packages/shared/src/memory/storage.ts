@@ -2,13 +2,13 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type CreateWorkingMemoryInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput, type WorkingMemoryJson, type WorkingMemoryNote, type WorkingMemoryScope } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type CreateSessionNoteInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput, type SessionNotesJson, type SessionNote, type SessionNoteScope } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
 const SUGGESTIONS_FILE = 'suggestions.json'
 const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
-const WORKING_NOTES_FILE = 'working-notes.json'
+const SESSION_NOTES_FILE = 'session-notes.json'
 const BRAIN_ACTIVITY_FILE = 'brain-activity.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
 const ACTIVITY_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /\b(api[_-]?key|token|password|passwd|secret|bearer)\b\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
@@ -21,7 +21,7 @@ export function getMemoryDir(workspaceRootPath: string): string { return join(wo
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
 export function getMemorySuggestionsPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SUGGESTIONS_FILE) }
 export function getMemoryAutoSuggestStatePath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), AUTO_SUGGEST_STATE_FILE) }
-export function getWorkingMemoryPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), WORKING_NOTES_FILE) }
+export function getSessionNotesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SESSION_NOTES_FILE) }
 export function getMemoryBrainActivityPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), BRAIN_ACTIVITY_FILE) }
 
 function ensureDir(path: string): void { mkdirSync(dirname(path), { recursive: true }) }
@@ -42,8 +42,8 @@ function assertConfidence(confidence: unknown): asserts confidence is MemoryConf
 function assertRecordStatus(status: unknown): asserts status is MemoryRecordStatus {
   if (status !== undefined && status !== 'active' && status !== 'stale') throw new Error(`Invalid memory status: ${String(status)}`)
 }
-function assertWorkingScope(scope: unknown): asserts scope is WorkingMemoryScope {
-  if (scope !== 'session' && scope !== 'day') throw new Error(`Invalid working memory scope: ${String(scope)}`)
+function assertSessionNoteScope(scope: unknown): asserts scope is SessionNoteScope {
+  if (scope !== 'session' && scope !== 'day') throw new Error(`Invalid Session Notes scope: ${String(scope)}`)
 }
 function normalizeStringList(value: unknown, field: string): string[] | undefined {
   if (value == null) return undefined
@@ -220,8 +220,8 @@ export function findMemoryHygieneItems(memories: MemoryRecord[]): MemoryHygieneI
   return items
 }
 
-function validateWorkingMemoryInput(input: CreateWorkingMemoryInput): CreateWorkingMemoryInput {
-  assertWorkingScope(input.scope)
+function validateSessionNoteInput(input: CreateSessionNoteInput): CreateSessionNoteInput {
+  assertSessionNoteScope(input.scope)
   assertNoSecrets(input.title, input.content, input.tags)
   return {
     ...input,
@@ -236,34 +236,34 @@ function validateWorkingMemoryInput(input: CreateWorkingMemoryInput): CreateWork
   }
 }
 
-export function loadWorkingMemoryNotes(workspaceRootPath: string): WorkingMemoryNote[] {
-  const path = getWorkingMemoryPath(workspaceRootPath)
+export function loadSessionNotes(workspaceRootPath: string): SessionNote[] {
+  const path = getSessionNotesPath(workspaceRootPath)
   if (!existsSync(path)) return []
-  const data = readJsonFileSync<WorkingMemoryJson | WorkingMemoryNote[]>(path)
+  const data = readJsonFileSync<SessionNotesJson | SessionNote[]>(path)
   return Array.isArray(data) ? data : (Array.isArray(data.notes) ? data.notes : [])
 }
 
-export function saveWorkingMemoryNotes(workspaceRootPath: string, notes: WorkingMemoryNote[]): void {
-  const path = getWorkingMemoryPath(workspaceRootPath)
+export function saveSessionNotes(workspaceRootPath: string, notes: SessionNote[]): void {
+  const path = getSessionNotesPath(workspaceRootPath)
   ensureDir(path)
   atomicWriteFileSync(path, JSON.stringify({ version: 1, notes }, null, 2) + '\n')
 }
 
-export function addWorkingMemoryNote(workspaceRootPath: string, input: CreateWorkingMemoryInput): WorkingMemoryNote {
-  const valid = validateWorkingMemoryInput(input)
-  const notes = loadWorkingMemoryNotes(workspaceRootPath)
-  const note: WorkingMemoryNote = { ...valid, id: valid.id?.trim() || makeId('work') }
-  if (notes.some(item => item.id === note.id)) throw new Error(`Working memory note already exists: ${note.id}`)
+export function addSessionNote(workspaceRootPath: string, input: CreateSessionNoteInput): SessionNote {
+  const valid = validateSessionNoteInput(input)
+  const notes = loadSessionNotes(workspaceRootPath)
+  const note: SessionNote = { ...valid, id: valid.id?.trim() || makeId('session-note') }
+  if (notes.some(item => item.id === note.id)) throw new Error(`Session Notes note already exists: ${note.id}`)
   notes.push(note)
-  saveWorkingMemoryNotes(workspaceRootPath, notes)
+  saveSessionNotes(workspaceRootPath, notes)
   return note
 }
 
-export function clearWorkingMemoryNotes(workspaceRootPath: string, scope: WorkingMemoryScope): number {
-  assertWorkingScope(scope)
-  const notes = loadWorkingMemoryNotes(workspaceRootPath)
+export function clearSessionNotes(workspaceRootPath: string, scope: SessionNoteScope): number {
+  assertSessionNoteScope(scope)
+  const notes = loadSessionNotes(workspaceRootPath)
   const next = notes.filter(note => note.scope !== scope)
-  saveWorkingMemoryNotes(workspaceRootPath, next)
+  saveSessionNotes(workspaceRootPath, next)
   return notes.length - next.length
 }
 
@@ -365,4 +365,3 @@ export function rejectMemorySuggestion(workspaceRootPath: string, suggestionId: 
   saveMemorySuggestions(workspaceRootPath, suggestions)
   return next
 }
-

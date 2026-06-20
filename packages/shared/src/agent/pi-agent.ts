@@ -1206,7 +1206,7 @@ export class PiAgent extends BaseAgent {
 
     const hookCallbacks = getSessionScopedToolCallbacks(this._sessionId)?.hooksFns;
     if (hookCallbacks) {
-      const hookDecision = await hookCallbacks.simulateTool({
+      const hookDecision = await hookCallbacks.beforeToolUse({
         event: 'PreToolUse',
         workspaceId: this.config.workspace.id,
         sessionId: this.config.session?.id || this._sessionId,

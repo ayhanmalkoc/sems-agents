@@ -16,9 +16,10 @@ function fns(): HooksFns {
     disable: async () => {},
     runs: async () => [run],
     explain: async id => id === run.id ? run : undefined,
-    test: async () => ({ type: 'block', message: 'blocked' }),
+    testHook: async () => ({ type: 'block', message: 'blocked' }),
     policy: async () => policy,
     setPolicy: async updates => ({ ...policy, ...updates }),
+    beforeToolUse: async () => ({ type: 'block', message: 'blocked tool' }),
     simulateTool: async () => ({ type: 'block', message: 'blocked tool' }),
     simulatePrompt: async () => ({ type: 'block', message: 'blocked prompt' }),
     customList: async () => [customHook],
@@ -46,19 +47,21 @@ describe('hooks tool', () => {
 
   it('handles runs and dry-run test', async () => {
     expect((await executeHooksCommand('runs secret_scan_prompt', fns())).content[0].text).toContain('run-1')
-    const explain = (await executeHooksCommand('explain run-1', fns())).content[0].text
+    const explain = (await executeHooksCommand('run-detail run-1', fns())).content[0].text
     expect(explain).toContain('blocked')
     expect(explain).toContain('input=prompt=[REDACTED]')
     expect(explain).toContain('Final: Decision: block')
     expect(explain).toContain('Outputs: observe -> block')
-    expect((await executeHooksCommand('test secret_scan_prompt {"event":"UserPromptSubmit"}', fns())).content[0].text).toContain('Decision: block')
+    expect((await executeHooksCommand('test-hook secret_scan_prompt {"event":"UserPromptSubmit"}', fns())).content[0].text).toContain('Decision: block')
   })
 
   it('handles policy and simulations', async () => {
     expect((await executeHooksCommand('policy', fns())).content[0].text).toContain('secretGuard=standard')
     expect((await executeHooksCommand('set-policy {"workspaceBoundary":"block"}', fns())).content[0].text).toContain('workspaceBoundary=block')
-    expect((await executeHooksCommand('simulate-tool {"toolName":"memory"}', fns())).content[0].text).toContain('blocked tool')
-    expect((await executeHooksCommand('simulate-prompt {"message":"token=abc123456789000"}', fns())).content[0].text).toContain('blocked prompt')
+    expect((await executeHooksCommand('dry-run-tool {"toolName":"memory"}', fns())).content[0].text).toContain('No tool executed.')
+    expect((await executeHooksCommand('dry-run-prompt {"message":"token=abc123456789000"}', fns())).content[0].text).toContain('No prompt submitted.')
+    expect((await executeHooksCommand(`${['simulate', 'tool'].join('-')} {"toolName":"memory"}`, fns())).isError).toBe(true)
+    expect((await executeHooksCommand('test secret_scan_prompt {"event":"UserPromptSubmit"}', fns())).isError).toBe(true)
   })
 
   it('handles custom hook and trust commands', async () => {

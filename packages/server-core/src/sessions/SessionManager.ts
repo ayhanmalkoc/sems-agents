@@ -40,7 +40,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addWorkingMemoryNote, clearWorkingMemoryNotes, findMemoryHygieneItems, loadMemoryBrainActivity, loadWorkingMemoryNotes, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addSessionNote, clearSessionNotes, findMemoryHygieneItems, loadMemoryBrainActivity, loadSessionNotes, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4221,15 +4221,15 @@ export class SessionManager implements ISessionManager {
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
-            workingList: async () => loadWorkingMemoryNotes(managed.workspace.rootPath),
-            workingAdd: async (input) => {
-              const note = addWorkingMemoryNote(managed.workspace.rootPath, input)
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/working-notes.json')
+            sessionNotesList: async () => loadSessionNotes(managed.workspace.rootPath),
+            sessionNotesAdd: async (input) => {
+              const note = addSessionNote(managed.workspace.rootPath, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/session-notes.json')
               return note
             },
-            workingClear: async (scope) => {
-              const count = clearWorkingMemoryNotes(managed.workspace.rootPath, scope)
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/working-notes.json')
+            sessionNotesClear: async (scope) => {
+              const count = clearSessionNotes(managed.workspace.rootPath, scope)
+              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/session-notes.json')
               return count
             },
             suggestFromSession: async (sessionId) => {
@@ -4273,29 +4273,21 @@ export class SessionManager implements ISessionManager {
             },
             runs: async (hookId) => loadHookRuns(managed.workspace.rootPath, hookId),
             explain: async (runId) => getHookRun(managed.workspace.rootPath, runId),
-            test: async (hookId, payload) => new HookEngine(managed.workspace.rootPath).test(hookId, payload),
+            testHook: async (hookId, payload) => new HookEngine(managed.workspace.rootPath).test(hookId, payload),
             policy: async () => loadHooksPolicy(managed.workspace.rootPath),
             setPolicy: async (policy) => {
               const next = saveHooksPolicy(managed.workspace.rootPath, policy)
               this.notifyConfigFileChange(managed.workspace.rootPath, 'hooks/hooks.json')
               return next
             },
+            beforeToolUse: async (payload) => new HookEngine(managed.workspace.rootPath).beforeToolUse(payload),
             simulateTool: async (payload) => new HookEngine(managed.workspace.rootPath).simulateTool(payload),
             simulatePrompt: async (payload) => new HookEngine(managed.workspace.rootPath).simulatePrompt(payload),
             afterToolUse: async (payload) => new HookEngine(managed.workspace.rootPath).afterToolUse(payload),
             beforePromptSubmit: async (payload) => {
               const decision = await new HookEngine(managed.workspace.rootPath).beforePromptSubmit(payload)
               if (decision.type === 'mutate' && /explicit remember/i.test(decision.message ?? '')) {
-                const memoryMode = resolveMemoryAutomationMode(loadPreferences())
-                if (memoryMode !== 'off') {
-                  void this.runMemoryBrainTask({
-                    managed,
-                    targets: [managed],
-                    mode: memoryMode,
-                    reason: 'explicit remember prompt',
-                    explicitPrompt: typeof payload.prompt === 'string' ? payload.prompt : typeof payload.message === 'string' ? payload.message : undefined,
-                  })
-                }
+                return { type: 'addContext', message: decision.message, context: 'Memory curation mode: the user explicitly asked to remember this. Use the memory tool and Session Notes in the current chat; do not create a new session.' }
               }
               return decision
             },
@@ -7031,16 +7023,6 @@ export class SessionManager implements ISessionManager {
           this.emitUnreadSummaryChanged()
         }
       }
-      try {
-        void new HookEngine(managed.workspace.rootPath).emit({ event: 'Stop', sessionId, hookId: 'memory_learn_on_stop', metadata: { reason: 'session_complete', finalMessageId: currentFinalMessageId } }).catch(error => sessionLog.warn('[Hooks] Stop memory hook failed:', error))
-        void this.learnMemoryOnStop(managed, currentFinalMessageId)
-      } catch (error) {
-        sessionLog.warn(`Auto memory suggestion skipped for session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`)
-      }
-    }
-
-    if (reason === 'complete' && managed.systemPromptPreset === 'mini') {
-      this.completeMemoryBrainActivityForSession(managed)
     }
 
     // 3. Auto-complete mini agent sessions to avoid session list clutter
@@ -7086,20 +7068,6 @@ export class SessionManager implements ISessionManager {
     this.persistSession(managed)
   }
 
-
-  private completeMemoryBrainActivityForSession(managed: ManagedSession): void {
-    const activity = loadMemoryBrainActivity(managed.workspace.rootPath)
-    const row = activity.find(item => item.taskSessionId === managed.id && item.status === 'running')
-    if (!row) return
-    const finalSummary = this.getLastFinalAssistantMessageContent(managed.messages)
-    updateMemoryBrainActivity(managed.workspace.rootPath, row.id, {
-      status: 'done',
-      completedAt: new Date().toISOString(),
-      summary: finalSummary || 'Memory Brain task completed.',
-    })
-    this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/brain-activity.json')
-  }
-
   private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): Promise<MemoryLearnResult> {
     if (mode === 'off-as-review') {
       return { mode, processed: 0, created: [], suggested: [], skipped: targets.length, reasons: ['memory automation is off'] }
@@ -7133,23 +7101,6 @@ export class SessionManager implements ISessionManager {
     })
     this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
 
-    let taskSession: Session
-    try {
-      taskSession = await this.createSession(input.managed.workspace.id, {
-        name: `Memory brain: ${input.reason}`,
-        model: input.managed.model,
-        llmConnection: input.managed.llmConnection,
-        systemPromptPreset: 'mini',
-        permissionMode: 'allow-all',
-        workingDirectory: input.managed.workspace.rootPath,
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'failed', completedAt: new Date().toISOString(), error: message, summary: 'Memory Brain task failed to create.' })
-      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-      return { mode: input.mode, processed: targets.length, created: [], suggested: [], skipped: targets.length, reasons: [message], taskId: activity.id, taskStatus: 'failed' }
-    }
-
     const modeInstruction = input.mode === 'auto'
       ? 'Use memory create for only strong durable facts. If uncertain, do not write.'
       : 'Create pending memory suggestions only when a durable learning needs review. Do not approve them.'
@@ -7157,7 +7108,7 @@ export class SessionManager implements ISessionManager {
     const sessionContext = formatMemoryBrainSessionContext(targets)
     const explicitPrompt = input.explicitPrompt ? redactMemoryBrainText(input.explicitPrompt).slice(0, 1200) : undefined
     const prompt = [
-      'You are the Memory Brain for this workspace.',
+      'Memory Brain curation instruction for the current chat agent.',
       'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for create/update/search/hygiene only. Do not edit JSON files directly.',
       'Do not call memory learn or memory suggest-from-session from inside this Memory Brain task; this task already received the bounded session context below.',
       modeInstruction,
@@ -7171,16 +7122,8 @@ export class SessionManager implements ISessionManager {
       'Finish with a concise summary: processed, created ids, suggested ids, skipped count, reasons.',
     ].join('\n')
 
-    try {
-      updateMemoryBrainActivity(workspaceRoot, activity.id, { taskSessionId: taskSession.id, summary: `Memory Brain task started: ${taskSession.id}` })
-      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-      await this.sendMessage(taskSession.id, prompt)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'failed', completedAt: new Date().toISOString(), error: message, summary: 'Memory Brain task failed to start.' })
-      this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-      return { mode: input.mode, processed: targets.length, created: [], suggested: [], skipped: targets.length, reasons: [message], taskId: activity.id, taskStatus: 'failed' }
-    }
+    updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'done', completedAt: new Date().toISOString(), summary: 'Memory curation instruction prepared for the current chat agent.' })
+    this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
 
     return {
       mode: input.mode,
@@ -7188,18 +7131,10 @@ export class SessionManager implements ISessionManager {
       created: [],
       suggested: [],
       skipped,
-      reasons: [`memory brain task started: ${taskSession.id}`],
+      reasons: [prompt],
       taskId: activity.id,
-      taskStatus: 'running',
+      taskStatus: 'done',
     }
-  }
-
-  private async learnMemoryOnStop(managed: ManagedSession, lastFinalAssistantMessageId: string | undefined): Promise<void> {
-    if (!lastFinalAssistantMessageId) return
-    if (managed.systemPromptPreset === 'mini') return
-    const memoryAutomationMode = resolveMemoryAutomationMode(loadPreferences())
-    if (memoryAutomationMode === 'off') return
-    await this.runMemoryBrainTask({ managed, targets: [managed], mode: memoryAutomationMode, reason: 'session_complete' })
   }
 
   private resolveMemoryLearnTargets(managed: ManagedSession, target: string): LearnMemorySession[] {

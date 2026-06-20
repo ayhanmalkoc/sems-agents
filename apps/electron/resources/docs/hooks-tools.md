@@ -39,7 +39,7 @@ Craft supports a compact lifecycle event set. Product/domain behavior is express
 - `PostCompact` - after conversation compaction.
 - `SubagentStart` - subagent starts.
 - `SubagentStop` - subagent stops.
-- `Stop` - before an agent turn stops. Session completion and memory learning are represented here with metadata such as `{ "reason": "session_complete" }`.
+- `Stop` - before an agent turn stops. Memory learning is not triggered by Stop.
 
 ## Commands
 
@@ -51,11 +51,11 @@ Craft supports a compact lifecycle event set. Product/domain behavior is express
 - `hooks runs [hookId]` - show recent hook runs.
 - `hooks explain <runId>` - inspect one hook run summary.
 - `hooks run-detail <runId>` - inspect final decision and per-hook decision timeline.
-- `hooks test <hookId> <json>` - dry-run one builtin or custom hook.
+- `hooks test-hook <hookId> <json>` - dry-run one builtin or custom hook.
 - `hooks policy` - show workspace hook policy.
 - `hooks set-policy <json>` - update workspace hook policy.
-- `hooks simulate-tool <snake_case-json>` - dry-run the `PreToolUse` gateway.
-- `hooks simulate-prompt <snake_case-json>` - dry-run the `UserPromptSubmit` gateway.
+- `hooks dry-run-tool <snake_case-json>` - dry-run the `PreToolUse` gateway.
+- `hooks dry-run-prompt <snake_case-json>` - dry-run the `UserPromptSubmit` gateway.
 - `hooks custom-list` - list workspace custom hooks.
 - `hooks custom-show <hookId>` - inspect one custom hook.
 - `hooks custom-create <json>` - create one custom hook.
@@ -110,8 +110,7 @@ Legacy internal camelCase payloads are normalized into this contract before hook
 - `workspace_boundary_guard` - asks or blocks for risky workspace boundary operations.
 - `tool_audit_log` - records post-tool decisions and redacts secret-looking output.
 - `validation_summary_on_stop` - captures stop validation context.
-- `memory_learn_on_stop` - starts a Memory Brain mini-agent task when `Stop` metadata marks session completion.
-- `memory_explicit_remember_on_prompt` - detects explicit remember requests on `UserPromptSubmit` for the Memory Brain flow.
+- `- `memory_explicit_remember_on_prompt` - detects explicit remember requests on `UserPromptSubmit` for the Memory Brain flow.
 
 ## Custom Hook Schema
 
@@ -144,8 +143,8 @@ Allowed powers: `observe`, `block`, `ask`, `mutate`, `redact`, `addContext`.
 
 ## Examples
 
-- `hooks simulate-prompt {"hook_event_name":"UserPromptSubmit","prompt":"token=sk_test_123456789abcdef"}`
-- `hooks simulate-tool {"hook_event_name":"PreToolUse","tool_name":"bash","tool_input":"rm -rf ../outside"}`
+- `hooks dry-run-prompt {"hook_event_name":"UserPromptSubmit","prompt":"token=sk_test_123456789abcdef"}`
+- `hooks dry-run-tool {"hook_event_name":"PreToolUse","tool_name":"bash","tool_input":"rm -rf ../outside"}`
 - `hooks custom-create {"id":"review_note","name":"Review note","enabled":true,"source":"workspace","matcher":{"event":"PostToolUse"},"handler":{"type":"prompt","output":{"decision":"observe","reason":"reviewed"}},"powers":["observe"]}`
 - `hooks trust-review review_note`
 - `hooks trust-approve review_note --confirm`

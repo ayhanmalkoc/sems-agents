@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { mkdtempSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { HookEngine, HookToolGateway, hooksConfigPath, hooksDir, loadHookRuns, loadHooksConfig, mergeHookDecisions, saveCustomHook, saveHooksConfig, saveHooksPolicy, setHookEnabled, trustApproveCustomHook } from '../index.ts'
+import { HookEngine, HookToolGateway, loadHookRuns, mergeHookDecisions, saveCustomHook, saveHooksConfig, saveHooksPolicy, setHookEnabled, trustApproveCustomHook } from '../index.ts'
 
 function tempWorkspace(): string { return mkdtempSync(join(tmpdir(), 'hooks-test-')) }
 
@@ -16,19 +16,6 @@ describe('builtin hooks runtime', () => {
     expect(engine.list().some(hook => hook.id === 'secret_scan_prompt')).toBe(true)
   })
 
-
-  it('migrates legacy builtin hook ids on load and save', () => {
-    const workspace = tempWorkspace()
-    mkdirSync(hooksDir(workspace), { recursive: true })
-    writeFileSync(hooksConfigPath(workspace), JSON.stringify({ version: 1, hooks: [{ id: 'validation_summary_on_turn_stop', enabled: false }] }), 'utf8')
-    const config = loadHooksConfig(workspace)
-    expect(config.hooks.find(hook => hook.id === 'validation_summary_on_stop')?.enabled).toBe(false)
-    expect(config.hooks.some(hook => hook.id === 'validation_summary_on_turn_stop')).toBe(false)
-    saveHooksConfig(workspace, config)
-    const saved = readFileSync(hooksConfigPath(workspace), 'utf8')
-    expect(saved).toContain('validation_summary_on_stop')
-    expect(saved).not.toContain('validation_summary_on_turn_stop')
-  })
 
 
   it('blocks prompt and tool input secrets', async () => {

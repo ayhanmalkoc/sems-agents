@@ -39,7 +39,7 @@ type MemorySuggestion = Omit<MemoryRecord, 'status'> & {
   decidedBy?: string
 }
 
-type WorkingMemoryNote = {
+type SessionNote = {
   id: string
   scope: 'session' | 'day'
   title: string
@@ -60,7 +60,6 @@ type MemoryBrainActivity = {
   reason: string
   mode: MemoryAutomationMode | 'off-as-review'
   sourceSessionIds: string[]
-  taskSessionId?: string
   startedAt: string
   completedAt?: string
   summary?: string
@@ -203,7 +202,7 @@ function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters,
   return true
 }
 
-function matchesQuery(item: MemoryRecord | MemorySuggestion | WorkingMemoryNote, query: string) {
+function matchesQuery(item: MemoryRecord | MemorySuggestion | SessionNote, query: string) {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   const haystack = [item.title, item.content, ...(item.tags ?? [])].join(' ').toLowerCase()
@@ -217,7 +216,7 @@ export default function MemorySettingsPage() {
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS)
   const [memories, setMemories] = React.useState<MemoryRecord[]>([])
   const [suggestions, setSuggestions] = React.useState<MemorySuggestion[]>([])
-  const [workingNotes, setWorkingNotes] = React.useState<WorkingMemoryNote[]>([])
+  const [sessionNotes, setSessionNotes] = React.useState<SessionNote[]>([])
   const [brainActivity, setBrainActivity] = React.useState<MemoryBrainActivity[]>([])
   const [loading, setLoading] = React.useState(false)
   const [advancedOpen, setAdvancedOpen] = React.useState<'activity' | 'cleanup' | 'temporary' | null>(null)
@@ -233,13 +232,13 @@ export default function MemorySettingsPage() {
       const [memoryRows, suggestionRows, workingRows, activityRows, preferences] = await Promise.all([
         query.trim() ? window.electronAPI.searchMemories(activeWorkspaceId, query.trim()) : window.electronAPI.getMemories(activeWorkspaceId),
         window.electronAPI.getMemorySuggestions(activeWorkspaceId),
-        window.electronAPI.getWorkingMemoryNotes(activeWorkspaceId),
+        window.electronAPI.getMemorySessionNotes(activeWorkspaceId),
         window.electronAPI.getMemoryBrainActivity(activeWorkspaceId),
         window.electronAPI.readPreferences().catch(() => ({ content: '{}' })),
       ])
       setMemories(memoryRows as MemoryRecord[])
       setSuggestions(suggestionRows as MemorySuggestion[])
-      setWorkingNotes(workingRows as WorkingMemoryNote[])
+      setSessionNotes(workingRows as SessionNote[])
       setBrainActivity(activityRows as MemoryBrainActivity[])
       const content = (preferences as { content?: string }).content || '{}'
       setPreferencesContent(content)
@@ -295,14 +294,14 @@ export default function MemorySettingsPage() {
     }
   }
 
-  const clearWorking = async (scope: 'session' | 'day') => {
+  const clearSessionNotes = async (scope: 'session' | 'day') => {
     if (!activeWorkspaceId) return
     try {
-      const count = await window.electronAPI.clearWorkingMemoryNotes(activeWorkspaceId, scope)
-      toast.success(`Cleared ${count} ${scope} working note${count === 1 ? '' : 's'}`)
+      const count = await window.electronAPI.clearMemorySessionNotes(activeWorkspaceId, scope)
+      toast.success(`Cleared ${count} ${scope} session note${count === 1 ? '' : 's'}`)
       void refresh()
     } catch (error) {
-      toast.error('Failed to clear working memory', { description: error instanceof Error ? error.message : String(error) })
+      toast.error('Failed to clear Session Notes', { description: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -409,7 +408,7 @@ export default function MemorySettingsPage() {
               </SettingsRow>
               <SettingsRow
                 label={t('settings.memory.brainActivityTitle')}
-                description={t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: workingNotes.length, reviewed: 0 })}
+                description={t('settings.memory.brainActivitySummary', { tasks: brainActivity.length, notes: sessionNotes.length, reviewed: 0 })}
                 onClick={() => setAdvancedOpen(advancedOpen === 'activity' ? null : 'activity')}
                 action={advancedOpen === 'activity' ? <ChevronDown className="h-4 w-4 text-foreground/40" /> : <ChevronRight className="h-4 w-4 text-foreground/40" />}
               />
@@ -420,7 +419,7 @@ export default function MemorySettingsPage() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-foreground">{item.reason}</div>
-                          <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.taskSessionId ?? item.id}</div>
+                          <div className="text-xs text-foreground/45">{new Date(item.startedAt).toLocaleString()} · {item.id}</div>
                         </div>
                         {badge(item.status)}
                       </div>
@@ -450,9 +449,9 @@ export default function MemorySettingsPage() {
                 </div>
               )}
               <SettingsRow
-                label={t('settings.memory.temporaryNotesTitle')}
-                description={t('settings.memory.temporaryNotesDescription')}
-                action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => clearWorking('session')}>{t('settings.memory.clearSession')}</Button><Button size="sm" variant="outline" onClick={() => clearWorking('day')}>{t('settings.memory.clearDay')}</Button></div>}
+                label={t('settings.memory.sessionNotesTitle')}
+                description={t('settings.memory.sessionNotesDescription')}
+                action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => clearSessionNotes('session')}>{t('settings.memory.clearSession')}</Button><Button size="sm" variant="outline" onClick={() => clearSessionNotes('day')}>{t('settings.memory.clearDay')}</Button></div>}
               />
             </SettingsCard>
           </SettingsSection>

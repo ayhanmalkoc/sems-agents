@@ -411,13 +411,13 @@ export const RPC_CHANNELS = {
   memory: {
     GET: 'memory:get',
     GET_SUGGESTIONS: 'memory:getSuggestions',
-    GET_WORKING: 'memory:getWorking',
+    GET_SESSION_NOTES: 'memory:getSessionNotes',
     GET_ACTIVITY: 'memory:getActivity',
     SEARCH: 'memory:search',
     DELETE: 'memory:delete',
     APPROVE: 'memory:approve',
     REJECT: 'memory:reject',
-    CLEAR_WORKING: 'memory:clearWorking',
+    CLEAR_SESSION_NOTES: 'memory:clearSessionNotes',
     CHANGED: 'memory:changed',
   },
   hooks: {

@@ -13,7 +13,7 @@ export type MemoryType = typeof MEMORY_TYPES[number]
 export type MemoryScope = typeof MEMORY_SCOPES[number]
 export type MemoryConfidence = 'medium' | 'high'
 export type MemoryRecordStatus = 'active' | 'stale'
-export type WorkingMemoryScope = 'session' | 'day'
+export type SessionNoteScope = 'session' | 'day'
 
 export interface MemorySourceTrace {
   sourceSessionId: string
@@ -92,9 +92,9 @@ export interface MemoryAutoSuggestStateJson {
 }
 
 
-export interface WorkingMemoryNote extends MemorySourceTrace {
+export interface SessionNote extends MemorySourceTrace {
   id: string
-  scope: WorkingMemoryScope
+  scope: SessionNoteScope
   title: string
   content: string
   tags?: string[]
@@ -102,11 +102,11 @@ export interface WorkingMemoryNote extends MemorySourceTrace {
   day?: string
 }
 
-export type CreateWorkingMemoryInput = Omit<WorkingMemoryNote, 'id'> & { id?: string }
+export type CreateSessionNoteInput = Omit<SessionNote, 'id'> & { id?: string }
 
-export interface WorkingMemoryJson {
+export interface SessionNotesJson {
   version: 1
-  notes: WorkingMemoryNote[]
+  notes: SessionNote[]
 }
 
 export type MemoryBrainActivityStatus = 'running' | 'done' | 'failed' | 'skipped'
@@ -117,7 +117,6 @@ export interface MemoryBrainActivity {
   reason: string
   mode: 'auto' | 'review' | 'off-as-review'
   sourceSessionIds: string[]
-  taskSessionId?: string
   startedAt: string
   completedAt?: string
   summary?: string

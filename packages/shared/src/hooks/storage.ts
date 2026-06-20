@@ -10,14 +10,6 @@ export function hooksRunsPath(workspaceRootPath: string): string { return join(h
 
 function ensureDir(workspaceRootPath: string): void { mkdirSync(hooksDir(workspaceRootPath), { recursive: true }) }
 
-const LEGACY_BUILTIN_HOOK_IDS: Record<string, string> = {
-  validation_summary_on_turn_stop: 'validation_summary_on_stop',
-}
-
-function normalizeBuiltinHookId(id: string): string {
-  return LEGACY_BUILTIN_HOOK_IDS[id] ?? id
-}
-
 export function defaultHooksPolicy(): HooksPolicy {
   return { secretGuard: 'standard', workspaceBoundary: 'ask', prerequisiteGuard: 'enforce', toolAudit: 'on', customHooks: 'trusted-only', customMaxDurationMs: 2000, customMaxOutputBytes: 4096 }
 }
@@ -48,10 +40,7 @@ function normalizeCustomHook(hook: CustomHookDefinition): CustomHookDefinition {
   if (hook.handler.type === 'command' && !hook.handler.executable?.trim()) throw new Error('Command hook executable is required.')
   if (hook.handler.type === 'http' && !hook.handler.url?.trim()) throw new Error('HTTP hook url is required.')
   if (hook.handler.type === 'mcp' && (!hook.handler.target?.trim() || !hook.handler.tool?.trim())) throw new Error('MCP hook target and tool are required.')
-  const matcher = { ...hook.matcher }
-  if ((matcher as { event?: string }).event === 'SessionComplete') matcher.event = 'Stop'
-  if ((matcher as { event?: string }).event === 'AutomationRun' || (matcher as { event?: string }).event === 'FileChanged') matcher.event = 'PostToolUse'
-  return { ...hook, id: hook.id.trim(), name: hook.name.trim(), enabled: hook.enabled !== false, source: hook.source ?? 'workspace', matcher, powers: hook.powers?.length ? hook.powers : ['observe'], timeoutMs: hook.timeoutMs, maxOutputBytes: hook.maxOutputBytes }
+  return { ...hook, id: hook.id.trim(), name: hook.name.trim(), enabled: hook.enabled !== false, source: hook.source ?? 'workspace', matcher: hook.matcher, powers: hook.powers?.length ? hook.powers : ['observe'], timeoutMs: hook.timeoutMs, maxOutputBytes: hook.maxOutputBytes }
 }
 
 export function defaultHooksConfig(): HooksConfig {
@@ -63,7 +52,7 @@ export function loadHooksConfig(workspaceRootPath: string): HooksConfig {
   if (!existsSync(path)) return defaultHooksConfig()
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<HooksConfig>
-    const existing = new Map((parsed.hooks ?? []).map(entry => [normalizeBuiltinHookId(entry.id), Boolean(entry.enabled)]))
+    const existing = new Map((parsed.hooks ?? []).map(entry => [entry.id, Boolean(entry.enabled)]))
     return {
       version: 1,
       hooks: BUILTIN_HOOKS.map(hook => ({ id: hook.id, enabled: existing.get(hook.id) ?? true })),
@@ -80,7 +69,7 @@ export function saveHooksConfig(workspaceRootPath: string, config: HooksConfig):
   ensureDir(workspaceRootPath)
   const normalized: HooksConfig = {
     version: 1,
-    hooks: BUILTIN_HOOKS.map(hook => ({ id: hook.id, enabled: config.hooks.find(entry => normalizeBuiltinHookId(entry.id) === hook.id)?.enabled ?? true })),
+    hooks: BUILTIN_HOOKS.map(hook => ({ id: hook.id, enabled: config.hooks.find(entry => entry.id === hook.id)?.enabled ?? true })),
     policy: normalizeHooksPolicy(config.policy),
     customHooks: (config.customHooks ?? []).map(normalizeCustomHook),
     trust: config.trust ?? [],
