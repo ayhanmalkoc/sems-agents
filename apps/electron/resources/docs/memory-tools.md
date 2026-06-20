@@ -4,18 +4,18 @@ Use the `memory` tool to manage persistent, scoped workspace memory. Product rul
 
 ## Product Policy
 
-Memory is agent-managed with user oversight. When a task depends on prior project decisions, user preferences, workflows, or past error fixes, run `memory search <query>` before answering.
+Memory is agent-managed. When a task depends on prior project decisions, user preferences, workflows, or past error fixes, run `memory search <query>` before answering.
 
 - If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly after checking for duplicates and secrets.
-- If learning is inferred from a session, use `memory suggest-from-session <sessionId>` or `memory learn ...`; these commands delegate review to the current-agent Memory Brain curation.
+- If learning is inferred from session history, use `memory learn ...`; Memory Brain saves only strong durable facts and ignores weak/noisy information.
 - Automatic memory follows the workspace preference `memoryAutomationMode`:
   - `auto` lets the current-agent Memory Brain save only strong durable completed-session learnings.
-  - `review` lets the current-agent Memory Brain queue durable learnings as pending suggestions.
+  - `review` behaves as manual review mode: memory changes only when Create/Edit/Refresh Memory is explicitly used.
   - `off` skips automatic memory.
 - Default is `auto`.
-- If the information is uncertain, noisy, temporary, or only maybe reusable, create a suggestion instead of approved memory.
+- If the information is uncertain, noisy, temporary, or only maybe reusable, ignore it.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
-- Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, and hygiene changes.
+- Do not edit memory JSON files directly. Use the `memory` tool for create, update, refresh, hygiene, and deletion changes.
 
 ## Commands
 
@@ -26,10 +26,7 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory create <json>` — create an approved memory for explicit user requests.
 - `memory update <memoryId> <json>` — update one approved memory.
 - `memory delete <memoryId>` — delete one approved memory.
-- `memory suggest-from-session <sessionId>` — ask the current-agent Memory Brain to review one session and queue pending suggestions when useful.
 - `memory learn <current|recent|all|sessionId>` — run current-agent Memory Brain curation for current, recent, all, or one specific session.
-- `memory approve <suggestionId>` — move a pending suggestion into approved memory.
-- `memory reject <suggestionId>` — reject a pending suggestion.
 - `memory hygiene` — list duplicate/stale/conflict cleanup candidates without mutating records.
 - `memory merge <targetId> <sourceId>` — mark the source stale and add it to target `supersedes`.
 - `memory mark-stale <memoryId>` — mark one memory stale.
@@ -79,32 +76,22 @@ Use manual learning when automatic completion learning may have missed something
 - `memory learn all` learns from up to 100 workspace sessions, including sessions loaded from disk.
 - `memory learn <sessionId>` learns from one session.
 - In `auto` mode, the Memory Brain saves only strong durable learnings as curated memory.
-- In `review` mode, the Memory Brain queues durable learnings as pending suggestions.
-- In `off` mode, manual learning is still allowed and queues suggestions (`off-as-review`) because it is an explicit user action.
+- In `review` mode, Memory Brain does not auto-save; use Create/Edit/Refresh Memory explicitly.
+- In `off` mode, automatic learning is disabled; direct manual memory tool actions can still run when explicitly requested.
 - Duplicate, secret, and low-confidence guards still apply.
-- Tool output is a stable summary: `processed`, `created`, `suggested`, `skipped`, `mode`, created ids, suggested ids, and the first skip reasons.
-
-## Suggestions
-
-Use suggestions when you think something may be worth remembering but the user has not explicitly approved it.
-
-- `suggest-from-session` and manual memory curation delegates judgment to the current-agent Memory Brain; regex/keyword extraction is not used.
-- It returns `Memory Brain returned no pending suggestions` when no durable suggestion is queued.
-- In `review` mode, pending suggestions are not curated memory until approved. In `auto` mode, only strong durable learnings are saved directly.
-- `approve` promotes a suggestion to memory with a fresh `mem-*` id.
-- `reject` keeps the audit trail but does not create memory.
+- Tool output is a stable summary: `processed`, `created`, `skipped`, `mode`, created ids, and the first skip reasons.
 
 ## Safety
 
 - Do not store secrets, credentials, tokens, private keys, or one-time codes.
 - Keep memory compact and reusable.
 - Prefer decisions, preferences, workflows, and error resolutions over raw chat dumps.
-- If uncertain, create a suggestion instead of approved memory.
+- If uncertain, ignore it instead of writing memory.
 
 
 ## Hygiene
 
-Use `memory hygiene` when memory feels noisy, duplicated, or outdated. It reports cleanup suggestions only. Use `merge` for duplicates, `mark-stale` for old facts, and `refresh` for updated facts. `delete` is still available but should be reserved for clearly unwanted records.
+Use `memory hygiene` when memory feels noisy, duplicated, or outdated. It reports cleanup candidates only. Use `merge` for duplicates, `mark-stale` for old facts, and `refresh` for updated facts. `delete` is still available but should be reserved for clearly unwanted records.
 
 ## Retrieval Guidance
 

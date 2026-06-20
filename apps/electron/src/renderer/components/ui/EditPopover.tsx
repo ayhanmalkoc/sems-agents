@@ -93,7 +93,6 @@ export type EditContextKey =
   | 'hooks-edit'
   | 'memory-create'
   | 'memory-edit'
-  | 'memory-review'
   | 'memory-learn'
 
 /**
@@ -656,8 +655,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to create or manage workspace memory using natural language. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'For explicit durable facts or "remember this" requests, use memory create. ' +
-        'For inferred learnings from a session, use memory suggest-from-session unless the user explicitly asks to save it. ' +
-        'Do not edit memory JSON files directly except as a last-resort fallback. ' +
+        'For inferred learnings from session history, use memory learn and save only strong durable facts. ' +
+        'Do not edit memory JSON files directly. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
         'Confirm clearly what changed.',
     },
@@ -679,7 +678,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
           'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
           'Use memory show to inspect the current record if needed. ' +
           'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, hygiene to find cleanup candidates, delete only when requested, ' +
-          'Do not edit memory JSON files directly except as a last-resort fallback. ' +
+          'Do not edit memory JSON files directly. ' +
           'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
           'Confirm clearly what changed.',
       },
@@ -691,26 +690,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     }
   },
 
-  'memory-review': (location) => ({
-    context: {
-      label: 'Memory Suggestions',
-      filePath: `${location}/memory/suggestions.json`,
-      context:
-        'The user wants to review workspace memory suggestions. ' +
-        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'Use memory list/search/hygiene as needed, then approve strong suggestions, reject weak or sensitive suggestions, merge duplicates, mark stale older memories, or refresh an existing memory. If a session note should become durable, create a memory suggestion or approved memory only when the user intent is clear. ' +
-        'Do not edit memory JSON files directly except as a last-resort fallback. ' +
-        'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
-        'Confirm clearly what changed.',
-    },
-    example: 'Review pending suggestions and approve only strong project decisions',
-    overridePlaceholder: 'How should suggestions be reviewed?',
-    model: 'default',
-    systemPromptPreset: 'mini',
-    inlineExecution: true,
-  }),
-
-
   'memory-learn': (location) => ({
     context: {
       label: 'Refresh Memory',
@@ -719,7 +698,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to refresh memory by learning from session history. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'Use memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
-        'Return a short learn summary with processed, created, suggested, skipped, mode, created ids, suggested ids, and the first skip reasons. ' +
+        'Return a short learn summary with processed, created, skipped, mode, created ids, and the first skip reasons. ' +
         'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
     },
     example: 'Refresh memory from all sessions',

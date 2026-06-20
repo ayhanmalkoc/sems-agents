@@ -36,44 +36,17 @@ export interface MemoryRecord extends MemorySourceTrace {
   updatedBy?: string
 }
 
-export type MemorySuggestionStatus = 'pending' | 'approved' | 'rejected'
-
-export interface MemorySuggestion extends MemorySourceTrace {
-  id: string
-  type: MemoryType
-  scope: MemoryScope
-  title: string
-  content: string
-  reason?: string
-  tags?: string[]
-  agentProfileId?: string
-  sessionId?: string
-  confidence?: MemoryConfidence
-  status: MemorySuggestionStatus
-  decidedAt?: string
-  decidedBy?: string
-  memoryId?: string
-}
-
 export type CreateMemoryInput = Omit<MemoryRecord, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string }
 export type UpdateMemoryInput = Partial<Pick<MemoryRecord, 'type' | 'scope' | 'title' | 'content' | 'tags' | 'agentProfileId' | 'sessionId' | 'confidence' | 'status' | 'supersedes' | 'updatedBy'>>
-export type CreateMemorySuggestionInput = Omit<MemorySuggestion, 'id' | 'status' | 'decidedAt' | 'decidedBy' | 'memoryId'> & { id?: string }
 
 export interface MemoryStoreJson {
   version: 1
   memories: MemoryRecord[]
 }
 
-export interface MemorySuggestionsJson {
-  version: 1
-  suggestions: MemorySuggestion[]
-}
-
 export interface MemoryStatusSnapshot {
   available: boolean
   memories: number
-  suggestions: number
-  pendingSuggestions: number
   reason?: string
 }
 

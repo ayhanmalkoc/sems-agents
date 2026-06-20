@@ -2,11 +2,10 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
-const SUGGESTIONS_FILE = 'suggestions.json'
 const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
 const BRAIN_ACTIVITY_FILE = 'brain-activity.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
@@ -18,7 +17,6 @@ function redactActivityText(value: string | undefined): string | undefined { ret
 
 export function getMemoryDir(workspaceRootPath: string): string { return join(workspaceRootPath, MEMORY_DIR) }
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
-export function getMemorySuggestionsPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SUGGESTIONS_FILE) }
 export function getMemoryAutoSuggestStatePath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), AUTO_SUGGEST_STATE_FILE) }
 export function getMemoryBrainActivityPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), BRAIN_ACTIVITY_FILE) }
 
@@ -83,13 +81,6 @@ export function validateMemoryInput(input: CreateMemoryInput): CreateMemoryInput
   }
 }
 
-export function validateMemorySuggestionInput(input: CreateMemorySuggestionInput): CreateMemorySuggestionInput {
-  assertNoSecrets(input.reason)
-  const validated = validateMemoryInput(input)
-  return { ...validated, reason: input.reason, agentProfileId: input.agentProfileId, sessionId: input.sessionId }
-}
-
-
 export function getMemoryContentHash(input: { type: MemoryType; title: string; content: string; sourceSessionId?: string }): string {
   return createHash('sha256').update([input.type, input.title.trim(), input.content.trim(), input.sourceSessionId ?? ''].join('\n')).digest('hex')
 }
@@ -132,19 +123,6 @@ export function saveMemories(workspaceRootPath: string, memories: MemoryRecord[]
   const path = getMemoriesPath(workspaceRootPath)
   ensureDir(path)
   atomicWriteFileSync(path, JSON.stringify({ version: 1, memories }, null, 2) + '\n')
-}
-
-export function loadMemorySuggestions(workspaceRootPath: string): MemorySuggestion[] {
-  const path = getMemorySuggestionsPath(workspaceRootPath)
-  if (!existsSync(path)) return []
-  const data = readJsonFileSync<MemorySuggestionsJson | MemorySuggestion[]>(path)
-  return Array.isArray(data) ? data : (Array.isArray(data.suggestions) ? data.suggestions : [])
-}
-
-export function saveMemorySuggestions(workspaceRootPath: string, suggestions: MemorySuggestion[]): void {
-  const path = getMemorySuggestionsPath(workspaceRootPath)
-  ensureDir(path)
-  atomicWriteFileSync(path, JSON.stringify({ version: 1, suggestions }, null, 2) + '\n')
 }
 
 export function createMemory(workspaceRootPath: string, input: CreateMemoryInput): MemoryRecord {
@@ -259,12 +237,10 @@ export function updateMemoryBrainActivity(workspaceRootPath: string, id: string,
   return next
 }
 
-export function hasSimilarMemoryOrSuggestion(memories: MemoryRecord[], suggestions: MemorySuggestion[], input: { type: MemoryType; title: string; content: string; sourceSessionId?: string }): boolean {
+export function hasSimilarMemory(memories: MemoryRecord[], input: { type: MemoryType; title: string; content: string; sourceSessionId?: string }): boolean {
   const contentKey = memoryContentKey(input)
   const fullKey = memorySimilarityKey(input)
-  const memoryMatch = memories.some(memory => memoryContentKey(memory) === contentKey || memorySimilarityKey(memory) === fullKey)
-  const suggestionMatch = suggestions.some(suggestion => memoryContentKey(suggestion) === contentKey || memorySimilarityKey(suggestion) === fullKey)
-  return memoryMatch || suggestionMatch
+  return memories.some(memory => memoryContentKey(memory) === contentKey || memorySimilarityKey(memory) === fullKey)
 }
 
 export function deleteMemory(workspaceRootPath: string, memoryId: string): void {
@@ -275,41 +251,3 @@ export function deleteMemory(workspaceRootPath: string, memoryId: string): void 
   saveMemories(workspaceRootPath, next)
 }
 
-export function createMemorySuggestion(workspaceRootPath: string, input: CreateMemorySuggestionInput): MemorySuggestion {
-  const valid = validateMemorySuggestionInput(input)
-  const suggestions = loadMemorySuggestions(workspaceRootPath)
-  const suggestion: MemorySuggestion = { ...valid, id: valid.id?.trim() || makeId('sug'), status: 'pending' }
-  if (suggestions.some(item => item.id === suggestion.id)) throw new Error(`Memory suggestion already exists: ${suggestion.id}`)
-  suggestions.push(suggestion)
-  saveMemorySuggestions(workspaceRootPath, suggestions)
-  return suggestion
-}
-
-export function approveMemorySuggestion(workspaceRootPath: string, suggestionId: string, decidedBy = 'agent'): { suggestion: MemorySuggestion; memory: MemoryRecord } {
-  const id = requireText(suggestionId, 'suggestionId')
-  const suggestions = loadMemorySuggestions(workspaceRootPath)
-  const index = suggestions.findIndex(item => item.id === id)
-  if (index < 0) throw new Error(`Memory suggestion not found: ${id}`)
-  const suggestion = suggestions[index]
-  if (suggestion.status !== 'pending') throw new Error(`Memory suggestion is already ${suggestion.status}`)
-  assertNoSecrets(suggestion.title, suggestion.content, suggestion.reason, suggestion.tags)
-  const { id: _suggestionId, status: _status, decidedAt: _decidedAt, decidedBy: _decidedBy, memoryId: _memoryId, ...memoryInput } = suggestion
-  const memory = createMemory(workspaceRootPath, memoryInput)
-  const decided: MemorySuggestion = { ...suggestion, status: 'approved', decidedAt: nowIso(), decidedBy, memoryId: memory.id }
-  suggestions[index] = decided
-  saveMemorySuggestions(workspaceRootPath, suggestions)
-  return { suggestion: decided, memory }
-}
-
-export function rejectMemorySuggestion(workspaceRootPath: string, suggestionId: string, decidedBy = 'agent'): MemorySuggestion {
-  const id = requireText(suggestionId, 'suggestionId')
-  const suggestions = loadMemorySuggestions(workspaceRootPath)
-  const index = suggestions.findIndex(item => item.id === id)
-  if (index < 0) throw new Error(`Memory suggestion not found: ${id}`)
-  const suggestion = suggestions[index]
-  if (suggestion.status !== 'pending') throw new Error(`Memory suggestion is already ${suggestion.status}`)
-  const next: MemorySuggestion = { ...suggestion, status: 'rejected', decidedAt: nowIso(), decidedBy }
-  suggestions[index] = next
-  saveMemorySuggestions(workspaceRootPath, suggestions)
-  return next
-}

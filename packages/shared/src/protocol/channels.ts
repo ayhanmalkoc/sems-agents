@@ -410,12 +410,9 @@ export const RPC_CHANNELS = {
   },
   memory: {
     GET: 'memory:get',
-    GET_SUGGESTIONS: 'memory:getSuggestions',
     GET_ACTIVITY: 'memory:getActivity',
     SEARCH: 'memory:search',
     DELETE: 'memory:delete',
-    APPROVE: 'memory:approve',
-    REJECT: 'memory:reject',
     CHANGED: 'memory:changed',
   },
   hooks: {

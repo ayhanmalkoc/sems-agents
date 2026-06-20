@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ChevronRight, Search, Sparkles, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -31,15 +31,7 @@ type MemoryRecord = {
   supersedes?: string[]
 }
 
-type MemorySuggestion = Omit<MemoryRecord, 'status'> & {
-  status: 'pending' | 'approved' | 'rejected'
-  reason?: string
-  memoryId?: string
-  decidedAt?: string
-  decidedBy?: string
-}
 
-type HygieneItem = { kind: 'duplicate' | 'stale'; memoryId: string; relatedMemoryId?: string; reason: string }
 
 type MemoryBrainActivity = {
   id: string
@@ -55,7 +47,7 @@ type MemoryBrainActivity = {
 
 type Filters = { type: string; scope: string; status: string }
 
-const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', status: 'pending' }
+const EMPTY_FILTERS: Filters = { type: 'all', scope: 'all', status: 'all' }
 
 type MemoryAutomationMode = 'auto' | 'review' | 'off'
 function parseMemoryAutomationMode(content: string): MemoryAutomationMode {
@@ -91,7 +83,7 @@ function aiButton(label: React.ReactNode) {
   return <Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{label}</Button>
 }
 
-function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id: string) => void }) {
+function MemoryCard({ memory }: { memory: MemoryRecord }) {
   const [expanded, setExpanded] = React.useState(false)
   return (
     <div className={cn('group rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm transition hover:border-primary/25 hover:bg-foreground/[0.015]', expanded && 'border-primary/30 bg-foreground/[0.018]')}>
@@ -104,11 +96,7 @@ function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id:
             </div>
             <p className={cn('mt-2 text-sm leading-6 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-2')}>{memory.content}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100" onClick={event => event.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground/40 hover:text-destructive" onClick={() => onDelete(memory.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {badge(memory.type)}
@@ -127,69 +115,17 @@ function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id:
   )
 }
 
-function SuggestionCard({ suggestion, onApprove, onReject }: { suggestion: MemorySuggestion; onApprove: (id: string) => void; onReject: (id: string) => void }) {
-  const [expanded, setExpanded] = React.useState(false)
-  const pending = suggestion.status === 'pending'
-  const decidedLabel = suggestion.status === 'approved' ? 'Approved' : 'Rejected'
-  return (
-    <div className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm transition hover:border-primary/25">
-      <div className="flex items-start justify-between gap-3">
-        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setExpanded(value => !value)}>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">Suggestion</span>
-            <h3 className="truncate text-sm font-medium text-foreground">{suggestion.title}</h3>
-          </div>
-          <p className={cn('mt-2 text-sm leading-6 text-foreground/60', expanded ? 'whitespace-pre-wrap' : 'line-clamp-2')}>{suggestion.content}</p>
-          {suggestion.reason && <p className="mt-2 line-clamp-2 text-xs text-foreground/40">Why: {suggestion.reason}</p>}
-        </button>
-        <div className="flex shrink-0 gap-1">
-          {pending ? (
-            <>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-success" title="Approve suggestion" onClick={() => onApprove(suggestion.id)}><Check className="h-4 w-4" /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Reject suggestion" onClick={() => onReject(suggestion.id)}><X className="h-4 w-4" /></Button>
-            </>
-          ) : (
-            <span className="rounded-full bg-foreground/[0.04] px-2 py-1 text-[11px] text-foreground/45">{decidedLabel}</span>
-          )}
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">{badge(suggestion.type)}{suggestion.confidence && badge(suggestion.confidence)}</div>
-      {expanded && (
-        <div className="mt-3 border-t border-border/60 pt-3">
-          <div className="flex flex-wrap gap-2 text-[11px] text-foreground/45">
-            <span>Review before saving to long-term memory.</span>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function buildHygieneItems(memories: MemoryRecord[]): HygieneItem[] {
-  const seen = new Map<string, MemoryRecord>()
-  const items: HygieneItem[] = []
-  for (const memory of memories) {
-    if ((memory.status ?? 'active') === 'stale') items.push({ kind: 'stale', memoryId: memory.id, reason: 'Memory is marked stale.' })
-    const key = `${memory.type}:${memory.title.trim().toLowerCase()}:${memory.content.trim().toLowerCase().slice(0, 120)}`
-    const related = seen.get(key)
-    if (related) items.push({ kind: 'duplicate', memoryId: memory.id, relatedMemoryId: related.id, reason: 'Similar type, title, and content.' })
-    else seen.set(key, memory)
-  }
-  return items.slice(0, 5)
-}
-
 function selectOptions(values: string[]) {
   return ['all', ...Array.from(new Set(values.filter(Boolean))).sort()]
 }
 
-function matchesFilters(item: MemoryRecord | MemorySuggestion, filters: Filters, tab: 'memories' | 'suggestions') {
+function matchesFilters(item: MemoryRecord, filters: Filters) {
   if (filters.type !== 'all' && item.type !== filters.type) return false
   if (filters.scope !== 'all' && item.scope !== filters.scope) return false
-  if (tab === 'suggestions' && filters.status !== 'all' && (item as MemorySuggestion).status !== filters.status) return false
   return true
 }
 
-function matchesQuery(item: MemoryRecord | MemorySuggestion, query: string) {
+function matchesQuery(item: MemoryRecord, query: string) {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   const haystack = [item.title, item.content, ...(item.tags ?? [])].join(' ').toLowerCase()
@@ -202,10 +138,9 @@ export default function MemorySettingsPage() {
   const [query, setQuery] = React.useState('')
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS)
   const [memories, setMemories] = React.useState<MemoryRecord[]>([])
-  const [suggestions, setSuggestions] = React.useState<MemorySuggestion[]>([])
   const [brainActivity, setBrainActivity] = React.useState<MemoryBrainActivity[]>([])
   const [loading, setLoading] = React.useState(false)
-  const [advancedOpen, setAdvancedOpen] = React.useState<'activity' | 'cleanup' | null>(null)
+  const [advancedOpen, setAdvancedOpen] = React.useState<'activity' | null>(null)
   const [memoryMode, setMemoryMode] = React.useState<MemoryAutomationMode>('auto')
   const [preferencesContent, setPreferencesContent] = React.useState('{}')
   const activeWorkspace = React.useMemo(() => workspaces.find(workspace => workspace.id === activeWorkspaceId) ?? null, [activeWorkspaceId, workspaces])
@@ -215,14 +150,12 @@ export default function MemorySettingsPage() {
     if (!activeWorkspaceId) return
     setLoading(true)
     try {
-      const [memoryRows, suggestionRows, activityRows, preferences] = await Promise.all([
+      const [memoryRows, activityRows, preferences] = await Promise.all([
         query.trim() ? window.electronAPI.searchMemories(activeWorkspaceId, query.trim()) : window.electronAPI.getMemories(activeWorkspaceId),
-        window.electronAPI.getMemorySuggestions(activeWorkspaceId),
         window.electronAPI.getMemoryBrainActivity(activeWorkspaceId),
         window.electronAPI.readPreferences().catch(() => ({ content: '{}' })),
       ])
       setMemories(memoryRows as MemoryRecord[])
-      setSuggestions(suggestionRows as MemorySuggestion[])
       setBrainActivity(activityRows as MemoryBrainActivity[])
       const content = (preferences as { content?: string }).content || '{}'
       setPreferencesContent(content)
@@ -244,52 +177,12 @@ export default function MemorySettingsPage() {
     return cleanup
   }, [activeWorkspaceId, refresh])
 
-  const deleteOne = async (id: string) => {
-    if (!activeWorkspaceId) return
-    if (!window.confirm(`Delete memory ${id}?`)) return
-    try {
-      await window.electronAPI.deleteMemory(activeWorkspaceId, id)
-      toast.success('Memory deleted')
-      void refresh()
-    } catch (error) {
-      toast.error('Failed to delete memory', { description: error instanceof Error ? error.message : String(error) })
-    }
-  }
 
-  const approve = async (id: string) => {
-    if (!activeWorkspaceId) return
-    try {
-      await window.electronAPI.approveMemorySuggestion(activeWorkspaceId, id)
-      toast.success('Suggestion approved')
-      void refresh()
-    } catch (error) {
-      toast.error('Failed to approve suggestion', { description: error instanceof Error ? error.message : String(error) })
-    }
-  }
 
-  const reject = async (id: string) => {
-    if (!activeWorkspaceId) return
-    try {
-      await window.electronAPI.rejectMemorySuggestion(activeWorkspaceId, id)
-      toast.success('Suggestion rejected')
-      void refresh()
-    } catch (error) {
-      toast.error('Failed to reject suggestion', { description: error instanceof Error ? error.message : String(error) })
-    }
-  }
 
-  const visibleMemories = memories.filter(memory => matchesFilters(memory, filters, 'memories') && matchesQuery(memory, query))
-  const visibleSuggestions = suggestions
-    .filter(suggestion => matchesFilters(suggestion, { ...filters, status: 'all' }, 'suggestions') && matchesQuery(suggestion, query))
-    .sort((left, right) => (left.status === 'pending' ? 0 : 1) - (right.status === 'pending' ? 0 : 1))
-  const hygieneItems = React.useMemo(() => buildHygieneItems(memories), [memories])
-  const staleCount = memories.filter(memory => memory.status === 'stale').length
-  const duplicateItems = hygieneItems.filter(item => item.kind === 'duplicate')
-  const staleItems = hygieneItems.filter(item => item.kind === 'stale')
+  const visibleMemories = memories.filter(memory => matchesFilters(memory, filters) && matchesQuery(memory, query))
   const visibleMemoryCards = visibleMemories.slice(0, 10)
   const hiddenMemoryCount = Math.max(visibleMemories.length - visibleMemoryCards.length, 0)
-  const activeSuggestions = visibleSuggestions.filter(suggestion => suggestion.status === 'pending')
-  const attentionCount = hygieneItems.length + staleCount
   const selectedModeDescriptionKey = memoryMode === 'auto' ? 'settings.memory.mode.autoDescription' : memoryMode === 'review' ? 'settings.memory.mode.reviewDescription' : 'settings.memory.mode.offDescription'
   const typeOptions = selectOptions(memories.map(item => item.type))
   const scopeOptions = selectOptions(memories.map(item => item.scope))
@@ -327,7 +220,6 @@ export default function MemorySettingsPage() {
                 label={t('settings.memory.workspaceMemoryTitle')}
                 description={t('settings.memory.workspaceMemorySummary', {
                   saved: memories.length,
-                  suggestions: activeSuggestions.length,
                   mode: modeLabel(memoryMode, t),
                 })}
               />
@@ -350,21 +242,13 @@ export default function MemorySettingsPage() {
                 <Button size="sm" variant="ghost" onClick={() => setFilters(EMPTY_FILTERS)}>{t('settings.memory.reset')}</Button>
               </div>
               <div className={cn('space-y-3 p-3', loading && 'opacity-60')}>
-                {visibleMemoryCards.length ? visibleMemoryCards.map(memory => <MemoryCard key={memory.id} memory={memory} onDelete={deleteOne} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
+                {visibleMemoryCards.length ? visibleMemoryCards.map(memory => <MemoryCard key={memory.id} memory={memory} />) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-foreground/50">{t('settings.memory.noSavedMemories')}</div>}
                 {hiddenMemoryCount > 0 && <div className="text-center text-xs text-foreground/45">{t('settings.memory.moreMemories', { count: hiddenMemoryCount })}</div>}
               </div>
             </SettingsCard>
           </SettingsSection>
 
-          {activeSuggestions.length > 0 && (
-            <SettingsSection title={t('settings.memory.suggestionsTitle')} description={t('settings.memory.suggestionsDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.review'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}>
-              <SettingsCard className="p-3">
-                <div className="space-y-3">
-                  {activeSuggestions.map(suggestion => <SuggestionCard key={suggestion.id} suggestion={suggestion} onApprove={approve} onReject={reject} />)}
-                </div>
-              </SettingsCard>
-            </SettingsSection>
-          )}
+
 
           <SettingsSection title={t('settings.memory.advancedTitle')} description={t('settings.memory.advancedDescription')}>
             <SettingsCard>
@@ -400,25 +284,6 @@ export default function MemorySettingsPage() {
                     </div>
                   ))}
                   {brainActivity.length === 0 && <div className="rounded-xl border border-dashed border-border p-4 text-sm text-foreground/50">{t('settings.memory.noBrainActivity')}</div>}
-                </div>
-              )}
-              <SettingsRow
-                label={t('settings.memory.cleanupSuggestionsTitle')}
-                description={t('settings.memory.advancedCleanupSummary', { attention: attentionCount })}
-                onClick={() => setAdvancedOpen(advancedOpen === 'cleanup' ? null : 'cleanup')}
-                action={<div className="flex items-center gap-2">{attentionCount > 0 && <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">{attentionCount}</span>}{advancedOpen === 'cleanup' ? <ChevronDown className="h-4 w-4 text-foreground/40" /> : <ChevronRight className="h-4 w-4 text-foreground/40" />}</div>}
-              />
-              {advancedOpen === 'cleanup' && (
-                <div className="space-y-3 border-t border-border/60 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-foreground/45">{t('settings.memory.cleanupDescription')}</p>
-                    {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.reviewCleanup'))} onInlineComplete={refresh} {...getEditConfig('memory-review', workspaceRoot)} />}
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{duplicateItems.length}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.duplicates')}</div></div>
-                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">{staleItems.length + staleCount}</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.stale')}</div></div>
-                    <div className="rounded-xl bg-foreground/[0.025] p-3"><div className="text-sm font-medium text-foreground">0</div><div className="text-xs text-foreground/45">{t('settings.memory.cleanup.conflicts')}</div></div>
-                  </div>
                 </div>
               )}
 

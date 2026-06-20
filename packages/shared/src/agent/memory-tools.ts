@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { CreateMemoryInput, MemoryHygieneItem, MemoryRecord, MemoryStatusSnapshot, MemorySuggestion, UpdateMemoryInput } from '../memory/types.ts'
+import type { CreateMemoryInput, MemoryHygieneItem, MemoryRecord, MemoryStatusSnapshot, UpdateMemoryInput } from '../memory/types.ts'
 
 type ToolResult = {
   content: Array<{ type: 'text'; text: string }>
@@ -19,10 +19,6 @@ export interface MemoryFns {
   merge: (targetId: string, sourceId: string) => Promise<{ target: MemoryRecord; source: MemoryRecord }>
   markStale: (memoryId: string) => Promise<MemoryRecord>
   refresh: (memoryId: string, updates: UpdateMemoryInput) => Promise<MemoryRecord>
-  suggestFromSession: (sessionId: string) => Promise<MemorySuggestion | MemorySuggestion[]>
-  approve: (suggestionId: string) => Promise<{ suggestion: MemorySuggestion; memory: MemoryRecord }>
-  reject: (suggestionId: string) => Promise<MemorySuggestion>
-  listSuggestions?: () => Promise<MemorySuggestion[]>
   learn?: (target: string) => Promise<MemoryLearnSummary>
 }
 
@@ -30,7 +26,6 @@ export interface MemoryLearnSummary {
   mode: 'auto' | 'review' | 'off-as-review'
   processed: number
   created: MemoryRecord[]
-  suggested: MemorySuggestion[]
   skipped: number
   reasons?: string[]
   taskId?: string
@@ -38,7 +33,7 @@ export interface MemoryLearnSummary {
 }
 
 const MemorySchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, learn <current|recent|all|sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, learn <current|recent|all|sessionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -72,17 +67,6 @@ function formatMemorySearchResults(memories: MemoryRecord[]): string {
   if (memories.length === 0) return 'Memory search: no relevant memories found'
   return ['Memory search results:', ...memories.map(formatMemorySearchResult)].join('\n')
 }
-function formatSuggestion(suggestion: MemorySuggestion): string {
-  const content = suggestion.content.length > 240 ? `${suggestion.content.slice(0, 237)}...` : suggestion.content
-  const parts = [suggestion.id, `status=${suggestion.status}`, `type=${suggestion.type}`, `scope=${suggestion.scope}`, `confidence=${suggestion.confidence ?? 'n/a'}`, `title=${JSON.stringify(suggestion.title)}`]
-  if (suggestion.memoryId) parts.push(`memoryId=${suggestion.memoryId}`)
-  return `- ${parts.join(' ')}\n  ${content}`
-}
-function formatSuggestions(suggestions: MemorySuggestion[]): string {
-  if (suggestions.length === 0) return 'Memory Brain returned no pending suggestions yet. If a task was started, pending suggestions may appear after it completes.'
-  return suggestions.map(formatSuggestion).join('\n')
-}
-
 function formatHygiene(items: MemoryHygieneItem[]): string {
   if (items.length === 0) return 'Memory hygiene: no cleanup needed'
   return ['Memory hygiene: needs cleanup', ...items.map(item => `- kind=${item.kind} memoryId=${item.memoryId}${item.relatedMemoryId ? ` relatedMemoryId=${item.relatedMemoryId}` : ''} reason=${JSON.stringify(item.reason)}`)].join('\n')
@@ -91,12 +75,11 @@ function formatHygiene(items: MemoryHygieneItem[]): string {
 
 function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
-    `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
+    `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} skipped=${summary.skipped}`,
     'Task runs asynchronously; created/suggested counts reflect current completed output only.',
   ]
   if (summary.taskId) lines.push(`Task: ${summary.taskId} status=${summary.taskStatus ?? 'running'}`)
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(',')}`)
-  if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(',')}`)
   if (summary.reasons?.length) lines.push(`Reasons: ${summary.reasons.join('; ')}`)
   return lines.join('\n')
 }
@@ -108,7 +91,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
   try {
     if (!verb || verb === 'status') {
       const status = await fns.status()
-      return success(`Memory: ${status.available ? 'available' : 'unavailable'}\nMemories: ${status.memories}\nSuggestions: ${status.suggestions}\nPending: ${status.pendingSuggestions}${status.reason ? `\nReason: ${status.reason}` : ''}`)
+      return success(`Memory: ${status.available ? 'available' : 'unavailable'}\nMemories: ${status.memories}${status.reason ? `\nReason: ${status.reason}` : ''}`)
     }
     if (verb === 'list') {
       const memories = await fns.list()
@@ -162,35 +145,11 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       await fns.delete(memoryId)
       return success(`Deleted memory ${memoryId}`)
     }
-    if (verb === 'suggest-from-session') {
-      const sessionId = rest[0]
-      if (!sessionId) return failure('suggest-from-session requires a session id')
-      const result = await fns.suggestFromSession(sessionId)
-      const suggestions = Array.isArray(result) ? result : [result]
-      if (suggestions.length === 0) return success('Memory Brain returned no pending suggestions yet. If a task was started, pending suggestions may appear after it completes.')
-      return success(`Created ${suggestions.length} memory suggestion${suggestions.length === 1 ? '' : 's'}\n${formatSuggestions(suggestions)}`)
-    }
     if (verb === 'learn') {
       if (!fns.learn) return failure('learn is not available in this context')
       const target = rest.join(' ').trim()
       if (!target) return failure('learn requires target: current, recent, all, or session id')
       return success(formatLearnSummary(await fns.learn(target)))
-    }
-    if (verb === 'approve') {
-      const suggestionId = rest[0]
-      if (!suggestionId) return failure('approve requires a suggestion id')
-      const result = await fns.approve(suggestionId)
-      return success(`Approved suggestion ${result.suggestion.id} as memory ${result.memory.id}\n${formatMemory(result.memory)}`)
-    }
-    if (verb === 'reject') {
-      const suggestionId = rest[0]
-      if (!suggestionId) return failure('reject requires a suggestion id')
-      const suggestion = await fns.reject(suggestionId)
-      return success(`Rejected suggestion ${suggestion.id}`)
-    }
-    if (verb === 'suggestions') {
-      const suggestions = await fns.listSuggestions?.() ?? []
-      return success(suggestions.length ? ['Suggestions:', ...suggestions.map(formatSuggestion)].join('\n') : 'Suggestions: none')
     }
     return failure(`Unknown memory command: ${verb}`)
   } catch (error) {
@@ -199,7 +158,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
 }
 
 export function createMemoryTool(options: { getMemoryFns: () => MemoryFns | undefined }) {
-  return tool('memory', 'Manage persistent scoped workspace memory: retrieval, suggestions, hygiene, approvals, and deletion.', MemorySchema.shape, async (args) => {
+  return tool('memory', 'Manage persistent scoped workspace memory: retrieval, hygiene, updates, and deletion.', MemorySchema.shape, async (args) => {
     const fns = options.getMemoryFns()
     if (!fns) return failure('Memory controls are not available. This tool requires the desktop app.')
     return executeMemoryCommand(String(args.command ?? 'status'), fns)

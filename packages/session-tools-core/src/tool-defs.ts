@@ -183,11 +183,11 @@ export const ResourcesToolSchema = z.object({
 });
 
 export const MemoryToolSchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, approve <suggestionId>, reject <suggestionId>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, learn <current|recent|all|sessionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
 });
 
 export const HooksToolSchema = z.object({
-  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test <hookId> <json>, policy, set-policy <json>, simulate-tool <snake_case-json>, simulate-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.'),
+  command: z.string().describe('Hooks command: status, list, show <hookId>, enable <hookId>, disable <hookId>, runs [hookId], explain <runId>, run-detail <runId>, test-hook <hookId> <json>, policy, set-policy <json>, dry-run-tool <snake_case-json>, dry-run-prompt <snake_case-json>, custom-list, custom-show <hookId>, custom-create <json>, custom-update <hookId> <json>, custom-delete <hookId>, trust-review <hookId>, trust-approve <hookId> --confirm, trust-revoke <hookId>, matcher-set <hookId> <json>.'),
 });
 
 export const SessionsToolSchema = z.object({
@@ -559,15 +559,15 @@ Commands:
 - \`enable <hookId>\` / \`disable <hookId>\` - toggle one builtin hook
 - \`runs [hookId]\` - show recent hook runs
 - \`explain <runId>\` - inspect one run decision
-- \`test <hookId> <json>\` - dry-run one hook with event payload
+- \`test-hook <hookId> <json>\` - dry-run one hook with event payload
 - \`policy\` - show workspace hook policy
 - \`set-policy <json>\` - update workspace hook policy
-- \`simulate-tool <snake_case-json>\` - dry-run PreToolUse gateway
-- \`simulate-prompt <snake_case-json>\` - dry-run UserPromptSubmit gateway`,
+- \`dry-run-tool <snake_case-json>\` - dry-run PreToolUse gateway
+- \`dry-run-prompt <snake_case-json>\` - dry-run UserPromptSubmit gateway`,
 
   memory: `Manage persistent scoped workspace memory.
 
-Use this when the user asks to remember durable information, inspect/search memory, or review memory suggestions.
+Use this when the user asks to remember durable information, inspect/search memory, or refresh workspace memory.
 
 Commands:
 - \`status\` - summarize memory availability and counts
@@ -577,9 +577,7 @@ Commands:
 - \`create <json>\` - create approved memory with source trace
 - \`update <memoryId> <json>\` - update one memory
 - \`delete <memoryId>\` - delete one memory
-- \`suggest-from-session <sessionId>\` - create a pending candidate
-- \`approve <suggestionId>\` - promote candidate to memory
-- \`reject <suggestionId>\` - reject candidate`,
+`,
 
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
 - Cost optimization: use a smaller model for simple tasks (summarization, classification)

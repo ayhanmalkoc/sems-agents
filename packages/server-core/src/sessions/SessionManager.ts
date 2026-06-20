@@ -40,7 +40,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, findMemoryHygieneItems, loadMemoryBrainActivity, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryBrainActivity, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -125,7 +125,6 @@ type MemoryBrainTaskResult = {
   mode: MemoryLearnMode
   processed: number
   created: MemoryRecord[]
-  suggested: MemorySuggestion[]
   skipped: number
   reasons: string[]
   taskId?: string
@@ -138,7 +137,6 @@ type MemoryLearnResult = {
   mode: MemoryLearnMode
   processed: number
   created: ReturnType<typeof createMemory>[]
-  suggested: ReturnType<typeof createMemorySuggestion>[]
   skipped: number
   reasons: string[]
 }
@@ -4185,8 +4183,7 @@ export class SessionManager implements ISessionManager {
           memoryFns: {
             status: async () => {
               const memories = loadMemories(managed.workspace.rootPath)
-              const suggestions = loadMemorySuggestions(managed.workspace.rootPath)
-              return { available: true, memories: memories.length, suggestions: suggestions.length, pendingSuggestions: suggestions.filter(s => s.status === 'pending').length }
+              return { available: true, memories: memories.length }
             },
             list: async () => loadMemories(managed.workspace.rootPath),
             show: async (memoryId) => loadMemories(managed.workspace.rootPath).find(memory => memory.id === memoryId),
@@ -4221,27 +4218,6 @@ export class SessionManager implements ISessionManager {
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
-            suggestFromSession: async (sessionId) => {
-              const result = await this.runMemoryBrainTask({
-                managed,
-                targets: this.resolveMemoryLearnTargets(managed, sessionId),
-                mode: 'review',
-                reason: 'suggest-from-session',
-              })
-              return result.suggested
-            },
-            approve: async (suggestionId) => {
-              const result = approveMemorySuggestion(managed.workspace.rootPath, suggestionId, 'memory tool')
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/suggestions.json')
-              return result
-            },
-            reject: async (suggestionId) => {
-              const suggestion = rejectMemorySuggestion(managed.workspace.rootPath, suggestionId, 'memory tool')
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/suggestions.json')
-              return suggestion
-            },
-            listSuggestions: async () => loadMemorySuggestions(managed.workspace.rootPath),
             learn: async (target) => {
               const preferenceMode = resolveMemoryAutomationMode(loadPreferences())
               const mode: MemoryLearnMode = preferenceMode === 'auto' ? 'auto' : preferenceMode === 'off' ? 'off-as-review' : 'review'
@@ -7059,7 +7035,7 @@ export class SessionManager implements ISessionManager {
 
   private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], mode: MemoryLearnMode): Promise<MemoryLearnResult> {
     if (mode === 'off-as-review') {
-      return { mode, processed: 0, created: [], suggested: [], skipped: targets.length, reasons: ['memory automation is off'] }
+      return { mode, processed: 0, created: [], skipped: targets.length, reasons: ['memory automation is off'] }
     }
     return this.runMemoryBrainTask({ managed, targets, mode, reason: 'memory learn command' })
   }
@@ -7078,7 +7054,7 @@ export class SessionManager implements ISessionManager {
         summary: 'No eligible non-mini sessions.',
       })
       this.notifyConfigFileChange(workspaceRoot, 'memory/brain-activity.json')
-      return { mode: input.mode, processed: 0, created: [], suggested: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'], taskId: activity.id, taskStatus: 'skipped' }
+      return { mode: input.mode, processed: 0, created: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'], taskId: activity.id, taskStatus: 'skipped' }
     }
 
     const sessionIds = targets.map(target => target.id)
@@ -7092,14 +7068,14 @@ export class SessionManager implements ISessionManager {
 
     const modeInstruction = input.mode === 'auto'
       ? 'Use memory create for only strong durable facts. If uncertain, do not write.'
-      : 'Create pending memory suggestions only when a durable learning needs review. Do not approve them.'
+      : 'Manual review mode: use memory create only for strong durable facts explicitly worth saving. If uncertain, do not write.'
     const targetInstruction = sessionIds.length === 1 ? sessionIds[0] : sessionIds.join(', ')
     const sessionContext = formatMemoryBrainSessionContext(targets)
     const explicitPrompt = input.explicitPrompt ? redactMemoryBrainText(input.explicitPrompt).slice(0, 1200) : undefined
     const prompt = [
       'Memory Brain curation instruction for the current chat agent.',
       'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for create/update/search/hygiene only. Do not edit JSON files directly.',
-      'Do not call memory learn or memory suggest-from-session from inside this Memory Brain task; this task already received the bounded session context below.',
+      'Do not call memory learn from inside this Memory Brain task; this task already received the bounded session context below.',
       modeInstruction,
       'Search existing memory before writing. Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',
       'If existing memory already covers the fact, do not create a duplicate.',
@@ -7108,7 +7084,7 @@ export class SessionManager implements ISessionManager {
       ...(explicitPrompt ? [`Explicit remember prompt: ${explicitPrompt}`] : []),
       'Bounded redacted session context:',
       sessionContext,
-      'Finish with a concise summary: processed, created ids, suggested ids, skipped count, reasons.',
+      'Finish with a concise summary: processed, created ids, skipped count, reasons.',
     ].join('\n')
 
     updateMemoryBrainActivity(workspaceRoot, activity.id, { status: 'done', completedAt: new Date().toISOString(), summary: 'Memory curation instruction prepared for the current chat agent.' })
@@ -7118,7 +7094,6 @@ export class SessionManager implements ISessionManager {
       mode: input.mode,
       processed: targets.length,
       created: [],
-      suggested: [],
       skipped,
       reasons: [prompt],
       taskId: activity.id,
