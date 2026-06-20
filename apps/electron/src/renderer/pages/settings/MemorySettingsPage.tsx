@@ -101,8 +101,8 @@ function badge(text: string) {
   return <span className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-[11px] text-foreground/55">{text}</span>
 }
 
-function aiButton(label: React.ReactNode, variant: 'default' | 'outline' = 'outline') {
-  return <Button size="sm" variant={variant}><Sparkles className="h-3.5 w-3.5" />{label}</Button>
+function aiButton(label: React.ReactNode) {
+  return <Button size="sm" variant="outline"><Sparkles className="h-3.5 w-3.5" />{label}</Button>
 }
 
 function MemoryCard({ memory, onDelete }: { memory: MemoryRecord; onDelete: (id: string) => void }) {
@@ -337,18 +337,31 @@ export default function MemorySettingsPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <PanelHeader
-        title={t('settings.memory.title')}
-        actions={(
-          <div className="flex items-center gap-2">
-            {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />}
-            {workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.create'), 'default')} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />}
-            <HeaderMenu route={routes.view.settings('memory')} />
-          </div>
-        )}
-      />
+      <PanelHeader title={t('settings.memory.title')} actions={<HeaderMenu route={routes.view.settings('memory')} />} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+          <SettingsSection
+            title={t('settings.memory.title')}
+            description={t('settings.memory.pageDescription')}
+            action={workspaceRoot && (
+              <div className="flex items-center gap-2">
+                <EditPopover trigger={aiButton(t('settings.memory.refreshMemory'))} onInlineComplete={refresh} {...getEditConfig('memory-learn', workspaceRoot)} />
+                <EditPopover trigger={aiButton(t('settings.memory.create'))} onInlineComplete={refresh} {...getEditConfig('memory-create', workspaceRoot)} />
+              </div>
+            )}
+          >
+            <SettingsCard>
+              <SettingsRow
+                label={t('settings.memory.workspaceMemoryTitle')}
+                description={t('settings.memory.workspaceMemorySummary', {
+                  saved: memories.length,
+                  suggestions: activeSuggestions.length,
+                  mode: modeLabel(memoryMode, t),
+                })}
+              />
+            </SettingsCard>
+          </SettingsSection>
+
           <SettingsSection title={t('settings.memory.savedMemoriesTitle')} description={t('settings.memory.savedMemoriesDescription')} action={workspaceRoot && <EditPopover trigger={aiButton(t('settings.memory.edit'))} onInlineComplete={refresh} {...getEditConfig('memory-edit', `${workspaceRoot}::workspace memory`)} />}>
             <SettingsCard className="overflow-hidden">
               <div className="flex flex-wrap items-center gap-2 border-b border-border/60 p-3">

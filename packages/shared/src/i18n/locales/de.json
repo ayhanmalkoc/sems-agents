@@ -1764,5 +1764,7 @@
   "settings.memory.cleanupSuggestionsTitle": "Cleanup suggestions",
   "settings.memory.temporaryNotesTitle": "Temporary notes",
   "settings.memory.minimalIntro": "Let the Memory Brain manage learning. Use Create or Refresh Memory when you want direct control.",
-  "settings.memory.advancedCleanupSummary": "{{attention}} cleanup suggestion(s). Nothing changes until review."
+  "settings.memory.advancedCleanupSummary": "{{attention}} cleanup suggestion(s). Nothing changes until review.",
+  "settings.memory.workspaceMemorySummary": "{{saved}} saved · {{suggestions}} suggestions · {{mode}}",
+  "settings.memory.workspaceMemoryTitle": "Workspace memory"
 }
