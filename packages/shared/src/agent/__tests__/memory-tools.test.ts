@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { executeMemoryCommand, type MemoryFns } from '../memory-tools.ts'
-import type { MemoryRecord, MemorySuggestion, SessionNote } from '../../memory/index.ts'
+import type { MemoryRecord, MemorySuggestion } from '../../memory/index.ts'
 
 const memory: MemoryRecord = {
   id: 'mem-1',
@@ -19,15 +19,6 @@ const suggestion: MemorySuggestion = {
   status: 'pending',
 }
 
-const workingNote: SessionNote = {
-  id: 'work-1',
-  scope: 'session',
-  title: 'session note',
-  content: 'Temporary context.',
-  sourceSessionId: 'session-1',
-  createdBy: 'test',
-  createdAt: '2026-06-16T00:00:00.000Z',
-}
 
 function fns(): MemoryFns {
   return {
@@ -42,9 +33,6 @@ function fns(): MemoryFns {
     merge: async () => ({ target: { ...memory, supersedes: ['mem-2'] }, source: { ...memory, id: 'mem-2', status: 'stale' } }),
     markStale: async () => ({ ...memory, status: 'stale' }),
     refresh: async (_id, updates) => ({ ...memory, ...updates, status: 'active' }),
-    sessionNotesList: async () => [workingNote],
-    sessionNotesAdd: async (input) => ({ ...workingNote, ...input, id: input.id ?? 'work-created' }),
-    sessionNotesClear: async () => 1,
     suggestFromSession: async () => suggestion,
     approve: async () => ({ suggestion: { ...suggestion, status: 'approved', memoryId: memory.id }, memory }),
     reject: async () => ({ ...suggestion, status: 'rejected' }),
@@ -73,9 +61,6 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('merge mem-1 mem-2', fns())).content[0].text).toContain('Merged source')
     expect((await executeMemoryCommand('mark-stale mem-1', fns())).content[0].text).toContain('stale')
     expect((await executeMemoryCommand('refresh mem-1 {"content":"Fresh"}', fns())).content[0].text).toContain('Refreshed memory')
-    expect((await executeMemoryCommand('session-notes-list', fns())).content[0].text).toContain('Session Notes')
-    expect((await executeMemoryCommand('session-notes-add {"scope":"session","title":"T","content":"C","sourceSessionId":"s","createdBy":"t","createdAt":"now"}', fns())).content[0].text).toContain('Added Session Notes')
-    expect((await executeMemoryCommand('session-notes-clear session', fns())).content[0].text).toContain('Cleared 1')
     expect((await executeMemoryCommand('suggest-from-session session-1', fns())).content[0].text).toContain('Created 1 memory suggestion')
     const learn = (await executeMemoryCommand('learn current', fns())).content[0].text
     expect(learn).toContain('Memory learn summary: delegated to Memory Brain mode=review processed=1 created=0 suggested=1 skipped=0')

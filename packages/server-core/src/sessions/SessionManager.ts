@@ -40,7 +40,7 @@ import {
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, addSessionNote, clearSessionNotes, findMemoryHygieneItems, loadMemoryBrainActivity, loadSessionNotes, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
+import { createMemory, updateMemory, deleteMemory, loadMemories, loadMemorySuggestions, searchMemories, createMemorySuggestion, approveMemorySuggestion, rejectMemorySuggestion, findMemoryHygieneItems, loadMemoryBrainActivity, markMemoryStale, mergeMemories, refreshMemory, startMemoryBrainActivity, updateMemoryBrainActivity, type MemoryRecord, type MemorySuggestion } from '@craft-agent/shared/memory'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4221,17 +4221,6 @@ export class SessionManager implements ISessionManager {
               this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/memories.json')
               return memory
             },
-            sessionNotesList: async () => loadSessionNotes(managed.workspace.rootPath),
-            sessionNotesAdd: async (input) => {
-              const note = addSessionNote(managed.workspace.rootPath, input)
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/session-notes.json')
-              return note
-            },
-            sessionNotesClear: async (scope) => {
-              const count = clearSessionNotes(managed.workspace.rootPath, scope)
-              this.notifyConfigFileChange(managed.workspace.rootPath, 'memory/session-notes.json')
-              return count
-            },
             suggestFromSession: async (sessionId) => {
               const result = await this.runMemoryBrainTask({
                 managed,
@@ -4287,7 +4276,7 @@ export class SessionManager implements ISessionManager {
             beforePromptSubmit: async (payload) => {
               const decision = await new HookEngine(managed.workspace.rootPath).beforePromptSubmit(payload)
               if (decision.type === 'mutate' && /explicit remember/i.test(decision.message ?? '')) {
-                return { type: 'addContext', message: decision.message, context: 'Memory curation mode: the user explicitly asked to remember this. Use the memory tool and Session Notes in the current chat; do not create a new session.' }
+                return { type: 'addContext', message: decision.message, context: 'Memory curation mode: the user explicitly asked to remember this. Use the memory tool in the current chat; do not create a new session.' }
               }
               return decision
             },

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { addSessionNote, approveMemorySuggestion, clearSessionNotes, createMemory, createMemorySuggestion, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemoryOrSuggestion, loadMemories, loadMemoryAutoSuggestState, loadMemoryBrainActivity, loadMemorySuggestions, loadSessionNotes, markMemoryStale, mergeMemories, refreshMemory, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, startMemoryBrainActivity, updateMemory, updateMemoryAutoSuggestSessionState, updateMemoryBrainActivity } from '../index.ts'
+import { approveMemorySuggestion, createMemory, createMemorySuggestion, deleteMemory, findMemoryHygieneItems, getMemoryAutoSuggestSessionState, getMemoryContentHash, hasSimilarMemoryOrSuggestion, loadMemories, loadMemoryAutoSuggestState, loadMemoryBrainActivity, loadMemorySuggestions, markMemoryStale, mergeMemories, refreshMemory, rejectMemorySuggestion, saveMemorySuggestions, searchMemories, startMemoryBrainActivity, updateMemory, updateMemoryAutoSuggestSessionState, updateMemoryBrainActivity } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -109,14 +109,6 @@ describe('memory storage', () => {
     expect(loadMemoryBrainActivity(ws)[0]?.summary).toBe('Done')
   })
 
-  it('supports Session Notes add list and clear', () => {
-    const ws = tempWs()
-    const note = addSessionNote(ws, { scope: 'session', title: 'Temporary task', content: 'Use this only today.', sourceSessionId: 'session-1', createdBy: 'test', createdAt: base.createdAt, sessionId: 'session-1' })
-    expect(note.id).toStartWith('session-note-')
-    expect(loadSessionNotes(ws)).toHaveLength(1)
-    expect(clearSessionNotes(ws, 'session')).toBe(1)
-    expect(loadSessionNotes(ws)).toHaveLength(0)
-  })
 
   it('approves and rejects suggestions', () => {
     const ws = tempWs()

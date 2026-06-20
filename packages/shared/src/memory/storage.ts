@@ -2,13 +2,12 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type CreateSessionNoteInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput, type SessionNotesJson, type SessionNote, type SessionNoteScope } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type CreateMemorySuggestionInput, type MemoryBrainActivity, type MemoryBrainActivityJson, type MemoryBrainActivityStatus, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryAutoSuggestSessionState, type MemoryAutoSuggestStateJson, type MemoryStoreJson, type MemorySuggestion, type MemorySuggestionsJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
 const SUGGESTIONS_FILE = 'suggestions.json'
 const AUTO_SUGGEST_STATE_FILE = 'auto-suggest-state.json'
-const SESSION_NOTES_FILE = 'session-notes.json'
 const BRAIN_ACTIVITY_FILE = 'brain-activity.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
 const ACTIVITY_SECRET_PATTERNS = [/sk[-_][A-Za-z0-9_\-./+=]{8,}/gi, /\b(api[_-]?key|token|password|passwd|secret|bearer)\b\s*(?:[:=]|is)?\s*[^\s,;]{8,}/gi, /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi]
@@ -21,7 +20,6 @@ export function getMemoryDir(workspaceRootPath: string): string { return join(wo
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
 export function getMemorySuggestionsPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SUGGESTIONS_FILE) }
 export function getMemoryAutoSuggestStatePath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), AUTO_SUGGEST_STATE_FILE) }
-export function getSessionNotesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), SESSION_NOTES_FILE) }
 export function getMemoryBrainActivityPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), BRAIN_ACTIVITY_FILE) }
 
 function ensureDir(path: string): void { mkdirSync(dirname(path), { recursive: true }) }
@@ -41,9 +39,6 @@ function assertConfidence(confidence: unknown): asserts confidence is MemoryConf
 }
 function assertRecordStatus(status: unknown): asserts status is MemoryRecordStatus {
   if (status !== undefined && status !== 'active' && status !== 'stale') throw new Error(`Invalid memory status: ${String(status)}`)
-}
-function assertSessionNoteScope(scope: unknown): asserts scope is SessionNoteScope {
-  if (scope !== 'session' && scope !== 'day') throw new Error(`Invalid Session Notes scope: ${String(scope)}`)
 }
 function normalizeStringList(value: unknown, field: string): string[] | undefined {
   if (value == null) return undefined
@@ -218,53 +213,6 @@ export function findMemoryHygieneItems(memories: MemoryRecord[]): MemoryHygieneI
     else seen.set(key, memory)
   }
   return items
-}
-
-function validateSessionNoteInput(input: CreateSessionNoteInput): CreateSessionNoteInput {
-  assertSessionNoteScope(input.scope)
-  assertNoSecrets(input.title, input.content, input.tags)
-  return {
-    ...input,
-    title: requireText(input.title, 'title'),
-    content: requireText(input.content, 'content'),
-    sourceSessionId: requireText(input.sourceSessionId, 'sourceSessionId'),
-    createdBy: requireText(input.createdBy, 'createdBy'),
-    createdAt: requireText(input.createdAt, 'createdAt'),
-    tags: normalizeTags(input.tags),
-    sessionId: input.sessionId,
-    day: input.day,
-  }
-}
-
-export function loadSessionNotes(workspaceRootPath: string): SessionNote[] {
-  const path = getSessionNotesPath(workspaceRootPath)
-  if (!existsSync(path)) return []
-  const data = readJsonFileSync<SessionNotesJson | SessionNote[]>(path)
-  return Array.isArray(data) ? data : (Array.isArray(data.notes) ? data.notes : [])
-}
-
-export function saveSessionNotes(workspaceRootPath: string, notes: SessionNote[]): void {
-  const path = getSessionNotesPath(workspaceRootPath)
-  ensureDir(path)
-  atomicWriteFileSync(path, JSON.stringify({ version: 1, notes }, null, 2) + '\n')
-}
-
-export function addSessionNote(workspaceRootPath: string, input: CreateSessionNoteInput): SessionNote {
-  const valid = validateSessionNoteInput(input)
-  const notes = loadSessionNotes(workspaceRootPath)
-  const note: SessionNote = { ...valid, id: valid.id?.trim() || makeId('session-note') }
-  if (notes.some(item => item.id === note.id)) throw new Error(`Session Notes note already exists: ${note.id}`)
-  notes.push(note)
-  saveSessionNotes(workspaceRootPath, notes)
-  return note
-}
-
-export function clearSessionNotes(workspaceRootPath: string, scope: SessionNoteScope): number {
-  assertSessionNoteScope(scope)
-  const notes = loadSessionNotes(workspaceRootPath)
-  const next = notes.filter(note => note.scope !== scope)
-  saveSessionNotes(workspaceRootPath, next)
-  return notes.length - next.length
 }
 
 export function loadMemoryBrainActivity(workspaceRootPath: string): MemoryBrainActivity[] {

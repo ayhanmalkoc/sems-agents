@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { CreateMemoryInput, CreateSessionNoteInput, MemoryHygieneItem, MemoryRecord, MemoryStatusSnapshot, MemorySuggestion, UpdateMemoryInput, SessionNote, SessionNoteScope } from '../memory/types.ts'
+import type { CreateMemoryInput, MemoryHygieneItem, MemoryRecord, MemoryStatusSnapshot, MemorySuggestion, UpdateMemoryInput } from '../memory/types.ts'
 
 type ToolResult = {
   content: Array<{ type: 'text'; text: string }>
@@ -19,9 +19,6 @@ export interface MemoryFns {
   merge: (targetId: string, sourceId: string) => Promise<{ target: MemoryRecord; source: MemoryRecord }>
   markStale: (memoryId: string) => Promise<MemoryRecord>
   refresh: (memoryId: string, updates: UpdateMemoryInput) => Promise<MemoryRecord>
-  sessionNotesList: () => Promise<SessionNote[]>
-  sessionNotesAdd: (input: CreateSessionNoteInput) => Promise<SessionNote>
-  sessionNotesClear: (scope: SessionNoteScope) => Promise<number>
   suggestFromSession: (sessionId: string) => Promise<MemorySuggestion | MemorySuggestion[]>
   approve: (suggestionId: string) => Promise<{ suggestion: MemorySuggestion; memory: MemoryRecord }>
   reject: (suggestionId: string) => Promise<MemorySuggestion>
@@ -41,7 +38,7 @@ export interface MemoryLearnSummary {
 }
 
 const MemorySchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, learn <current|recent|all|sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>, session-notes-list, session-notes-add <json>, session-notes-clear <session|day>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, suggest-from-session <sessionId>, learn <current|recent|all|sessionId>, approve <suggestionId>, reject <suggestionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -90,62 +87,46 @@ function formatHygiene(items: MemoryHygieneItem[]): string {
   if (items.length === 0) return 'Memory hygiene: no cleanup needed'
   return ['Memory hygiene: needs cleanup', ...items.map(item => `- kind=${item.kind} memoryId=${item.memoryId}${item.relatedMemoryId ? ` relatedMemoryId=${item.relatedMemoryId}` : ''} reason=${JSON.stringify(item.reason)}`)].join('\n')
 }
-function formatSessionNote(note: SessionNote): string {
-  const parts = [note.id, `scope=${note.scope}`, `title=${JSON.stringify(note.title)}`, `sourceSessionId=${note.sourceSessionId}`]
-  if (note.sessionId) parts.push(`sessionId=${note.sessionId}`)
-  if (note.day) parts.push(`day=${note.day}`)
-  if (note.tags?.length) parts.push(`tags=${note.tags.join(',')}`)
-  return `- ${parts.join(' ')}\n  ${note.content}`
-}
-function formatSessionNotes(notes: SessionNote[]): string {
-  if (notes.length === 0) return 'Session Notes: none'
-  return ['Session Notes:', ...notes.map(formatSessionNote)].join('\n')
-}
 
-function formatMemories(memories: MemoryRecord[]): string {
-  if (memories.length === 0) return 'Memories: none'
-  return ['Memories:', ...memories.map(formatMemory)].join('\n')
-}
-function formatStatus(status: MemoryStatusSnapshot): string {
-  const lines = [`Memory: ${status.available ? 'available' : 'unavailable'}`, `Memories: ${status.memories}`, `Suggestions: ${status.suggestions}`, `Pending suggestions: ${status.pendingSuggestions}`]
-  if (status.reason) lines.push(`Reason: ${status.reason}`)
-  return lines.join('\n')
-}
 
 function formatLearnSummary(summary: MemoryLearnSummary): string {
   const lines = [
     `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} suggested=${summary.suggested.length} skipped=${summary.skipped}`,
+    'Task runs asynchronously; created/suggested counts reflect current completed output only.',
   ]
   if (summary.taskId) lines.push(`Task: ${summary.taskId} status=${summary.taskStatus ?? 'running'}`)
-  if (summary.taskId && summary.created.length === 0 && summary.suggested.length === 0 && summary.taskStatus === 'running') lines.push('Memory Brain task runs asynchronously; created/suggested items may appear after completion.')
-  if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(', ')}`, 'Created:', ...summary.created.map(formatMemory))
-  if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(', ')}`, 'Suggested:', ...summary.suggested.map(formatSuggestion))
-  if (summary.reasons?.length) lines.push('Skipped reasons:', ...summary.reasons.slice(0, 10).map(reason => `- ${reason}`))
+  if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(',')}`)
+  if (summary.suggested.length) lines.push(`Suggested ids: ${summary.suggested.map(suggestion => suggestion.id).join(',')}`)
+  if (summary.reasons?.length) lines.push(`Reasons: ${summary.reasons.join('; ')}`)
   return lines.join('\n')
 }
 
 export async function executeMemoryCommand(command: string, fns: MemoryFns): Promise<ToolResult> {
   const trimmed = command.trim()
-  const [rawVerb = 'status', ...rest] = trimmed.split(/\s+/)
+  const [rawVerb = '', ...rest] = trimmed.split(/\s+/)
   const verb = rawVerb.toLowerCase()
   try {
-    if (verb === 'status') return success(formatStatus(await fns.status()))
-    if (verb === 'list') return success(formatMemories(await fns.list()))
+    if (!verb || verb === 'status') {
+      const status = await fns.status()
+      return success(`Memory: ${status.available ? 'available' : 'unavailable'}\nMemories: ${status.memories}\nSuggestions: ${status.suggestions}\nPending: ${status.pendingSuggestions}${status.reason ? `\nReason: ${status.reason}` : ''}`)
+    }
+    if (verb === 'list') {
+      const memories = await fns.list()
+      return success(memories.length ? ['Memories:', ...memories.map(formatMemory)].join('\n') : 'Memories: none')
+    }
     if (verb === 'show') {
       const memoryId = rest[0]
       if (!memoryId) return failure('show requires a memory id')
       const memory = await fns.show(memoryId)
-      if (!memory) return failure(`Memory not found: ${memoryId}`)
-      return success(formatMemory(memory))
+      return success(memory ? formatMemory(memory) : `Memory not found: ${memoryId}`)
     }
     if (verb === 'search') {
-      const query = trimmed.slice(rawVerb.length).trim()
+      const query = rest.join(' ').trim()
       if (!query) return failure('search requires a query')
       return success(formatMemorySearchResults(await fns.search(query)))
     }
     if (verb === 'create') {
-      const input = parseJsonPayload<CreateMemoryInput>(trimmed.slice(rawVerb.length).trim(), 'create')
-      const memory = await fns.create(input)
+      const memory = await fns.create(parseJsonPayload<CreateMemoryInput>(trimmed.slice(rawVerb.length).trim(), 'create'))
       return success(`Created memory ${memory.id}\n${formatMemory(memory)}`)
     }
     if (verb === 'update') {
@@ -174,18 +155,6 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
       const payload = trimmed.slice(rawVerb.length).trim().slice(memoryId.length).trim()
       const memory = await fns.refresh(memoryId, parseJsonPayload<UpdateMemoryInput>(payload, 'refresh'))
       return success(`Refreshed memory ${memory.id}\n${formatMemory(memory)}`)
-    }
-    if (verb === 'session-notes-list') return success(formatSessionNotes(await fns.sessionNotesList()))
-    if (verb === 'session-notes-add') {
-      const input = parseJsonPayload<CreateSessionNoteInput>(trimmed.slice(rawVerb.length).trim(), 'session-notes-add')
-      const note = await fns.sessionNotesAdd(input)
-      return success(`Added Session Notes ${note.id}\n${formatSessionNote(note)}`)
-    }
-    if (verb === 'session-notes-clear') {
-      const scope = rest[0] as SessionNoteScope | undefined
-      if (scope !== 'session' && scope !== 'day') return failure('session-notes-clear requires scope: session or day')
-      const count = await fns.sessionNotesClear(scope)
-      return success(`Cleared ${count} Session Notes note${count === 1 ? '' : 's'} for scope ${scope}`)
     }
     if (verb === 'delete') {
       const memoryId = rest[0]
@@ -230,7 +199,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
 }
 
 export function createMemoryTool(options: { getMemoryFns: () => MemoryFns | undefined }) {
-  return tool('memory', 'Manage persistent scoped workspace memory: retrieval, suggestions, hygiene, session notes, approvals, and deletion.', MemorySchema.shape, async (args) => {
+  return tool('memory', 'Manage persistent scoped workspace memory: retrieval, suggestions, hygiene, approvals, and deletion.', MemorySchema.shape, async (args) => {
     const fns = options.getMemoryFns()
     if (!fns) return failure('Memory controls are not available. This tool requires the desktop app.')
     return executeMemoryCommand(String(args.command ?? 'status'), fns)

@@ -15,7 +15,7 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - Default is `auto`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, create a suggestion instead of approved memory.
 - If content includes secrets or credentials, reject it. Never store API keys, tokens, passwords, bearer secrets, private keys, or one-time codes.
-- Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, hygiene, and Session Notes changes.
+- Do not edit memory JSON files directly. Use the `memory` tool for create, update, review, and hygiene changes.
 
 ## Commands
 
@@ -34,9 +34,6 @@ Memory is agent-managed with user oversight. When a task depends on prior projec
 - `memory merge <targetId> <sourceId>` — mark the source stale and add it to target `supersedes`.
 - `memory mark-stale <memoryId>` — mark one memory stale.
 - `memory refresh <memoryId> <json>` — update a memory and mark it active.
-- `memory session-notes-list` — list temporary session notes.
-- `memory session-notes-add <json>` — add a temporary session/day session note.
-- `memory session-notes-clear <session|day>` — clear temporary session notes by scope.
 
 ## Memory Types
 
@@ -96,15 +93,6 @@ Use suggestions when you think something may be worth remembering but the user h
 - In `review` mode, pending suggestions are not curated memory until approved. In `auto` mode, only strong durable learnings are saved directly.
 - `approve` promotes a suggestion to memory with a fresh `mem-*` id.
 - `reject` keeps the audit trail but does not create memory.
-
-## Session Notes
-
-Session Notes are a lightweight layer for short-lived session/day notes. It stays separate from curated memory.
-
-- Storage target: workspace-local `memory/session-notes.json`.
-- Scope: session/day, not durable project knowledge.
-- Lifecycle: expires or rolls up into suggestions; never auto-promotes to curated memory.
-- V3 behavior: auto-suggest may write pending suggestions only; session notes never auto-promote; no curated auto-write, no prompt auto-injection, no vector provider.
 
 ## Safety
 

@@ -413,13 +413,11 @@ export const CHANNEL_MAP = {
   // Memory
   getMemories: invoke(RPC_CHANNELS.memory.GET),
   getMemorySuggestions: invoke(RPC_CHANNELS.memory.GET_SUGGESTIONS),
-  getMemorySessionNotes: invoke(RPC_CHANNELS.memory.GET_SESSION_NOTES),
   getMemoryBrainActivity: invoke(RPC_CHANNELS.memory.GET_ACTIVITY),
   searchMemories: invoke(RPC_CHANNELS.memory.SEARCH),
   deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
   approveMemorySuggestion: invoke(RPC_CHANNELS.memory.APPROVE),
   rejectMemorySuggestion: invoke(RPC_CHANNELS.memory.REJECT),
-  clearMemorySessionNotes: invoke(RPC_CHANNELS.memory.CLEAR_SESSION_NOTES),
   onMemoryChanged: listener(RPC_CHANNELS.memory.CHANGED),
 
   // Hooks

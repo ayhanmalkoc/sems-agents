@@ -716,13 +716,11 @@ export interface ElectronAPI {
   // Memory
   getMemories(workspaceId: string): Promise<unknown[]>
   getMemorySuggestions(workspaceId: string): Promise<unknown[]>
-  getMemorySessionNotes(workspaceId: string): Promise<unknown[]>
   getMemoryBrainActivity(workspaceId: string): Promise<unknown[]>
   searchMemories(workspaceId: string, query: string): Promise<unknown[]>
   deleteMemory(workspaceId: string, memoryId: string): Promise<void>
   approveMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
   rejectMemorySuggestion(workspaceId: string, suggestionId: string): Promise<unknown>
-  clearMemorySessionNotes(workspaceId: string, scope: 'session' | 'day'): Promise<number>
   onMemoryChanged(callback: (workspaceId: string) => void): () => void
 
   // Hooks

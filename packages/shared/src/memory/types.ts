@@ -13,7 +13,6 @@ export type MemoryType = typeof MEMORY_TYPES[number]
 export type MemoryScope = typeof MEMORY_SCOPES[number]
 export type MemoryConfidence = 'medium' | 'high'
 export type MemoryRecordStatus = 'active' | 'stale'
-export type SessionNoteScope = 'session' | 'day'
 
 export interface MemorySourceTrace {
   sourceSessionId: string
@@ -91,23 +90,6 @@ export interface MemoryAutoSuggestStateJson {
   sessions: MemoryAutoSuggestSessionState[]
 }
 
-
-export interface SessionNote extends MemorySourceTrace {
-  id: string
-  scope: SessionNoteScope
-  title: string
-  content: string
-  tags?: string[]
-  sessionId?: string
-  day?: string
-}
-
-export type CreateSessionNoteInput = Omit<SessionNote, 'id'> & { id?: string }
-
-export interface SessionNotesJson {
-  version: 1
-  notes: SessionNote[]
-}
 
 export type MemoryBrainActivityStatus = 'running' | 'done' | 'failed' | 'skipped'
 
