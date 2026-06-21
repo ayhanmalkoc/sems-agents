@@ -14,16 +14,20 @@
  * baseline count and validating relative to it.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, cpSync } from 'fs';
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 import {
+  BUILTIN_SKILLS_DIR,
   loadAllSkills,
+  loadBuiltinSkills,
   loadWorkspaceSkills,
   loadSkill,
   skillExists,
   listSkillSlugs,
   deleteSkill,
+  loadSkillBySlug,
+  invalidateSkillsCache,
 } from '../storage.ts';
 
 // ============================================================
@@ -33,6 +37,7 @@ import {
 let tempDir: string;
 let workspaceRoot: string;
 let projectRoot: string;
+let builtinBackupDir: string | null = null;
 
 // The real global skills directory — we cannot mock this reliably.
 const REAL_GLOBAL_SKILLS_DIR = join(homedir(), '.agents', 'skills');
@@ -103,7 +108,13 @@ function getExistingGlobalSlugs(): Set<string> {
 // ============================================================
 
 beforeEach(() => {
+  invalidateSkillsCache();
   tempDir = mkdtempSync(join(tmpdir(), 'skills-test-'));
+  builtinBackupDir = join(tempDir, 'builtin-backup');
+  if (existsSync(BUILTIN_SKILLS_DIR)) {
+    cpSync(BUILTIN_SKILLS_DIR, builtinBackupDir, { recursive: true });
+    rmSync(BUILTIN_SKILLS_DIR, { recursive: true, force: true });
+  }
   workspaceRoot = join(tempDir, 'workspace');
   projectRoot = join(tempDir, 'project');
 
@@ -113,9 +124,54 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  invalidateSkillsCache();
+  rmSync(BUILTIN_SKILLS_DIR, { recursive: true, force: true });
+  if (builtinBackupDir && existsSync(builtinBackupDir)) {
+    cpSync(builtinBackupDir, BUILTIN_SKILLS_DIR, { recursive: true });
+  }
   if (tempDir && existsSync(tempDir)) {
     rmSync(tempDir, { recursive: true, force: true });
   }
+  builtinBackupDir = null;
+});
+
+
+
+describe('builtin Studio skills', () => {
+  it('loads builtin Studio skills with builtin source', () => {
+    createSkill(BUILTIN_SKILLS_DIR, 'studio-prototype', {
+      name: 'Studio Prototype',
+      description: 'Built-in Studio prototype skill',
+    });
+
+    const builtin = loadBuiltinSkills();
+    const skill = builtin.find(item => item.slug === 'studio-prototype');
+    expect(skill).toBeDefined();
+    expect(skill!.source).toBe('builtin');
+  });
+
+  it('prevents workspace and project skills from overriding reserved Studio slugs', () => {
+    createSkill(BUILTIN_SKILLS_DIR, 'studio-prototype', {
+      name: 'Studio Prototype',
+      description: 'Built-in Studio prototype skill',
+    });
+    createSkill(join(workspaceRoot, 'skills'), 'studio-prototype', {
+      name: 'Workspace Override',
+      description: 'Should be ignored',
+    });
+    const projectSkillsDir = join(projectRoot, '.agents', 'skills');
+    createSkill(projectSkillsDir, 'studio-prototype', {
+      name: 'Project Override',
+      description: 'Should be ignored',
+    });
+
+    const all = loadAllSkills(workspaceRoot, projectRoot);
+    const skill = all.find(item => item.slug === 'studio-prototype');
+    expect(skill).toBeDefined();
+    expect(skill!.source).toBe('builtin');
+    expect(skill!.metadata.name).toBe('Studio Prototype');
+    expect(loadSkillBySlug(workspaceRoot, 'studio-prototype', projectRoot)?.source).toBe('builtin');
+  });
 });
 
 // ============================================================

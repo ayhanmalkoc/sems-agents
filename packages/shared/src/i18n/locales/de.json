@@ -1761,5 +1761,7 @@
   "editPopover.placeholder.studioRefine": "What should change?",
   "editPopover.label.studioExport": "Studio Export",
   "editPopover.example.studioExport": "Export this as a zip",
-  "editPopover.placeholder.studioExport": "Export as html, zip, or pdf?"
+  "editPopover.placeholder.studioExport": "Export as html or zip?",
+  "skillInfo.sourceBuiltin": "Built-in",
+  "skillsList.builtinBadge": "Built-in"
 }

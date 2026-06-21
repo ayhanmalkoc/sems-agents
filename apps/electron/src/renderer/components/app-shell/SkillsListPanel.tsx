@@ -88,6 +88,11 @@ export function SkillsListPanel({
                 {t('skillsList.projectBadge')}
               </EntityListBadge>
             )}
+            {skill.source === 'builtin' && (
+              <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">
+                {t('skillsList.builtinBadge')}
+              </EntityListBadge>
+            )}
             <span className="truncate">{skill.metadata.description}</span>
           </>
         ),

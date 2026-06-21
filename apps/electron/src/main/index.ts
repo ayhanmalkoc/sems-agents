@@ -69,6 +69,7 @@ Sentry.init({
 // the system prompt's "Preferred language" line, and the native menu.
 import { setupI18n, i18n, SUPPORTED_LANGUAGE_CODES, type LanguageCode } from '@craft-agent/shared/i18n'
 import { getPersistedUiLanguage, setPersistedUiLanguage } from '@craft-agent/shared/config'
+import { initializeBuiltinSkills } from '@craft-agent/shared/skills'
 setupI18n()
 const persistedUiLanguage = getPersistedUiLanguage()
 if (persistedUiLanguage) {
@@ -402,6 +403,9 @@ app.whenReady().then(async () => {
 
   // Initialize bundled docs
   initializeDocs()
+
+  // Initialize bundled built-in skills
+  initializeBuiltinSkills()
 
   // Initialize bundled release notes
   initializeReleaseNotes()

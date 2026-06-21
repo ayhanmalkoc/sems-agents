@@ -238,6 +238,7 @@ export default function ResourcesHomePage({ navState: navStateProp }: ResourcesH
             <div className="truncate text-sm font-medium text-foreground">{skill.metadata.name}</div>
             <EntityListBadge colorClass="bg-info/10 text-info">{t('resources.typeSkill')}</EntityListBadge>
             {skill.source === 'project' && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{t('skillsList.projectBadge')}</EntityListBadge>}
+            {skill.source === 'builtin' && <EntityListBadge colorClass="bg-foreground/10 text-foreground/50">{t('skillsList.builtinBadge')}</EntityListBadge>}
           </div>
           <div className="mt-1 truncate text-xs leading-5 text-muted-foreground">{subtitle}</div>
         </div>

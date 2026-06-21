@@ -74,6 +74,6 @@ describe('studio tool', () => {
     expect((await executeStudioCommand('', mock)).content[0].text).toContain('Studio: available')
     expect((await executeStudioCommand('show', mock)).content[0].text).toContain('show requires an output id')
     expect((await executeStudioCommand('create not-json', mock)).content[0].text).toContain('Invalid JSON')
-    expect((await executeStudioCommand('export studio-1 exe', mock)).content[0].text).toContain('Export format')
+    expect((await executeStudioCommand('export studio-1 pdf', mock)).content[0].text).toContain('Export format must be html or zip')
   })
 })

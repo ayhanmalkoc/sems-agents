@@ -47,9 +47,9 @@ sessions/{sessionId}/data/studio/{outputId}/exports/
 }
 ```
 
-## Builtin Studio skill guides
+## Built-in Studio skills
 
-These are built-in product guidance modes, not separate runtimes:
+These are real built-in skills synced to `~/.craft-agent/builtin-skills/`. They are not separate runtimes or chat modes:
 
 - `studio-prototype` - landing pages, prototypes, app screens, interactive HTML mockups.
 - `studio-dashboard` - dashboards, admin views, analytics and data-heavy surfaces.
@@ -71,10 +71,6 @@ Allowed export formats:
 
 - `html`
 - `zip`
-- `pdf`
-
-PDF export depends on renderer-backed print support. If unavailable, report the failure and offer `html` or `zip`.
-
 ## Rules
 
 - Use Studio skills for product/design judgment.

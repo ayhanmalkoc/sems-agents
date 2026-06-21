@@ -153,8 +153,6 @@ export function exportStudioOutput(sessionPath: string, outputId: string, format
   } else if (format === 'zip') {
     exportPath = join(exportsDir, `${outputId}.zip`)
     writeFileSync(exportPath, makeZip(collectFiles(outputDir)))
-  } else if (format === 'pdf') {
-    throw new Error('PDF export requires a renderer-backed print pipeline and is not available in this context')
   } else {
     throw new Error(`Unsupported export format: ${format}`)
   }

@@ -202,6 +202,7 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
               <Info_Table.Row label={t('common.source')}>
                 {skill.source === 'project' ? t('skillInfo.sourceProject') :
                  skill.source === 'global' ? t('skillInfo.sourceGlobal') :
+                 skill.source === 'builtin' ? t('skillInfo.sourceBuiltin') :
                  t('skillInfo.sourceWorkspace')}
               </Info_Table.Row>
               <Info_Table.Row label={t('common.location')}>

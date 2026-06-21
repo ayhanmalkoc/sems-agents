@@ -7,13 +7,16 @@
 
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
+  cpSync,
   statSync,
 } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { getBundledAssetsDir } from '../utils/paths.ts';
 import matter from 'gray-matter';
 import type { LoadedSkill, SkillMetadata, SkillSource } from './types.ts';
 import { getWorkspaceSkillsPath } from '../workspaces/storage.ts';
@@ -28,6 +31,12 @@ import {
 // ============================================================
 // Agent Skills Paths (Issue #171)
 // ============================================================
+
+/** Built-in Craft skills directory: ~/.craft-agent/builtin-skills/ */
+export const BUILTIN_SKILLS_DIR = join(homedir(), '.craft-agent', 'builtin-skills');
+
+export const BUILTIN_STUDIO_SKILL_SLUGS = ['studio-prototype', 'studio-dashboard', 'studio-deck'] as const;
+const RESERVED_BUILTIN_SKILL_SLUGS = new Set<string>(BUILTIN_STUDIO_SKILL_SLUGS);
 
 /** Global agent skills directory: ~/.agents/skills/ */
 export const GLOBAL_AGENT_SKILLS_DIR = join(homedir(), '.agents', 'skills');
@@ -189,6 +198,21 @@ export function loadWorkspaceSkills(workspaceRoot: string): LoadedSkill[] {
   return loadSkillsFromDir(skillsDir, 'workspace');
 }
 
+export function loadBuiltinSkills(): LoadedSkill[] {
+  return loadSkillsFromDir(BUILTIN_SKILLS_DIR, 'builtin');
+}
+
+export function initializeBuiltinSkills(): void {
+  const bundledBuiltinSkillsDir = getBundledAssetsDir('builtin-skills');
+  if (!bundledBuiltinSkillsDir || !existsSync(bundledBuiltinSkillsDir)) return;
+  mkdirSync(BUILTIN_SKILLS_DIR, { recursive: true });
+  for (const slug of BUILTIN_STUDIO_SKILL_SLUGS) {
+    const src = join(bundledBuiltinSkillsDir, slug);
+    const dest = join(BUILTIN_SKILLS_DIR, slug);
+    if (existsSync(src)) cpSync(src, dest, { recursive: true, force: true });
+  }
+}
+
 // ── Skills cache ────────────────────────────────────────────────────────
 // loadAllSkills reads from up to 3 directories on every call (~100ms).
 // The result rarely changes during a session, so we cache it per
@@ -222,22 +246,31 @@ export function loadAllSkills(workspaceRoot: string, projectRoot?: string): Load
   }
 
   const skillsBySlug = new Map<string, LoadedSkill>();
+  const addSkill = (skill: LoadedSkill) => {
+    if (RESERVED_BUILTIN_SKILL_SLUGS.has(skill.slug) && skill.source !== 'builtin') return;
+    skillsBySlug.set(skill.slug, skill);
+  };
 
-  // 1. Global skills (lowest priority): ~/.agents/skills/
+  // 0. Built-in skills (reserved, cannot be overridden)
+  for (const skill of loadBuiltinSkills()) {
+    addSkill(skill);
+  }
+
+  // 1. Global skills (lowest user priority): ~/.agents/skills/
   for (const skill of loadSkillsFromDir(GLOBAL_AGENT_SKILLS_DIR, 'global')) {
-    skillsBySlug.set(skill.slug, skill);
+    addSkill(skill);
   }
 
-  // 2. Workspace skills (medium priority)
+  // 2. Workspace skills (medium user priority)
   for (const skill of loadWorkspaceSkills(workspaceRoot)) {
-    skillsBySlug.set(skill.slug, skill);
+    addSkill(skill);
   }
 
-  // 3. Project skills (highest priority): {projectRoot}/.agents/skills/
+  // 3. Project skills (highest user priority): {projectRoot}/.agents/skills/
   if (projectRoot) {
     const projectSkillsDir = join(projectRoot, PROJECT_AGENT_SKILLS_DIR);
     for (const skill of loadSkillsFromDir(projectSkillsDir, 'project')) {
-      skillsBySlug.set(skill.slug, skill);
+      addSkill(skill);
     }
   }
 
@@ -255,6 +288,10 @@ export function loadAllSkills(workspaceRoot: string, projectRoot?: string): Load
  * @param projectRoot - Optional project root for project-level skills
  */
 export function loadSkillBySlug(workspaceRoot: string, slug: string, projectRoot?: string): LoadedSkill | null {
+  if (RESERVED_BUILTIN_SKILL_SLUGS.has(slug)) {
+    return loadSkillFromDir(BUILTIN_SKILLS_DIR, slug, 'builtin');
+  }
+
   // Highest priority: project-level
   if (projectRoot) {
     const projectSkillsDir = join(projectRoot, PROJECT_AGENT_SKILLS_DIR);
