@@ -655,7 +655,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to create or manage workspace memory using natural language. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'For explicit durable facts or "remember this" requests, use memory create. ' +
-        'For inferred learnings from session history, use memory learn and save only strong durable facts. ' +
+        'For inferred learnings from workspace session history, prefer memory learn workspace and save only strong durable facts. ' +
         'Do not edit memory JSON files directly. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
         'Confirm clearly what changed.',
@@ -697,8 +697,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       context:
         'The user wants to refresh memory by learning from session history. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'Use memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
-        'Return a short learn summary with processed, created, skipped, mode, created ids, and the first skip reasons. ' +
+        'Use memory learn workspace for incremental workspace refresh, memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
+        'Return a short learn summary with processed, created, skipped, mode, indexed sessions, created ids, and the first skip reasons. ' +
         'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
     },
     example: 'Refresh memory from all sessions',

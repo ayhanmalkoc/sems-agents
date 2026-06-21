@@ -44,6 +44,22 @@ export interface MemoryStoreJson {
   memories: MemoryRecord[]
 }
 
+export type MemoryWorkspaceSessionStatus = 'processed' | 'skipped'
+
+export interface MemoryWorkspaceSessionIndexEntry {
+  sessionId: string
+  messageCount: number
+  contentHash: string
+  processedAt: string
+  status: MemoryWorkspaceSessionStatus
+}
+
+export interface MemoryWorkspaceIndexJson {
+  version: 1
+  lastRefreshAt?: string
+  sessions: MemoryWorkspaceSessionIndexEntry[]
+}
+
 export interface MemoryStatusSnapshot {
   available: boolean
   enabled: boolean

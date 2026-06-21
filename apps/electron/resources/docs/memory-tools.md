@@ -9,7 +9,7 @@ Memory is agent-managed. When a task depends on prior project decisions, user pr
 - If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly after checking for duplicates and secrets.
 - If learning is inferred from session history, use `memory learn ...`; Memory Brain saves only strong durable facts and ignores weak/noisy information.
 - Memory follows the workspace preference `memoryEnabled`.
-  - `true` lets the current chat agent search/update memory and run Memory Brain refresh at 90% context fill.
+  - `true` lets the current chat agent search/update memory and run Workspace Memory Brain refresh.
   - `false` blocks agent memory search/update/learn. Existing memories remain visible in Settings.
 - Default is `true`.
 - If the information is uncertain, noisy, temporary, or only maybe reusable, ignore it.
@@ -70,6 +70,7 @@ Memory is workspace-first. Use `workspace`, `agent_profile`, or `session` unless
 
 Use manual learning when automatic completion learning may have missed something, or when the user asks to revisit session history for memory.
 
+- `memory learn workspace` learns incrementally from new or changed workspace sessions. This is the main Refresh Memory path.
 - `memory learn current` learns from the current session.
 - `memory learn recent` learns from recent loaded workspace sessions.
 - `memory learn all` learns from up to 100 workspace sessions, including sessions loaded from disk.
@@ -77,7 +78,7 @@ Use manual learning when automatic completion learning may have missed something
 - When Memory is on, the Memory Brain saves only strong durable learnings as curated memory.
 - When Memory is off, `memory learn` and memory mutations are blocked.
 - Duplicate, secret, and low-confidence guards still apply.
-- Tool output is a stable summary: `processed`, `created`, `skipped`, `mode`, created ids, and the first skip reasons.
+- Tool output is a stable summary: `processed`, `created`, `skipped`, `mode`, indexed sessions, created ids, and the first skip reasons.
 
 ## Safety
 

@@ -27,11 +27,13 @@ export interface MemoryLearnSummary {
   processed: number
   created: MemoryRecord[]
   skipped: number
+  indexedSessions?: number
+  pendingSessions?: number
   reasons?: string[]
 }
 
 const MemorySchema = z.object({
-  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, learn <current|recent|all|sessionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
+  command: z.string().describe('Memory command: status, list, show <memoryId>, search <query>, create <json>, update <memoryId> <json>, delete <memoryId>, learn <workspace|current|recent|all|sessionId>, hygiene, merge <targetId> <sourceId>, mark-stale <memoryId>, refresh <memoryId> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -76,6 +78,8 @@ function formatLearnSummary(summary: MemoryLearnSummary): string {
     `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} skipped=${summary.skipped}`,
     'The current chat agent receives bounded context and writes memory only when it finds durable facts.',
   ]
+  if (summary.indexedSessions !== undefined) lines.push(`Indexed sessions: ${summary.indexedSessions}`)
+  if (summary.pendingSessions !== undefined) lines.push(`Pending sessions: ${summary.pendingSessions}`)
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(',')}`)
   if (summary.reasons?.length) lines.push(`Reasons: ${summary.reasons.join('; ')}`)
   return lines.join('\n')

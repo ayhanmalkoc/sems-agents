@@ -26,7 +26,7 @@ function fns(): MemoryFns {
     merge: async () => ({ target: { ...memory, supersedes: ['mem-2'] }, source: { ...memory, id: 'mem-2', status: 'stale' } }),
     markStale: async () => ({ ...memory, status: 'stale' }),
     refresh: async (_id, updates) => ({ ...memory, ...updates, status: 'active' }),
-    learn: async () => ({ mode: 'on', processed: 1, created: [memory], skipped: 0, reasons: [] }),
+    learn: async () => ({ mode: 'on', processed: 1, created: [memory], skipped: 0, reasons: [], indexedSessions: 1 }),
   }
 }
 
@@ -52,6 +52,7 @@ describe('memory tool', () => {
     expect((await executeMemoryCommand('refresh mem-1 {"content":"Fresh"}', fns())).content[0].text).toContain('Refreshed memory')
     const learn = (await executeMemoryCommand('learn current', fns())).content[0].text
     expect(learn).toContain('Memory learn summary: delegated to Memory Brain mode=on processed=1 created=1 skipped=0')
+    expect(learn).toContain('Indexed sessions: 1')
     expect(learn).toContain('Created ids: mem-1')
   })
 

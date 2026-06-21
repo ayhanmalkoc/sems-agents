@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { createMemory, deleteMemory, findMemoryHygieneItems, getMemoryContentHash, hasSimilarMemory, loadMemories, markMemoryStale, mergeMemories, refreshMemory, searchMemories, updateMemory } from '../index.ts'
+import { createMemory, deleteMemory, findMemoryHygieneItems, getMemoryContentHash, hasSimilarMemory, loadMemories, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, searchMemories, updateMemory, updateMemoryWorkspaceIndex } from '../index.ts'
 
 let dirs: string[] = []
 function tempWs(): string {
@@ -89,5 +89,16 @@ describe('memory storage', () => {
 
 
 
+
+  it('tracks incremental workspace memory index', () => {
+    const ws = tempWs()
+    expect(loadMemoryWorkspaceIndex(ws).sessions).toEqual([])
+    updateMemoryWorkspaceIndex(ws, [{ sessionId: 's1', messageCount: 2, contentHash: 'hash-1', processedAt: '2026-06-16T00:00:00.000Z', status: 'processed' }], '2026-06-16T00:00:00.000Z')
+    expect(loadMemoryWorkspaceIndex(ws).lastRefreshAt).toBe('2026-06-16T00:00:00.000Z')
+    expect(loadMemoryWorkspaceIndex(ws).sessions[0]?.sessionId).toBe('s1')
+    updateMemoryWorkspaceIndex(ws, [{ sessionId: 's1', messageCount: 3, contentHash: 'hash-2', processedAt: '2026-06-16T00:01:00.000Z', status: 'processed' }], '2026-06-16T00:01:00.000Z')
+    expect(loadMemoryWorkspaceIndex(ws).sessions).toHaveLength(1)
+    expect(loadMemoryWorkspaceIndex(ws).sessions[0]?.contentHash).toBe('hash-2')
+  })
 
 })

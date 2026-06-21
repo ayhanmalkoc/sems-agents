@@ -2,10 +2,11 @@ import { dirname, join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts'
-import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryStoreJson, type MemoryType, type UpdateMemoryInput } from './types.ts'
+import { MEMORY_SCOPES, MEMORY_TYPES, type CreateMemoryInput, type MemoryConfidence, type MemoryHygieneItem, type MemoryRecord, type MemoryRecordStatus, type MemoryScope, type MemoryStoreJson, type MemoryType, type MemoryWorkspaceIndexJson, type MemoryWorkspaceSessionIndexEntry, type UpdateMemoryInput } from './types.ts'
 
 const MEMORY_DIR = 'memory'
 const MEMORIES_FILE = 'memories.json'
+const WORKSPACE_INDEX_FILE = 'workspace-index.json'
 const SECRET_ERROR = 'Memory cannot store sensitive credentials or secrets.'
 
 function nowIso(): string { return new Date().toISOString() }
@@ -13,6 +14,7 @@ function makeId(prefix: string): string { return `${prefix}-${Date.now().toStrin
 
 export function getMemoryDir(workspaceRootPath: string): string { return join(workspaceRootPath, MEMORY_DIR) }
 export function getMemoriesPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), MEMORIES_FILE) }
+export function getMemoryWorkspaceIndexPath(workspaceRootPath: string): string { return join(getMemoryDir(workspaceRootPath), WORKSPACE_INDEX_FILE) }
 
 function ensureDir(path: string): void { mkdirSync(dirname(path), { recursive: true }) }
 function assertType(type: unknown): asserts type is MemoryType {
@@ -79,6 +81,31 @@ export function getMemoryContentHash(input: { type: MemoryType; title: string; c
   return createHash('sha256').update([input.type, input.title.trim(), input.content.trim(), input.sourceSessionId ?? ''].join('\n')).digest('hex')
 }
 
+
+
+export function loadMemoryWorkspaceIndex(workspaceRootPath: string): MemoryWorkspaceIndexJson {
+  const path = getMemoryWorkspaceIndexPath(workspaceRootPath)
+  if (!existsSync(path)) return { version: 1, sessions: [] }
+  const data = readJsonFileSync<MemoryWorkspaceIndexJson>(path)
+  return { version: 1, lastRefreshAt: data.lastRefreshAt, sessions: Array.isArray(data.sessions) ? data.sessions : [] }
+}
+
+export function saveMemoryWorkspaceIndex(workspaceRootPath: string, index: MemoryWorkspaceIndexJson): void {
+  const path = getMemoryWorkspaceIndexPath(workspaceRootPath)
+  ensureDir(path)
+  const sessions = Array.from(new Map(index.sessions.map(item => [item.sessionId, item])).values())
+    .sort((a, b) => (Date.parse(b.processedAt) || 0) - (Date.parse(a.processedAt) || 0))
+  atomicWriteFileSync(path, JSON.stringify({ version: 1, lastRefreshAt: index.lastRefreshAt, sessions }, null, 2) + '\n')
+}
+
+export function updateMemoryWorkspaceIndex(workspaceRootPath: string, entries: MemoryWorkspaceSessionIndexEntry[], refreshedAt = nowIso()): MemoryWorkspaceIndexJson {
+  const current = loadMemoryWorkspaceIndex(workspaceRootPath)
+  const byId = new Map(current.sessions.map(item => [item.sessionId, item]))
+  for (const entry of entries) byId.set(entry.sessionId, entry)
+  const next = { version: 1 as const, lastRefreshAt: refreshedAt, sessions: Array.from(byId.values()) }
+  saveMemoryWorkspaceIndex(workspaceRootPath, next)
+  return next
+}
 
 export function loadMemories(workspaceRootPath: string): MemoryRecord[] {
   const path = getMemoriesPath(workspaceRootPath)

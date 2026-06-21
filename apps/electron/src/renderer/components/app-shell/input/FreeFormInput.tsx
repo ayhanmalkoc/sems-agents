@@ -329,7 +329,6 @@ export function FreeFormInput({
   onRequestExpand,
 }: FreeFormInputProps) {
   const { t } = useTranslation()
-  const [memoryEnabled, setMemoryEnabled] = React.useState(true)
 
   // Default rotating placeholders for onboarding/empty state (i18n-aware)
   const defaultPlaceholders = React.useMemo(() => [
@@ -457,22 +456,6 @@ export function FreeFormInput({
   }, [appShellCtx, workspaceId])
 
   // Read panel focus state from context (for multi-panel unfocused styling)
-  React.useEffect(() => {
-    let disposed = false
-    const loadMemoryPreference = async () => {
-      try {
-        const result = await window.electronAPI.readPreferences()
-        if (!disposed) setMemoryEnabled(JSON.parse(result.content || '{}').memoryEnabled !== false)
-      } catch {
-        if (!disposed) setMemoryEnabled(true)
-      }
-    }
-    void loadMemoryPreference()
-    const onPrefs = () => void loadMemoryPreference()
-    window.addEventListener('craft:preferences-updated', onPrefs)
-    return () => { disposed = true; window.removeEventListener('craft:preferences-updated', onPrefs) }
-  }, [])
-
   const appShellContext = useOptionalAppShellContext()
   const isFocusedPanel = appShellContext?.isFocusedPanel ?? true
 
@@ -1829,8 +1812,7 @@ export function FreeFormInput({
             const effectiveContextWindow = contextStatus?.contextWindow || getModelContextWindow(currentModel) || 262144
             const usagePercent = contextStatus?.inputTokens
               ? getContextFillPercent(contextStatus.inputTokens, effectiveContextWindow)
-              : null
-            if (usagePercent === null) return null
+              : 0
             const handleCompactClick = () => {
               if (!isProcessing) onSubmit('/compact', [])
             }
@@ -1859,7 +1841,7 @@ export function FreeFormInput({
                   <div className="space-y-1">
                     <div className="font-medium">{t('chat.contextWindowFull', { percent: usagePercent })}</div>
                     <div className="text-xs text-muted-foreground">{t('chat.tokensUsed', { displayCount: formatTokenCount(contextStatus?.inputTokens ?? 0) })}</div>
-                    <div className="text-xs text-muted-foreground">{t(memoryEnabled ? 'chat.contextMemoryAutoOn' : 'chat.contextMemoryAutoOff')}</div>
+                    <div className="text-xs text-muted-foreground">{t('chat.contextCompactHint')}</div>
                     {!isProcessing && <div className="text-xs text-muted-foreground">{t('chat.contextClickToCompact')}</div>}
                   </div>
                 </TooltipContent>
@@ -2162,6 +2144,47 @@ export function FreeFormInput({
 
           {/* Right side: Model + Send - never shrink so they're always visible */}
           <div className="flex items-center shrink-0">
+          {!compactMode && (() => {
+            const effectiveContextWindow = contextStatus?.contextWindow || getModelContextWindow(currentModel) || 262144
+            const usagePercent = contextStatus?.inputTokens
+              ? getContextFillPercent(contextStatus.inputTokens, effectiveContextWindow)
+              : 0
+            const handleCompactClick = () => {
+              if (!isProcessing) onSubmit('/compact', [])
+            }
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleCompactClick}
+                    disabled={isProcessing}
+                    aria-label={t('chat.contextWindowFull', { percent: usagePercent })}
+                    className="relative mr-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-foreground/65 transition-colors hover:bg-foreground/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span
+                      className="h-4 w-4 rounded-full"
+                      style={{
+                        background: `conic-gradient(currentColor ${usagePercent * 3.6}deg, color-mix(in oklab, currentColor 16%, transparent) 0deg)`,
+                        WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                        mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                      } as React.CSSProperties}
+                    />
+                    {contextStatus?.isCompacting && <Spinner className="absolute h-3 w-3" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-72">
+                  <div className="space-y-1">
+                    <div className="font-medium">{t('chat.contextWindowFull', { percent: usagePercent })}</div>
+                    <div className="text-xs text-muted-foreground">{t('chat.tokensUsed', { displayCount: formatTokenCount(contextStatus?.inputTokens ?? 0) })}</div>
+                    <div className="text-xs text-muted-foreground">{t('chat.contextCompactHint')}</div>
+                    {!isProcessing && <div className="text-xs text-muted-foreground">{t('chat.contextClickToCompact')}</div>}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })()}
+
           {/* 5. Model/Connection Selector - Hidden in compact mode (EditPopover embedding) */}
           {!compactMode && (
           <DropdownMenu open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>

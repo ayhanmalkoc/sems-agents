@@ -1732,7 +1732,6 @@
   "settings.memory.filter.allTypes": "All types",
   "settings.memory.filter.allScopes": "All scopes",
   "chat.contextWindowFull": "Context window {{percent}}% full",
-  "chat.contextMemoryAutoOn": "Memory refreshes automatically at 90%.",
-  "chat.contextMemoryAutoOff": "Memory is off. Automatic refresh will not run.",
-  "chat.contextClickToCompact": "Click to compact context."
+  "chat.contextClickToCompact": "Click to compact context.",
+  "chat.contextCompactHint": "Use Compact when the context window gets full."
 }
