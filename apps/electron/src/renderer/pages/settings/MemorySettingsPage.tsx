@@ -173,7 +173,7 @@ export default function MemorySettingsPage() {
       <PanelHeader title={t('settings.memory.title')} actions={<HeaderMenu route={routes.view.settings('memory')} />} />
 
       <div className="flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-5xl space-y-6 p-6">
+        <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
           <section className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4 p-5">
               <div className="min-w-0">

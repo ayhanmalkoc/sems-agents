@@ -1825,6 +1825,47 @@ export function FreeFormInput({
               onPermissionModeChange={onPermissionModeChange}
             />
           )}
+          {(() => {
+            const effectiveContextWindow = contextStatus?.contextWindow || getModelContextWindow(currentModel) || 262144
+            const usagePercent = contextStatus?.inputTokens
+              ? getContextFillPercent(contextStatus.inputTokens, effectiveContextWindow)
+              : null
+            if (usagePercent === null) return null
+            const handleCompactClick = () => {
+              if (!isProcessing) onSubmit('/compact', [])
+            }
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleCompactClick}
+                    disabled={isProcessing}
+                    aria-label={t('chat.contextWindowFull', { percent: usagePercent })}
+                    className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-foreground/65 transition-colors hover:bg-foreground/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span
+                      className="h-4 w-4 rounded-full"
+                      style={{
+                        background: `conic-gradient(currentColor ${usagePercent * 3.6}deg, color-mix(in oklab, currentColor 16%, transparent) 0deg)`,
+                        WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                        mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                      } as React.CSSProperties}
+                    />
+                    {contextStatus?.isCompacting && <Spinner className="absolute h-3 w-3" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-72">
+                  <div className="space-y-1">
+                    <div className="font-medium">{t('chat.contextWindowFull', { percent: usagePercent })}</div>
+                    <div className="text-xs text-muted-foreground">{t('chat.tokensUsed', { displayCount: formatTokenCount(contextStatus?.inputTokens ?? 0) })}</div>
+                    <div className="text-xs text-muted-foreground">{t(memoryEnabled ? 'chat.contextMemoryAutoOn' : 'chat.contextMemoryAutoOff')}</div>
+                    {!isProcessing && <div className="text-xs text-muted-foreground">{t('chat.contextClickToCompact')}</div>}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })()}
           {enableCompactModelPicker && (
             <CompactModelSelector
               currentModel={currentModel}
@@ -2476,46 +2517,6 @@ export function FreeFormInput({
             </StyledDropdownMenuContent>
           </DropdownMenu>
           )}
-
-          {/* 5.5 Context Usage Badge */}
-          {(() => {
-            const effectiveContextWindow = contextStatus?.contextWindow || getModelContextWindow(currentModel) || 262144
-            const usagePercent = contextStatus?.inputTokens
-              ? getContextFillPercent(contextStatus.inputTokens, effectiveContextWindow)
-              : null
-            const showBadge = usagePercent !== null && usagePercent >= 80 && !contextStatus?.isCompacting
-
-            if (!showBadge) return null
-
-            const handleCompactClick = () => {
-              if (!isProcessing) onSubmit('/compact', [])
-            }
-
-            return (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleCompactClick}
-                    disabled={isProcessing}
-                    className="inline-flex h-6 items-center rounded-[6px] bg-info/10 px-2 text-[12px] font-medium shadow-tinted transition-colors hover:bg-info/20 disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{
-                      '--shadow-color': 'var(--info-rgb)',
-                      color: 'color-mix(in oklab, var(--info) 30%, var(--foreground))',
-                    } as React.CSSProperties}
-                  >
-                    {usagePercent}%
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-64">
-                  <div className="space-y-1">
-                    <div>{t('chat.contextWindowFull', { percent: usagePercent })}</div>
-                    <div className="text-xs text-muted-foreground">{t(memoryEnabled ? 'chat.contextMemoryAutoOn' : 'chat.contextMemoryAutoOff')}</div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            )
-          })()}
 
           {/* 6. Send/Stop Button - Always show stop when processing */}
           {isProcessing ? (
