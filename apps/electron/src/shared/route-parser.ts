@@ -35,7 +35,7 @@ export interface ParsedRoute {
 // Compound Route Types (new format)
 // =============================================================================
 
-export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'settings'
+export type NavigatorType = 'sessions' | 'agents' | 'sources' | 'skills' | 'automations' | 'settings' | 'studio'
 
 export interface ParsedCompoundRoute {
   /** The navigator type */
@@ -61,7 +61,7 @@ export interface ParsedCompoundRoute {
  * Known prefixes that indicate a compound route
  */
 const COMPOUND_ROUTE_PREFIXES = [
-  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'agents', 'sources', 'skills', 'automations', 'memory', 'hooks', 'settings'
+  'allSessions', 'flagged', 'archived', 'state', 'label', 'view', 'agents', 'sources', 'skills', 'automations', 'studio', 'memory', 'hooks', 'settings'
 ]
 
 /**
@@ -107,6 +107,11 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
       navigator: 'settings',
       details: { type: subpage, id: subpage },
     }
+  }
+
+  // Studio navigator
+  if (first === 'studio') {
+    return segments.length === 1 ? { navigator: 'studio', details: null } : null
   }
 
   // Agents navigator
@@ -286,6 +291,9 @@ export function buildCompoundRoute(parsed: ParsedCompoundRoute): string {
     return `settings/${parsed.details.type}`
   }
 
+  if (parsed.navigator === 'studio') {
+    return 'studio'
+  }
 
   if (parsed.navigator === 'agents') {
     if (!parsed.details) return 'agents'
@@ -415,6 +423,11 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
     return { type: 'view', name: subpage, params: {} }
   }
 
+  // Studio
+  if (compound.navigator === 'studio') {
+    return { type: 'view', name: 'studio', params: {} }
+  }
+
   // Sources
   if (compound.navigator === 'sources') {
     if (!compound.details) {
@@ -529,6 +542,11 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
       return { navigator: 'settings', subpage: null }
     }
     return { navigator: 'settings', subpage: compound.details.type as SettingsSubpage }
+  }
+
+  // Studio
+  if (compound.navigator === 'studio') {
+    return { navigator: 'studio', details: null }
   }
 
   // Agents
@@ -649,6 +667,8 @@ function convertParsedRouteToNavigationState(parsed: ParsedRoute): NavigationSta
         }
       }
       return { navigator: 'skills', details: null }
+    case 'studio':
+      return { navigator: 'studio', details: null }
     case 'automations':
       return { navigator: 'automations', details: null }
     case 'automation-info':
@@ -749,6 +769,10 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
       navigator: 'settings',
       details: { type: state.subpage, id: state.subpage },
     }
+  }
+
+  if (state.navigator === 'studio') {
+    return { navigator: 'studio', details: null }
   }
 
   if (state.navigator === 'agents') {

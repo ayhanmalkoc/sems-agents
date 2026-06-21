@@ -183,6 +183,9 @@ export const routes = {
     automationsAgentic: (automationId?: string) =>
       automationId ? `automations/agentic/automation/${automationId}` as const : 'automations/agentic' as const,
 
+    /** Studio output manager. */
+    studio: () => 'studio' as const,
+
     /** Memory settings view (compat builder). */
     memory: () => 'settings/memory' as const,
 

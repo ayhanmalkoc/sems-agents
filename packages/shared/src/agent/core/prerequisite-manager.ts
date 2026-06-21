@@ -70,6 +70,8 @@ const SESSION_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', '
 const MEMORY_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'memory-tools.md'));
 /** Global hooks tools docs path required before lifecycle hook management. */
 const HOOKS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'hooks-tools.md'));
+/** Global studio tools docs path required before Studio output management. */
+const STUDIO_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'studio-tools.md'));
 
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
@@ -144,6 +146,18 @@ const RULES: PrerequisiteRule[] = [
     },
     blockMessage:
       'You must read the resources tools guide before managing workspace resources. Please read the file at {filePath} first, then retry.',
+    strict: true,
+  },
+
+  // Built-in studio tool: require studio-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'studio' || toolName === 'mcp__session__studio',
+    resolveRequiredPath: () => {
+      return existsSync(STUDIO_TOOLS_DOC_PATH) ? STUDIO_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the studio tools guide before managing Studio outputs. Please read the file at {filePath} first, then retry.',
     strict: true,
   },
 

@@ -4,6 +4,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Features
 
+- **Craft Studio workspace** - Added a top-level Studio surface, native Studio output tool, bundled Studio guides, and file-backed session outputs for previewing, refining, and exporting design work.
+
 ## Improvements
 
 - **Right dock full focus** — Added an expand/restore control that hides the main content and gives the right dock the remaining workspace while preserving normal dock width on restore.

@@ -8,7 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, type StudioFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -41,6 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
+import { createStudioOutput, exportStudioOutput, listStudioOutputsForSessions, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4306,6 +4307,46 @@ export class SessionManager implements ISessionManager {
               return next
             },
           },
+          studioFns: {
+            resolveOutput: async (outputId) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              return listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+            },
+            status: async () => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const paths = sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))
+              return { available: true, outputs: listStudioOutputsForSessions(paths).length }
+            },
+            list: async () => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              return listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id)))
+            },
+            show: async (outputId) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              return listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+            },
+            create: async (input) => {
+              const output = createStudioOutput(getSessionStoragePath(managed.workspace.rootPath, managed.id), input, managed.id)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            update: async (outputId, input) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              const output = updateStudioOutput(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            exportOutput: async (outputId, format) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              const output = exportStudioOutput(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, format)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+          } satisfies StudioFns,
           resourcesFns: {
             status: async () => ({
               available: true,

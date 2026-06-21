@@ -32,6 +32,7 @@ import {
   isSettingsNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
+  isStudioNavigation,
 } from '@/contexts/NavigationContext'
 import { useSessionSelection, useIsMultiSelectActive, useSelectedIds, useSelectionCount } from '@/hooks/useSession'
 import { agentSelection, sourceSelection, skillSelection, automationSelection } from '@/hooks/useEntitySelection'
@@ -43,6 +44,7 @@ import ResourcesHomePage from '@/pages/ResourcesHomePage'
 import AgentInfoPage from '@/pages/AgentInfoPage'
 import AgentsHomePage from '@/pages/AgentsHomePage'
 import AutomationsHomePage from '@/pages/AutomationsHomePage'
+import StudioHomePage from '@/pages/StudioHomePage'
 import { getSettingsPageComponent } from '@/pages/settings/settings-pages'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
 import type { ExecutionEntry } from '../automations/types'
@@ -281,6 +283,14 @@ export function MainContentPanel({
   // Bare `settings` route (subpage === null) means navigator-only view in compact mode;
   // PanelStackContainer hides the content panel entirely. On desktop the panel still
   // mounts, so fall back to the App page so it isn't empty.
+  if (isStudioNavigation(navState)) {
+    return wrapWithStoplight(
+      <Panel variant="grow" className={className}>
+        <StudioHomePage />
+      </Panel>
+    )
+  }
+
   if (isSettingsNavigation(navState)) {
     const subpage = navState.subpage ?? 'app'
     const SettingsPageComponent = getSettingsPageComponent(subpage)

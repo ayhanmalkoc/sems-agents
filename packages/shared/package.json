@@ -65,6 +65,7 @@
     "./protocol": "./src/protocol/index.ts",
     "./i18n": "./src/i18n/index.ts",
     "./resources": "./src/resources/index.ts",
+    "./studio": "./src/studio/index.ts",
     "./memory": "./src/memory/index.ts",
     "./hooks": "./src/hooks/index.ts",
     "./agent/context-window": "./src/agent/context-window.ts"

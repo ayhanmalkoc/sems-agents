@@ -94,6 +94,9 @@ export type EditContextKey =
   | 'memory-create'
   | 'memory-edit'
   | 'memory-learn'
+  | 'studio-create'
+  | 'studio-refine'
+  | 'studio-export'
 
 /**
  * Full edit configuration including context for agent and example for UI.
@@ -127,6 +130,69 @@ export interface EditConfig {
  * Each entry contains all strings needed for the edit popover and agent context.
  */
 const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
+
+  'studio-create': (_location) => ({
+    context: {
+      label: 'Studio Create',
+      filePath: 'studio',
+      context:
+        'The user wants to create a Craft Studio output. Read ~/.craft-agent/docs/studio-tools.md first. ' +
+        'Use the native studio tool, not shell commands. Choose the best Studio skill: studio-prototype, studio-dashboard, or studio-deck. ' +
+        'Create file-backed output with studio({ command: "create {...}" }). Include production-ready responsive HTML, metadata, and a concise README. ' +
+        'Confirm with the output id and explain how to preview it in Studio.',
+    },
+    example: 'Create a modern SaaS landing page for our agent product',
+    overridePlaceholder: 'What should Studio create?',
+    displayLabelKey: 'editPopover.label.studioCreate',
+    exampleKey: 'editPopover.example.studioCreate',
+    overridePlaceholderKey: 'editPopover.placeholder.studioCreate',
+    model: 'default',
+    systemPromptPreset: 'mini',
+    inlineExecution: true,
+  }),
+
+  'studio-refine': (location) => {
+    const [outputDir, outputId] = location.split('::')
+    return {
+      context: {
+        label: 'Studio Refine',
+        filePath: outputDir || 'studio',
+        context:
+          `The user wants to refine Studio output "${outputId || 'selected output'}". Read ~/.craft-agent/docs/studio-tools.md first. ` +
+          'Use studio show/update. Do not create a new runtime or chat mode. Preserve session data boundary. ' +
+          'Update the existing output HTML/metadata through the native studio tool and summarize the change.',
+      },
+      example: 'Make the hero section cleaner and improve mobile spacing',
+      overridePlaceholder: 'What should change?',
+      displayLabelKey: 'editPopover.label.studioRefine',
+      exampleKey: 'editPopover.example.studioRefine',
+      overridePlaceholderKey: 'editPopover.placeholder.studioRefine',
+      model: 'default',
+      systemPromptPreset: 'mini',
+      inlineExecution: true,
+    }
+  },
+
+  'studio-export': (location) => {
+    const [outputDir, outputId] = location.split('::')
+    return {
+      context: {
+        label: 'Studio Export',
+        filePath: outputDir || 'studio',
+        context:
+          `The user wants to export Studio output "${outputId || 'selected output'}". Read ~/.craft-agent/docs/studio-tools.md first. ` +
+          'Use the native studio export command. Prefer zip unless the user asks for html. PDF may require renderer support; report clearly if unavailable.',
+      },
+      example: 'Export this as a zip',
+      overridePlaceholder: 'Export as html, zip, or pdf?',
+      displayLabelKey: 'editPopover.label.studioExport',
+      exampleKey: 'editPopover.example.studioExport',
+      overridePlaceholderKey: 'editPopover.placeholder.studioExport',
+      model: 'fast',
+      systemPromptPreset: 'mini',
+      inlineExecution: true,
+    }
+  },
   'workspace-permissions': (location) => ({
     context: {
       label: 'Permission Settings',

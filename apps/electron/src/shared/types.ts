@@ -913,6 +913,12 @@ export interface SettingsNavigationState {
   rightSidebar?: RightSidebarPanel
 }
 
+export interface StudioNavigationState {
+  navigator: 'studio'
+  details: null
+  rightSidebar?: RightSidebarPanel
+}
+
 /**
  * Skills navigation state
  */
@@ -942,6 +948,7 @@ export type NavigationState =
   | SourcesNavigationState
   | AgentsNavigationState
   | SettingsNavigationState
+  | StudioNavigationState
   | SkillsNavigationState
   | AutomationsNavigationState
 
@@ -968,6 +975,10 @@ export const isSkillsNavigation = (
 export const isAutomationsNavigation = (
   state: NavigationState
 ): state is AutomationsNavigationState => state.navigator === 'automations'
+
+export const isStudioNavigation = (
+  state: NavigationState
+): state is StudioNavigationState => state.navigator === 'studio'
 
 
 
@@ -1005,6 +1016,9 @@ export const getNavigationStateKey = (state: NavigationState): string => {
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
     return `settings:${state.subpage}`
+  }
+  if (state.navigator === 'studio') {
+    return 'studio'
   }
   // Chats
   const f = state.filter
@@ -1059,6 +1073,9 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
     }
     return { navigator: 'automations', details: null }
   }
+
+  // Handle Studio
+  if (key === 'studio') return { navigator: 'studio', details: null }
 
   // Handle memory
   if (key === 'memory') return { navigator: 'settings', subpage: 'memory' }

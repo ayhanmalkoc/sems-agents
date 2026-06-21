@@ -28,6 +28,7 @@ export {
   type AgentsFns,
   type AutomationsFns,
   type ResourcesFns,
+  type StudioFns,
   // Auth request types (unified auth flow)
   type AuthRequest,
   type AuthRequestType,

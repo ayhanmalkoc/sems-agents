@@ -27,6 +27,7 @@ import {
   Info,
   MailOpen,
   PanelRight,
+  Palette,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -113,6 +114,7 @@ import {
   isSourcesNavigation,
   isAgentsNavigation,
   isSettingsNavigation,
+  isStudioNavigation,
   isSkillsNavigation,
   isAutomationsNavigation,
   type NavigationState,
@@ -860,7 +862,7 @@ function AppShellContent({
   const navState = useNavigationState()
   const isRightDockVisible = isRightDockOpen && isSessionsNavigation(navState)
 
-  const navigatorPanelWidth = (isSettingsNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
+  const navigatorPanelWidth = (isSettingsNavigation(navState) || isStudioNavigation(navState) || isSessionsNavigation(navState) || isAgentsNavigation(navState) || isAutomationsNavigation(navState) || isSourcesNavigation(navState) || isSkillsNavigation(navState))
     ? 0
     : (isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden ? 0 : sessionListWidth))
   const store = useStore()
@@ -1992,6 +1994,10 @@ function AppShellContent({
     navigate(routes.view.agents())
   }, [])
 
+  const handleStudioClick = useCallback(() => {
+    navigate(routes.view.studio())
+  }, [])
+
   // Handler for sources view (all sources)
   const handleSourcesClick = useCallback(() => {
     navigate(routes.view.sources())
@@ -2355,6 +2361,7 @@ function AppShellContent({
 
     // 3. Agents, Resources (Sources + Skills), Automations, Settings
     result.push({ id: 'nav:agents', type: 'nav', action: handleAgentsClick })
+    result.push({ id: 'nav:studio', type: 'nav', action: handleStudioClick })
     result.push({ id: 'nav:resources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
@@ -2363,7 +2370,7 @@ function AppShellContent({
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleAgentsClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleAgentsClick, handleStudioClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2475,6 +2482,10 @@ function AppShellContent({
     // Agents navigator
     if (isAgentsNavigation(navState)) {
       return 'Agents'
+    }
+
+    if (isStudioNavigation(navState)) {
+      return t("sidebar.studio")
     }
 
     // Sources navigator
@@ -2657,6 +2668,7 @@ function AppShellContent({
                     { id: "nav:newSession", title: t("session.newSession"), icon: <SquarePenRounded className="h-3.5 w-3.5" />, variant: "ghost", onClick: () => handleNewChat(), dataTutorial: "new-chat-button", contextMenu: { type: "newSession" } },
                     { id: "nav:search", title: t("common.search"), icon: Search, variant: searchDialogOpen ? "default" : "ghost", onClick: () => setSearchDialogOpen(true) },
                     { id: "nav:agents", title: t("sidebar.agents"), label: String(agentProfiles.filter(agent => agent.visibility !== 'internal').length), icon: Bot, variant: isAgentsNavigation(navState) ? "default" : "ghost", onClick: handleAgentsClick },
+                    { id: "nav:studio", title: t("sidebar.studio"), icon: Palette, variant: isStudioNavigation(navState) ? "default" : "ghost", onClick: handleStudioClick },
                     {
                       id: "nav:resources",
                       title: t("sidebar.resources"),
@@ -3481,7 +3493,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode) */}
-        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
+        {!effectiveSidebarAndNavigatorHidden && !isSettingsNavigation(navState) && !isStudioNavigation(navState) && !isSessionsNavigation(navState) && !isAgentsNavigation(navState) && !isAutomationsNavigation(navState) && !isSourcesNavigation(navState) && !isSkillsNavigation(navState) && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

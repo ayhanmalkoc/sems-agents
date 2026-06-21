@@ -1,0 +1,165 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync } from 'node:fs'
+import { dirname, join, normalize, relative } from 'node:path'
+import type { CreateStudioOutputInput, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
+
+const SCHEMA = 'craft-studio-output/v1' as const
+const ALLOWED_TYPES = new Set<StudioOutputType>(['prototype', 'landing-page', 'dashboard', 'deck', 'report', 'image-prompt', 'video-prompt'])
+
+function nowIso(): string { return new Date().toISOString() }
+
+export function slugifyStudioOutputId(value: string): string {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || `studio-${Date.now()}`
+}
+
+function assertSafeSegment(value: string, label: string): string {
+  if (!value || value.includes('..') || /[\\/]/.test(value)) throw new Error(`${label} must be a safe path segment`)
+  return value
+}
+
+function ensureInside(root: string, target: string): string {
+  const normalizedRoot = normalize(root)
+  const normalizedTarget = normalize(target)
+  const rel = relative(normalizedRoot, normalizedTarget)
+  if (rel.startsWith('..') || rel === '..' || rel.includes(`..${'/'}`) || rel.includes(`..${'\\'}`)) throw new Error('Path escapes studio output directory')
+  return normalizedTarget
+}
+
+export function getStudioRoot(sessionPath: string): string {
+  return join(sessionPath, 'data', 'studio')
+}
+
+export function getStudioOutputDir(sessionPath: string, outputId: string): string {
+  return join(getStudioRoot(sessionPath), assertSafeSegment(outputId, 'output id'))
+}
+
+function metadataPath(outputDir: string): string { return join(outputDir, 'metadata.json') }
+function readmePath(outputDir: string): string { return join(outputDir, 'README.md') }
+
+export function readStudioOutput(outputDir: string): StudioOutputRecord | null {
+  const path = metadataPath(outputDir)
+  if (!existsSync(path)) return null
+  const metadata = JSON.parse(readFileSync(path, 'utf-8')) as StudioOutputMetadata
+  if (metadata.schema !== SCHEMA) return null
+  const entryPath = ensureInside(outputDir, join(outputDir, metadata.entryFile || 'index.html'))
+  return { metadata, outputDir, entryPath }
+}
+
+export function listStudioOutputsForSession(sessionPath: string): StudioOutputRecord[] {
+  const root = getStudioRoot(sessionPath)
+  if (!existsSync(root)) return []
+  return readdirSync(root).flatMap(id => {
+    const dir = join(root, id)
+    if (!statSync(dir).isDirectory()) return []
+    const record = readStudioOutput(dir)
+    return record ? [record] : []
+  }).sort((a, b) => b.metadata.updatedAt.localeCompare(a.metadata.updatedAt))
+}
+
+export function listStudioOutputsForSessions(sessionPaths: string[]): StudioOutputRecord[] {
+  return sessionPaths.flatMap(listStudioOutputsForSession).sort((a, b) => b.metadata.updatedAt.localeCompare(a.metadata.updatedAt))
+}
+
+function defaultHtml(title: string): string {
+  const safeTitle = title.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] || c))
+  return `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1" />\n<title>${safeTitle}</title>\n<style>body{font-family:Inter,ui-sans-serif,system-ui;margin:0;background:#0f172a;color:#e2e8f0}main{min-height:100vh;display:grid;place-items:center;padding:48px}section{max-width:860px}h1{font-size:56px;line-height:1;margin:0 0 16px}p{font-size:20px;color:#94a3b8}</style>\n</head>\n<body><main><section><h1>${safeTitle}</h1><p>Studio output ready. Refine this file with the Studio skill.</p></section></main></body>\n</html>\n`
+}
+
+export function createStudioOutput(sessionPath: string, input: CreateStudioOutputInput, sessionId: string): StudioOutputRecord {
+  if (!ALLOWED_TYPES.has(input.type)) throw new Error(`Unsupported Studio output type: ${input.type}`)
+  const id = assertSafeSegment(input.id ? slugifyStudioOutputId(input.id) : slugifyStudioOutputId(input.title), 'output id')
+  const outputDir = getStudioOutputDir(sessionPath, id)
+  mkdirSync(join(outputDir, 'assets'), { recursive: true })
+  mkdirSync(join(outputDir, 'exports'), { recursive: true })
+  const entryFile = input.entryFile ?? 'index.html'
+  ensureInside(outputDir, join(outputDir, entryFile))
+  const createdAt = nowIso()
+  const metadata: StudioOutputMetadata = {
+    schema: SCHEMA,
+    id,
+    title: input.title,
+    type: input.type,
+    entryFile,
+    skill: input.skill,
+    status: 'ready',
+    sourcePrompt: input.sourcePrompt,
+    createdAt,
+    updatedAt: createdAt,
+    designSystem: input.designSystem,
+    exports: [],
+    sessionId,
+  }
+  writeFileSync(join(outputDir, entryFile), input.html ?? defaultHtml(input.title), 'utf-8')
+  writeFileSync(readmePath(outputDir), input.readme ?? `# ${input.title}\n\nStudio output generated by Craft.\n`, 'utf-8')
+  writeFileSync(metadataPath(outputDir), JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
+  return { metadata, outputDir, entryPath: join(outputDir, entryFile) }
+}
+
+export function updateStudioOutput(sessionPath: string, outputId: string, input: UpdateStudioOutputInput): StudioOutputRecord {
+  const outputDir = getStudioOutputDir(sessionPath, outputId)
+  const record = readStudioOutput(outputDir)
+  if (!record) throw new Error(`Studio output not found: ${outputId}`)
+  const metadata = { ...record.metadata, ...input, updatedAt: nowIso() } as StudioOutputMetadata
+  delete (metadata as { html?: string }).html
+  delete (metadata as { readme?: string }).readme
+  if (input.html !== undefined) writeFileSync(record.entryPath, input.html, 'utf-8')
+  if (input.readme !== undefined) writeFileSync(readmePath(outputDir), input.readme, 'utf-8')
+  writeFileSync(metadataPath(outputDir), JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
+  return { metadata, outputDir, entryPath: record.entryPath }
+}
+
+const crcTable = new Uint32Array(256).map((_, n) => {
+  let c = n
+  for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1)
+  return c >>> 0
+})
+function crc32(buf: Buffer): number { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0 }
+function dosTime(date = new Date()): { time: number; date: number } { return { time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2), date: ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate() } }
+function makeZip(files: Array<{ name: string; data: Buffer }>): Buffer {
+  const locals: Buffer[] = [], centrals: Buffer[] = []; let offset = 0; const dt = dosTime()
+  for (const file of files) {
+    const name = Buffer.from(file.name.replace(/\\/g, '/'))
+    const crc = crc32(file.data)
+    const local = Buffer.alloc(30 + name.length)
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0, 6); local.writeUInt16LE(0, 8); local.writeUInt16LE(dt.time, 10); local.writeUInt16LE(dt.date, 12); local.writeUInt32LE(crc, 14); local.writeUInt32LE(file.data.length, 18); local.writeUInt32LE(file.data.length, 22); local.writeUInt16LE(name.length, 26); name.copy(local, 30)
+    locals.push(local, file.data)
+    const central = Buffer.alloc(46 + name.length)
+    central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(20, 6); central.writeUInt16LE(0, 8); central.writeUInt16LE(0, 10); central.writeUInt16LE(dt.time, 12); central.writeUInt16LE(dt.date, 14); central.writeUInt32LE(crc, 16); central.writeUInt32LE(file.data.length, 20); central.writeUInt32LE(file.data.length, 24); central.writeUInt16LE(name.length, 28); central.writeUInt32LE(offset, 42); name.copy(central, 46)
+    centrals.push(central); offset += local.length + file.data.length
+  }
+  const centralSize = centrals.reduce((n, b) => n + b.length, 0)
+  const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(centralSize, 12); end.writeUInt32LE(offset, 16)
+  return Buffer.concat([...locals, ...centrals, end])
+}
+
+function collectFiles(root: string, dir = root): Array<{ name: string; data: Buffer }> {
+  return readdirSync(dir).flatMap(entry => {
+    const path = join(dir, entry)
+    const rel = relative(root, path).replace(/\\/g, '/')
+    if (statSync(path).isDirectory()) return entry === 'exports' ? [] : collectFiles(root, path)
+    return [{ name: rel, data: readFileSync(path) }]
+  })
+}
+
+export function exportStudioOutput(sessionPath: string, outputId: string, format: StudioExportFormat): StudioOutputRecord {
+  const outputDir = getStudioOutputDir(sessionPath, outputId)
+  const record = readStudioOutput(outputDir)
+  if (!record) throw new Error(`Studio output not found: ${outputId}`)
+  const exportsDir = join(outputDir, 'exports')
+  mkdirSync(exportsDir, { recursive: true })
+  let exportPath: string
+  if (format === 'html') {
+    exportPath = join(exportsDir, `${outputId}.html`)
+    copyFileSync(record.entryPath, exportPath)
+  } else if (format === 'zip') {
+    exportPath = join(exportsDir, `${outputId}.zip`)
+    writeFileSync(exportPath, makeZip(collectFiles(outputDir)))
+  } else if (format === 'pdf') {
+    throw new Error('PDF export requires a renderer-backed print pipeline and is not available in this context')
+  } else {
+    throw new Error(`Unsupported export format: ${format}`)
+  }
+  const exportRecord: StudioExportRecord = { format, path: relative(outputDir, exportPath).replace(/\\/g, '/'), createdAt: nowIso() }
+  const metadata: StudioOutputMetadata = { ...record.metadata, status: 'exported', updatedAt: nowIso(), exports: [...record.metadata.exports, exportRecord] }
+  writeFileSync(metadataPath(outputDir), JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
+  return { metadata, outputDir, entryPath: record.entryPath }
+}
