@@ -7087,7 +7087,7 @@ export class SessionManager implements ISessionManager {
     const explicitPrompt = input.explicitPrompt ? redactMemoryBrainText(input.explicitPrompt).slice(0, 1200) : undefined
     const prompt = [
       'Memory Brain curation instruction for the current chat agent.',
-      'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool for search/create/update/hygiene only. Do not edit JSON files directly.',
+      'Read ~/.craft-agent/docs/memory-tools.md first, then use native memory session tool calls like `memory({ command: \"search ...\" })`, `memory({ command: \"create {...}\" })`, or `memory({ command: \"update <memoryId> {...}\" })`. Do not use shell, bash, terminal, craft-agent, CLI commands, or direct JSON file edits.',
       'Do not call memory learn from inside this Memory Brain task; this task already received the bounded session context below.',
       'Use memory create/update only for strong durable facts. If uncertain, do not write.',
       'Search existing memory before writing. Ignore transient QA logs, commits, tool noise, duplicate facts, secrets, credentials, and low-quality notes.',

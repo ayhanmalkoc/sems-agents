@@ -653,9 +653,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       filePath: `${location}/memory/memories.json`,
       context:
         'The user wants to create or manage workspace memory using natural language. ' +
-        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'For explicit durable facts or "remember this" requests, use memory create. ' +
-        'For inferred learnings from workspace session history, prefer memory learn workspace and save only strong durable facts. ' +
+        'Read ~/.craft-agent/docs/memory-tools.md first, then use the native memory session tool only with calls like `memory({ command: "..." })`; do not use shell, bash, terminal, craft-agent, or CLI commands. ' +
+        'For explicit durable facts or "remember this" requests, use `memory({ command: "create {...}" })`. ' +
+        'For inferred learnings from workspace session history, prefer `memory({ command: "learn workspace" })` and save only strong durable facts. ' +
         'Do not edit memory JSON files directly. ' +
         'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
         'Confirm clearly what changed.',
@@ -675,9 +675,9 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         filePath: `${workspaceRoot}/memory/memories.json`,
         context:
           `The user wants to edit workspace memory ${memoryId}. ` +
-          'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-          'Use memory show to inspect the current record if needed. ' +
-          'Use refresh to update content/type/scope/tags/confidence, mark-stale for outdated memories, merge for duplicates, hygiene to find cleanup candidates, delete only when requested, ' +
+          'Read ~/.craft-agent/docs/memory-tools.md first, then use the native memory session tool only with calls like `memory({ command: "..." })`; do not use shell, bash, terminal, craft-agent, or CLI commands. ' +
+          'Use `memory({ command: "show <memoryId>" })` to inspect the current record if needed. ' +
+          'Use native commands like `refresh <memoryId> {...}` to update content/type/scope/tags/confidence, `mark-stale` for outdated memories, `merge` for duplicates, `hygiene` to find cleanup candidates, and `delete` only when requested. ' +
           'Do not edit memory JSON files directly. ' +
           'Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys. ' +
           'Confirm clearly what changed.',
@@ -696,13 +696,13 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       filePath: `${location}/memory/memories.json`,
       context:
         'The user wants to refresh memory by learning from session history. ' +
-        'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
-        'Use memory learn workspace for incremental workspace refresh, memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
-        'After memory learn returns, read the task instructions, run memory search for duplicates, then use memory create/update/merge/mark-stale when durable facts exist. Do not stop after learn unless there are no durable facts. ' +
+        'Read ~/.craft-agent/docs/memory-tools.md first, then use the native memory session tool only with calls like `memory({ command: "..." })`; do not use shell, bash, terminal, craft-agent, or CLI commands. ' +
+        'Call `memory({ command: "learn workspace" })` for incremental workspace refresh by default. Use `learn current` only when the user asks for the current session, `learn recent` for recent loaded sessions, `learn all` for a full one-off audit, or `learn <sessionId>` for a specific session. ' +
+        'After `learn` returns, read the task instructions, run `memory({ command: "search ..." })` for duplicates, then use native `create`/`update`/`merge`/`mark-stale` commands when durable facts exist. Do not stop after learn unless there are no durable facts. ' +
         'Return a final refresh summary with processed, created, updated, skipped, mode, indexed sessions, created ids, updated ids, and reasons. ' +
         'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
     },
-    example: 'Refresh memory from all sessions',
+    example: 'Refresh workspace memory',
     overridePlaceholder: 'What should memory learn from?',
     model: 'default',
     systemPromptPreset: 'mini',
