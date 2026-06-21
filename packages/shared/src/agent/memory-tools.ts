@@ -26,10 +26,16 @@ export interface MemoryLearnSummary {
   mode: 'on'
   processed: number
   created: MemoryRecord[]
+  updated?: MemoryRecord[]
   skipped: number
   indexedSessions?: number
   pendingSessions?: number
   reasons?: string[]
+  task?: {
+    kind: 'memory_refresh'
+    target: string
+    instructions: string
+  }
 }
 
 const MemorySchema = z.object({
@@ -74,13 +80,25 @@ function formatHygiene(items: MemoryHygieneItem[]): string {
 
 
 function formatLearnSummary(summary: MemoryLearnSummary): string {
+  const updated = summary.updated ?? []
   const lines = [
-    `Memory learn summary: delegated to Memory Brain mode=${summary.mode} processed=${summary.processed} created=${summary.created.length} skipped=${summary.skipped}`,
-    'The current chat agent receives bounded context and writes memory only when it finds durable facts.',
+    'Memory refresh task prepared.',
+    `Mode: ${summary.mode}`,
+    `Processed: ${summary.processed}`,
+    `Created: ${summary.created.length}`,
+    `Updated: ${updated.length}`,
+    `Skipped: ${summary.skipped}`,
   ]
   if (summary.indexedSessions !== undefined) lines.push(`Indexed sessions: ${summary.indexedSessions}`)
   if (summary.pendingSessions !== undefined) lines.push(`Pending sessions: ${summary.pendingSessions}`)
   if (summary.created.length) lines.push(`Created ids: ${summary.created.map(memory => memory.id).join(',')}`)
+  if (updated.length) lines.push(`Updated ids: ${updated.map(memory => memory.id).join(',')}`)
+  if (summary.task) {
+    lines.push('Next: complete durable memory refresh with memory search/create/update, then report final created/updated/skipped counts.')
+    lines.push(`Task target: ${summary.task.target}`)
+    lines.push('Task instructions:')
+    lines.push(summary.task.instructions)
+  }
   if (summary.reasons?.length) lines.push(`Reasons: ${summary.reasons.join('; ')}`)
   return lines.join('\n')
 }
@@ -149,7 +167,7 @@ export async function executeMemoryCommand(command: string, fns: MemoryFns): Pro
     if (verb === 'learn') {
       if (!fns.learn) return failure('learn is not available in this context')
       const target = rest.join(' ').trim()
-      if (!target) return failure('learn requires target: current, recent, all, or session id')
+      if (!target) return failure('learn requires target: workspace, current, recent, all, or session id')
       return success(formatLearnSummary(await fns.learn(target)))
     }
     return failure(`Unknown memory command: ${verb}`)

@@ -7,7 +7,7 @@ Use the `memory` tool to manage persistent, scoped workspace memory. Product rul
 Memory is agent-managed. When a task depends on prior project decisions, user preferences, workflows, or past error fixes, run `memory search <query>` before answering.
 
 - If the user explicitly says "remember this", "bunu hatırla", or clearly asks you to persist a durable fact, use `memory create <json>` directly after checking for duplicates and secrets.
-- If learning is inferred from session history, use `memory learn ...`; Memory Brain saves only strong durable facts and ignores weak/noisy information.
+- If learning is inferred from session history, use `memory learn ...`, then complete the returned refresh task with memory search/create/update. Memory Brain saves only strong durable facts and ignores weak/noisy information.
 - Memory follows the workspace preference `memoryEnabled`.
   - `true` lets the current chat agent search/update memory and run Workspace Memory Brain refresh.
   - `false` blocks agent memory search/update/learn. Existing memories remain visible in Settings.
@@ -68,7 +68,7 @@ Memory is workspace-first. Use `workspace`, `agent_profile`, or `session` unless
 
 ## Manual Learning
 
-Use manual learning when automatic completion learning may have missed something, or when the user asks to revisit session history for memory.
+Use memory learning when the user asks to refresh workspace memory or revisit session history. `learn` returns bounded Memory Brain instructions; complete the workflow with memory search/create/update before final response.
 
 - `memory learn workspace` learns incrementally from new or changed workspace sessions. This is the main Refresh Memory path.
 - `memory learn current` learns from the current session.

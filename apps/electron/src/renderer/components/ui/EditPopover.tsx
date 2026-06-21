@@ -698,7 +698,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         'The user wants to refresh memory by learning from session history. ' +
         'Read ~/.craft-agent/docs/memory-tools.md first, then use the memory tool. ' +
         'Use memory learn workspace for incremental workspace refresh, memory learn current for the current session, memory learn recent for recent loaded sessions, memory learn all for up to 100 workspace sessions, or memory learn <sessionId> for a specific session. ' +
-        'Return a short learn summary with processed, created, skipped, mode, indexed sessions, created ids, and the first skip reasons. ' +
+        'After memory learn returns, read the task instructions, run memory search for duplicates, then use memory create/update/merge/mark-stale when durable facts exist. Do not stop after learn unless there are no durable facts. ' +
+        'Return a final refresh summary with processed, created, updated, skipped, mode, indexed sessions, created ids, updated ids, and reasons. ' +
         'Do not edit memory JSON files directly. Never store secrets, tokens, passwords, API keys, bearer credentials, or private keys.',
     },
     example: 'Refresh memory from all sessions',

@@ -116,6 +116,7 @@ type MemoryBrainTaskInput = {
   managed: ManagedSession
   targets: LearnMemorySession[]
   reason: string
+  target?: string
   explicitPrompt?: string
 }
 
@@ -125,8 +126,10 @@ type MemoryBrainTaskResult = {
   indexedSessions?: number
   pendingSessions?: number
   created: MemoryRecord[]
+  updated?: MemoryRecord[]
   skipped: number
   reasons: string[]
+  task?: { kind: 'memory_refresh'; target: string; instructions: string }
 }
 
 type MemoryLearnResult = {
@@ -135,8 +138,10 @@ type MemoryLearnResult = {
   indexedSessions?: number
   pendingSessions?: number
   created: ReturnType<typeof createMemory>[]
+  updated?: ReturnType<typeof createMemory>[]
   skipped: number
   reasons: string[]
+  task?: { kind: 'memory_refresh'; target: string; instructions: string }
 }
 
 type LearnMemorySession = {
@@ -4231,7 +4236,7 @@ export class SessionManager implements ISessionManager {
             },
             learn: async (target) => {
               this.assertMemoryEnabled()
-              return this.learnMemorySessions(managed, this.resolveMemoryLearnTargets(managed, target))
+              return this.learnMemorySessions(managed, this.resolveMemoryLearnTargets(managed, target), target)
             },
           } satisfies MemoryFns,
           hooksFns: {
@@ -7052,8 +7057,8 @@ export class SessionManager implements ISessionManager {
     return createHash('sha256').update(payload).digest('hex')
   }
 
-  private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[]): Promise<MemoryLearnResult> {
-    const result = await this.runMemoryBrainTask({ managed, targets, reason: 'memory learn command' })
+  private async learnMemorySessions(managed: ManagedSession, targets: LearnMemorySession[], target = 'manual'): Promise<MemoryLearnResult> {
+    const result = await this.runMemoryBrainTask({ managed, targets, reason: 'memory learn command', target })
     const now = new Date().toISOString()
     const entries: MemoryWorkspaceSessionIndexEntry[] = targets.map(target => ({
       sessionId: target.id,
@@ -7073,7 +7078,7 @@ export class SessionManager implements ISessionManager {
     const targets = input.targets.filter(target => target.systemPromptPreset !== 'mini')
     const skipped = input.targets.length - targets.length
     if (targets.length === 0) {
-      return { mode: 'on', processed: 0, created: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'] }
+      return { mode: 'on', processed: 0, created: [], updated: [], skipped: input.targets.length, reasons: ['no eligible non-mini sessions'] }
     }
 
     const sessionIds = targets.map(target => target.id)
@@ -7095,7 +7100,15 @@ export class SessionManager implements ISessionManager {
       'Finish with a concise summary: processed, created ids, skipped count, reasons.',
     ].join('\n')
 
-    return { mode: 'on', processed: targets.length, created: [], skipped, reasons: [prompt] }
+    return {
+      mode: 'on',
+      processed: targets.length,
+      created: [],
+      updated: [],
+      skipped,
+      reasons: [],
+      task: { kind: 'memory_refresh', target: input.target ?? 'manual', instructions: prompt },
+    }
   }
 
   private resolveMemoryLearnTargets(managed: ManagedSession, target: string): LearnMemorySession[] {
