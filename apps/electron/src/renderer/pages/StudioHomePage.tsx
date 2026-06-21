@@ -33,28 +33,65 @@ type StudioOutput = {
   session?: Session
 }
 
+function titleFromFileName(name: string): string {
+  return name.replace(/\.html?$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+}
+
 async function readStudioOutputs(): Promise<StudioOutput[]> {
   const sessions = await window.electronAPI.getSessions()
   const outputs: StudioOutput[] = []
+  const seenEntryPaths = new Set<string>()
   for (const session of sessions) {
     if (!session.sessionFolderPath) continue
     const studioRoot = `${session.sessionFolderPath}/data/studio`
-    let root
     try {
-      root = await window.electronAPI.listFileEntries(studioRoot)
+      const root = await window.electronAPI.listFileEntries(studioRoot)
+      for (const entry of root.entries) {
+        if (entry.type !== 'directory') continue
+        try {
+          const metadataPath = `${entry.path}/metadata.json`
+          const metadata = JSON.parse(await window.electronAPI.readFile(metadataPath)) as StudioOutputMetadata
+          if (metadata.schema !== 'craft-studio-output/v1') continue
+          const entryPath = `${entry.path}/${metadata.entryFile || 'index.html'}`
+          seenEntryPaths.add(entryPath)
+          outputs.push({ metadata, outputDir: entry.path, entryPath, session })
+        } catch {
+          continue
+        }
+      }
+    } catch {
+      // A session may have loose HTML previews without Studio metadata.
+    }
+
+    try {
+      const dataRoot = `${session.sessionFolderPath}/data`
+      const dataEntries = await window.electronAPI.listFileEntries(dataRoot)
+      for (const entry of dataEntries.entries) {
+        if (entry.type !== 'file' || !/\.html?$/i.test(entry.name) || seenEntryPaths.has(entry.path)) continue
+        const fileSlug = entry.name.replace(/\.html?$/i, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'html'
+        const id = `${session.id}-${fileSlug}`
+        const timestamp = new Date(session.lastMessageAt || session.createdAt || Date.now()).toISOString()
+        outputs.push({
+          metadata: {
+            schema: 'craft-studio-output/v1',
+            id,
+            title: titleFromFileName(entry.name),
+            type: entry.name.toLowerCase().includes('landing') ? 'landing-page' : 'prototype',
+            entryFile: entry.name,
+            status: 'ready',
+            sourcePrompt: 'Session HTML preview output',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            exports: [],
+            sessionId: session.id,
+          },
+          outputDir: dataRoot,
+          entryPath: entry.path,
+          session,
+        })
+      }
     } catch {
       continue
-    }
-    for (const entry of root.entries) {
-      if (entry.type !== 'directory') continue
-      try {
-        const metadataPath = `${entry.path}/metadata.json`
-        const metadata = JSON.parse(await window.electronAPI.readFile(metadataPath)) as StudioOutputMetadata
-        if (metadata.schema !== 'craft-studio-output/v1') continue
-        outputs.push({ metadata, outputDir: entry.path, entryPath: `${entry.path}/${metadata.entryFile || 'index.html'}`, session })
-      } catch {
-        continue
-      }
     }
   }
   return outputs.sort((a, b) => b.metadata.updatedAt.localeCompare(a.metadata.updatedAt))
