@@ -186,8 +186,10 @@ export default function StudioHomePage() {
     setBusyAction(`export-${format}`)
     try {
       const exported = await window.electronAPI.exportStudioOutput(workspaceId, selected.metadata.id, format)
+      const latest = exported.metadata.exports.at(-1)
       await refresh()
       setSelectedId(exported.metadata.id)
+      if (latest) await window.electronAPI.showInFolder(`${exported.outputDir}/${latest.path}`)
     } finally {
       setBusyAction(null)
     }
@@ -218,7 +220,6 @@ export default function StudioHomePage() {
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <EditPopover trigger={<AIAssistedButton label={t('studio.create')} />} onInlineComplete={refresh} {...getEditConfig('studio-create', 'studio')} />
                 <EditPopover trigger={<AIAssistedButton label={t('studio.refine')} />} onInlineComplete={refresh} {...getEditConfig('studio-refine', studioLocation)} />
-                <EditPopover trigger={<AIAssistedButton label={t('studio.export')} />} onInlineComplete={refresh} {...getEditConfig('studio-export', studioLocation)} />
               </div>
             </div>
           </section>
@@ -243,7 +244,7 @@ export default function StudioHomePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-foreground">{output.metadata.title}</div>
-                        <div className="mt-1 text-xs capitalize text-muted-foreground">{typeLabel(output.metadata.type)} · {output.metadata.status}</div>
+                        <div className="mt-1 text-xs capitalize text-muted-foreground">{typeLabel(output.metadata.type)} / {output.metadata.status}</div>
                       </div>
                       <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium', output.kind === 'studio' ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-300' : 'border-amber-500/30 text-amber-600 dark:text-amber-300')}>{output.kind === 'studio' ? t('studio.badgeStudio') : t('studio.badgeLoose')}</span>
                     </div>
@@ -259,19 +260,20 @@ export default function StudioHomePage() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0">
                       <div className="truncate text-lg font-semibold text-foreground">{selected.metadata.title}</div>
-                      <div className="mt-1 text-xs capitalize text-muted-foreground">{typeLabel(selected.metadata.type)} · {selected.metadata.status} · {selected.metadata.id}</div>
+                      <div className="mt-1 text-xs capitalize text-muted-foreground">{typeLabel(selected.metadata.type)} / {selected.metadata.status} / {selected.metadata.id}</div>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                       {selected.kind === 'loose' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'adopt'} onClick={adoptSelected}><FolderInput className="h-3.5 w-3.5" />{t('studio.adopt')}</Button> : null}
+                      <Button size="sm" variant="outline" onClick={() => void openSelectedPreview()}><ExternalLink className="h-3.5 w-3.5" />{t('studio.view')}</Button>
+                      <Button size="sm" variant="outline" onClick={() => window.electronAPI.showInFolder(selected.entryPath)}><FolderInput className="h-3.5 w-3.5" />{t('studio.folder')}</Button>
                       {selected.kind === 'studio' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'export-html'} onClick={() => void exportSelected('html')}><ExternalLink className="h-3.5 w-3.5" />{t('studio.exportHtml')}</Button> : null}
                       {selected.kind === 'studio' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'export-zip'} onClick={() => void exportSelected('zip')}><FileArchive className="h-3.5 w-3.5" />{t('studio.exportZip')}</Button> : null}
-                      <Button size="sm" variant="outline" onClick={() => void openSelectedPreview()}><ExternalLink className="h-3.5 w-3.5" />{t('studio.openRightDock')}</Button>
                       {selected.session ? <Button size="sm" variant="ghost" onClick={() => navigate(routes.view.allSessions(selected.metadata.sessionId))}>{t('studio.relatedSession')}</Button> : null}
                     </div>
                   </div>
 
                   <div className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl border border-border/60 bg-background/60 p-3"><div className="mb-1 text-foreground/60">{t('studio.skill')}</div>{selected.metadata.skill || '—'}</div>
+                    <div className="rounded-xl border border-border/60 bg-background/60 p-3"><div className="mb-1 text-foreground/60">{t('studio.skill')}</div>{selected.metadata.skill || '-'}</div>
                     <div className="rounded-xl border border-border/60 bg-background/60 p-3"><div className="mb-1 text-foreground/60">{t('studio.session')}</div>{selected.session?.name || selected.metadata.sessionId}</div>
                     <div className="rounded-xl border border-border/60 bg-background/60 p-3"><div className="mb-1 text-foreground/60">{t('studio.updated')}</div>{new Date(selected.metadata.updatedAt).toLocaleString()}</div>
                     <div className="rounded-xl border border-border/60 bg-background/60 p-3"><div className="mb-1 text-foreground/60">{t('studio.exports')}</div>{selected.metadata.exports?.length ?? 0}</div>

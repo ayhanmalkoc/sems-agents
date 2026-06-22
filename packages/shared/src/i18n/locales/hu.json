@@ -1754,6 +1754,8 @@
   "studio.exportHtml": "Export HTML",
   "studio.exportZip": "Export ZIP",
   "studio.openRightDock": "Open preview",
+  "studio.view": "View",
+  "studio.folder": "Folder",
   "studio.relatedSession": "Related session",
   "studio.skill": "Skill",
   "studio.session": "Session",
