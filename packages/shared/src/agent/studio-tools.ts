@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
+import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioDesignSystemDefinition, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 
@@ -16,6 +16,8 @@ export interface StudioFns {
   adopt: (htmlPath: string, input: AdoptStudioOutputInput) => Promise<StudioOutputRecord>
   templates: () => Promise<StudioTemplateDefinition[]>
   template: (templateId: string) => Promise<StudioTemplateDefinition | undefined>
+  designSystems: () => Promise<StudioDesignSystemDefinition[]>
+  designSystem: (id: string) => Promise<StudioDesignSystemDefinition | undefined>
   createProject: (input: CreateStudioProjectInput) => Promise<StudioOutputRecord>
   addPage: (outputId: string, input: AddStudioPageInput) => Promise<StudioOutputRecord>
   addComponent: (outputId: string, input: AddStudioComponentInput) => Promise<StudioOutputRecord>
@@ -23,7 +25,7 @@ export interface StudioFns {
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -40,7 +42,12 @@ function formatOutput(record: StudioOutputRecord): string {
 }
 
 function formatTemplate(template: StudioTemplateDefinition): string {
-  return `- ${template.id} type=${template.type} skill=${template.skill} title=${JSON.stringify(template.title)} tags=${template.tags.join(',')}`
+  return `- ${template.id} type=${template.type} category=${template.category} skill=${template.skill} designSystem=${template.recommendedDesignSystem ?? 'none'} title=${JSON.stringify(template.title)} tags=${template.tags.join(',')}`
+}
+
+function formatDesignSystem(system: StudioDesignSystemDefinition): string {
+  const colors = system.tokens.colors ? Object.entries(system.tokens.colors).map(([key, value]) => `${key}:${value}`).join(',') : 'none'
+  return `- ${system.id} skill=${system.skill} title=${JSON.stringify(system.title)} density=${system.tokens.density ?? 'default'} colors=${colors}`
 }
 
 function formatDetail(record: StudioOutputRecord): string {
@@ -84,7 +91,17 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       const templateId = rest[0]
       if (!templateId) return failure('template requires a template id')
       const template = await fns.template(templateId)
-      return success(template ? ['Studio template:', formatTemplate(template), `Description: ${template.description}`, `Components: ${template.componentPaths.length}`].join('\n') : `Studio template not found: ${templateId}`)
+      return success(template ? ['Studio template:', formatTemplate(template), `Description: ${template.description}`, `Recommended design system: ${template.recommendedDesignSystem ?? 'none'}`, `Components: ${template.componentPaths.length}`].join('\n') : `Studio template not found: ${templateId}`)
+    }
+    if (verb === 'design-systems') {
+      const systems = await fns.designSystems()
+      return success(systems.length ? ['Studio design systems:', ...systems.map(formatDesignSystem)].join('\n') : 'Studio design systems: none')
+    }
+    if (verb === 'design-system') {
+      const id = rest[0]
+      if (!id) return failure('design-system requires a design system id')
+      const system = await fns.designSystem(id)
+      return success(system ? ['Studio design system:', formatDesignSystem(system), `Usage: ${system.usage.join(' ')}`].join('\n') : `Studio design system not found: ${id}`)
     }
     if (verb === 'show') {
       const outputId = rest[0]
@@ -148,7 +165,7 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
 }
 
 export function createStudioTool(options: { getStudioFns: () => StudioFns | undefined }) {
-  return tool('studio', 'Manage Craft Studio projects and outputs: templates, create, list, inspect, update, add pages/components, quality, adopt, and export. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
+  return tool('studio', 'Manage Craft Studio projects and outputs: templates, design systems, create, list, inspect, update, add pages/components, quality, adopt, and export. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
     const fns = options.getStudioFns()
     if (!fns) return failure('Studio controls are not available. This tool requires the desktop app.')
     return executeStudioCommand(String(args.command ?? 'status'), fns)

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioTemplate, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, runStudioQuality, updateStudioOutput } from '../index.ts'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, runStudioQuality, updateStudioOutput } from '../index.ts'
 
 let dirs: string[] = []
 function tempSession(): string {
@@ -21,11 +21,20 @@ describe('studio storage', () => {
     const templates = listStudioTemplates()
     expect(templates.map(template => template.id)).toContain('landing-saas')
     expect(getStudioTemplate('landing-saas')?.skill).toBe('studio-prototype')
+    expect(getStudioTemplate('landing-saas')?.category).toBe('web')
+    expect(getStudioTemplate('landing-saas')?.recommendedDesignSystem).toBe('saas-modern')
     expect(getStudioTemplate('report-product-spec')?.skill).toBe('studio-report')
     expect(getStudioTemplate('image-brand-visual')?.type).toBe('image-prompt')
     expect(getStudioTemplate('video-product-demo')?.type).toBe('video-prompt')
     expect(templates.length).toBeGreaterThanOrEqual(26)
     expect(new Set(templates.map(template => template.id)).size).toBe(templates.length)
+  })
+
+  it('lists and resolves builtin Studio design systems', () => {
+    const systems = listStudioDesignSystems()
+    expect(systems.map(system => system.id)).toContain('saas-modern')
+    expect(getStudioDesignSystem('saas-modern')?.skill).toBe('studio-prototype')
+    expect(getStudioDesignSystem('missing-system')).toBeUndefined()
   })
 
   it('creates, lists, reads, updates, and exports Studio outputs', () => {
@@ -69,7 +78,8 @@ describe('studio storage', () => {
     expect(existsSync(join(withComponent.outputDir, withComponent.metadata.components!.at(-1)!.file))).toBe(true)
 
     const quality = runStudioQuality(sessionPath, project.metadata.id)
-    expect(quality.metadata.quality?.checks.length).toBeGreaterThan(0)
+    expect(quality.metadata.quality?.checks.map(check => check.id)).toContain('design-system')
+    expect(quality.metadata.quality?.checks.map(check => check.id)).toContain('placeholder-copy')
     expect(quality.metadata.quality?.score).toBeGreaterThan(0)
   })
 

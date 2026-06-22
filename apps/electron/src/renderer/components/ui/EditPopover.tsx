@@ -137,7 +137,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       filePath: 'studio',
       context:
         'The user wants to create a Craft Studio output. Read ~/.craft-agent/docs/studio-tools.md first. ' +
-        'Use the native studio tool, not shell commands. Choose the best Studio skill: studio-prototype, studio-dashboard, studio-deck, studio-report, studio-image, or studio-video. ' +
+        'Use the native studio tool, not shell commands. First run studio templates and studio design-systems, then choose the best Studio skill/template/design system: studio-prototype, studio-dashboard, studio-deck, studio-report, studio-image, or studio-video. ' +
         'Create file-backed output with studio({ command: "create {...}" }). Include production-ready responsive HTML, metadata, and a concise README. ' +
         'Confirm with the output id and explain how to preview it in Studio.',
     },

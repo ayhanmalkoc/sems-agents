@@ -1,6 +1,7 @@
 export type StudioOutputType = 'prototype' | 'landing-page' | 'dashboard' | 'deck' | 'report' | 'image-prompt' | 'video-prompt'
 export type StudioOutputStatus = 'draft' | 'ready' | 'exported'
 export type StudioExportFormat = 'html' | 'zip'
+export type StudioTemplateCategory = 'web' | 'app' | 'mobile' | 'dashboard' | 'deck' | 'report' | 'image' | 'video'
 
 export interface StudioExportRecord {
   format: StudioExportFormat
@@ -119,11 +120,29 @@ export interface AddStudioComponentInput {
   html?: string
 }
 
+export interface StudioDesignSystemDefinition {
+  id: string
+  title: string
+  skill: string
+  tokens: {
+    colors?: Record<string, string>
+    typography?: Record<string, string>
+    spacing?: Record<string, string>
+    radius?: Record<string, string>
+    shadow?: Record<string, string>
+    density?: string
+    motion?: Record<string, string>
+  }
+  usage: string[]
+}
+
 export interface StudioTemplateDefinition {
   id: string
   title: string
   description: string
   type: StudioOutputType
+  category: StudioTemplateCategory
+  recommendedDesignSystem?: string
   skill: string
   templatePath: string
   componentPaths: string[]

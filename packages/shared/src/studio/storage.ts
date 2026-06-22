@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync } from 'node:fs'
 import { basename, join, normalize, relative } from 'node:path'
-import { getStudioTemplate, listStudioTemplates, readStudioComponentHtml, readStudioTemplateHtml } from './templates.ts'
+import { getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioTemplates, readStudioComponentHtml, readStudioTemplateHtml } from './templates.ts'
 import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioComponentRecord, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
 
 const SCHEMA = 'craft-studio-output/v1' as const
@@ -30,7 +30,7 @@ export function getStudioOutputDir(sessionPath: string, outputId: string): strin
 function metadataPath(outputDir: string): string { return join(outputDir, 'metadata.json') }
 function readmePath(outputDir: string): string { return join(outputDir, 'README.md') }
 
-export { getStudioTemplate, listStudioTemplates }
+export { getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioTemplates }
 
 export function readStudioOutput(outputDir: string): StudioOutputRecord | null {
   const path = metadataPath(outputDir)
@@ -169,12 +169,21 @@ export function runStudioQuality(sessionPath: string, outputId: string): StudioO
   const record = readStudioOutput(outputDir)
   if (!record) throw new Error(`Studio output not found: ${outputId}`)
   const html = existsSync(record.entryPath) ? readFileSync(record.entryPath, 'utf-8') : ''
+  const hasEmptyAction = /<(button|a)\b[^>]*>\s*<\/\1>/i.test(html)
+  const hasAction = /<(button|a)\b[^>]*>\s*[^<\s][\s\S]*?<\/\1>/i.test(html)
+  const hasResponsiveLayout = /@media|clamp\(|grid|flex/i.test(html)
+  const hasUnsafeAsset = /(?:src|href)=["'](?:https?:)?\/\//i.test(html)
+  const hasPlaceholder = /lorem ipsum|todo|placeholder|primary action|explore flow|studio output ready/i.test(html)
+  const hasDesignSystem = Boolean(record.metadata.designSystem?.source || record.metadata.designSystem?.name || record.metadata.theme?.name)
   const checks = [
     { id: 'viewport', label: 'Responsive viewport', status: html.includes('name="viewport"') ? 'pass' : 'fail', detail: 'Page should include a responsive viewport meta tag.' },
-    { id: 'semantic', label: 'Semantic sections', status: /<main|<section|<article/i.test(html) ? 'pass' : 'warn', detail: 'Use semantic regions for readable project structure.' },
-    { id: 'headings', label: 'Heading hierarchy', status: /<h1/i.test(html) ? 'pass' : 'warn', detail: 'Include one clear H1 and ordered section headings.' },
-    { id: 'actions', label: 'Action labels', status: /<button[^>]*>\s*<\/button>|<a[^>]*>\s*<\/a>/i.test(html) ? 'fail' : 'pass', detail: 'Buttons and links should have visible labels.' },
-    { id: 'mobile-spacing', label: 'Mobile spacing', status: /@media|clamp\(/i.test(html) ? 'pass' : 'warn', detail: 'Use responsive spacing rules for smaller screens.' },
+    { id: 'semantic', label: 'Semantic structure', status: /<main\b/i.test(html) && /<(section|article)\b/i.test(html) ? 'pass' : 'warn', detail: 'Use main plus section/article regions for readable project structure.' },
+    { id: 'headings', label: 'Heading hierarchy', status: /<h1\b/i.test(html) && /<h2\b/i.test(html) ? 'pass' : 'warn', detail: 'Include one clear H1 and supporting section headings.' },
+    { id: 'actions', label: 'Action labels', status: hasEmptyAction ? 'fail' : hasAction ? 'pass' : 'warn', detail: 'Buttons and links should have visible labels and a clear CTA path.' },
+    { id: 'responsive-layout', label: 'Responsive layout', status: hasResponsiveLayout ? 'pass' : 'warn', detail: 'Use responsive grid, flex, clamp, or media queries for multiple viewports.' },
+    { id: 'placeholder-copy', label: 'Production copy', status: hasPlaceholder ? 'fail' : 'pass', detail: 'Avoid placeholder, TODO, generic CTA, or slop copy.' },
+    { id: 'asset-safety', label: 'Relative assets', status: hasUnsafeAsset ? 'warn' : 'pass', detail: 'Prefer local relative assets for export-safe Studio outputs.' },
+    { id: 'design-system', label: 'Design system metadata', status: hasDesignSystem ? 'pass' : 'warn', detail: 'Attach a design system or theme metadata for consistent Studio outputs.' },
   ] as const
   const passCount = checks.filter(check => check.status === 'pass').length
   const now = nowIso()

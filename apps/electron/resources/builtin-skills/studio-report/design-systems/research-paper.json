@@ -1,0 +1,45 @@
+{
+  "id": "research-paper",
+  "title": "Research Paper",
+  "skill": "studio-report",
+  "tokens": {
+    "colors": {
+      "background": "#fbfaf7",
+      "surface": "#ffffff",
+      "text": "#1f2937",
+      "muted": "#6b7280",
+      "accent": "#0ea5e9"
+    },
+    "typography": {
+      "display": "Inter Tight, Inter, ui-sans-serif",
+      "body": "Inter, ui-sans-serif",
+      "mono": "JetBrains Mono, ui-monospace"
+    },
+    "spacing": {
+      "xs": "4px",
+      "sm": "8px",
+      "md": "16px",
+      "lg": "24px",
+      "xl": "40px",
+      "section": "72px"
+    },
+    "radius": {
+      "sm": "10px",
+      "md": "18px",
+      "lg": "28px",
+      "full": "999px"
+    },
+    "shadow": {
+      "soft": "0 20px 60px rgba(0,0,0,.18)",
+      "panel": "0 12px 30px rgba(0,0,0,.14)"
+    },
+    "density": "reading",
+    "motion": {
+      "duration": "180ms",
+      "easing": "cubic-bezier(.2,.8,.2,1)"
+    }
+  },
+  "usage": [
+    "Pick this system before writing HTML. Apply tokens consistently in CSS variables. Keep copy concrete and product-specific."
+  ]
+}

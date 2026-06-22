@@ -10,6 +10,8 @@ Studio is chat-first and project-aware: the agent creates/refines design project
 studio({ command: "status" })
 studio({ command: "templates" })
 studio({ command: "template landing-saas" })
+studio({ command: "design-systems" })
+studio({ command: "design-system saas-modern" })
 studio({ command: "list" })
 studio({ command: "show <outputId>" })
 studio({ command: "create {\"title\":\"Landing page\",\"type\":\"landing-page\",\"template\":\"landing-saas\",\"sourcePrompt\":\"Create a landing page\"}" })
@@ -60,10 +62,12 @@ Builtin templates live beside builtin Studio skills, not in Resources:
 
 - Use Studio skills for product/design judgment.
 - Use `studio templates` before choosing a template when the user asks for Studio creation.
+- Use `studio design-systems` before writing/refining visual output. Pick the recommended design system unless the user asks for a different style.
+- After create/refine, run `studio quality <outputId>` and fix important warnings.
 - For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.
 - If an HTML file already exists under session `data/`, adopt it with `studio adopt <absoluteHtmlPath> <json>` before treating it as a Studio output.
 - Use the Studio tool only for output lifecycle.
 - Never write outside session data.
 - Do not store secrets in metadata, README, HTML, or assets.
 - Keep exports relative and local-first.
-- After create/update/export, report the output id and next preview/export step.
+- After create/update/export, report the output id, selected template/design system, quality result, and next preview/export step.

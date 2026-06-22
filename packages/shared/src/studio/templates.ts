@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { StudioTemplateDefinition } from './types.ts'
+import type { StudioDesignSystemDefinition, StudioTemplateCategory, StudioTemplateDefinition } from './types.ts'
 
 const BUILTIN_SKILLS_ROOT = join(process.cwd(), 'apps', 'electron', 'resources', 'builtin-skills')
 
-const DEFINITIONS: Array<Omit<StudioTemplateDefinition, 'templatePath' | 'componentPaths'>> = [
+const DEFINITIONS: Array<Omit<StudioTemplateDefinition, 'templatePath' | 'componentPaths' | 'category' | 'recommendedDesignSystem'>> = [
   { id: 'landing-saas', title: 'SaaS Landing Page', description: 'Polished SaaS marketing page with hero, features, pricing, and FAQ.', type: 'landing-page', skill: 'studio-prototype', tags: ['landing', 'saas', 'marketing'] },
   { id: 'landing-agent', title: 'Agent Product Landing Page', description: 'Agent-focused landing page with workflow, trust, and CTA sections.', type: 'landing-page', skill: 'studio-prototype', tags: ['landing', 'agent', 'product'] },
   { id: 'landing-mobile-app', title: 'Mobile App Landing Page', description: 'App launch page with phone-first product story and conversion sections.', type: 'landing-page', skill: 'studio-prototype', tags: ['landing', 'mobile', 'app'] },
@@ -33,6 +33,45 @@ const DEFINITIONS: Array<Omit<StudioTemplateDefinition, 'templatePath' | 'compon
   { id: 'video-product-demo', title: 'Product Demo Storyboard', description: 'Video storyboard for product demo setup, walkthrough, outcome, and cutdowns.', type: 'video-prompt', skill: 'studio-video', tags: ['video', 'demo', 'storyboard'] },
 ]
 
+
+const TEMPLATE_METADATA: Record<string, { category: StudioTemplateCategory; recommendedDesignSystem: string }> = {
+  'landing-saas': { category: 'web', recommendedDesignSystem: 'saas-modern' },
+  'landing-agent': { category: 'web', recommendedDesignSystem: 'saas-modern' },
+  'landing-mobile-app': { category: 'mobile', recommendedDesignSystem: 'consumer-mobile' },
+  'landing-web-app': { category: 'app', recommendedDesignSystem: 'saas-modern' },
+  'prototype-mobile-flow': { category: 'mobile', recommendedDesignSystem: 'consumer-mobile' },
+  'prototype-saas-flow': { category: 'app', recommendedDesignSystem: 'saas-modern' },
+  'commerce-storefront': { category: 'web', recommendedDesignSystem: 'commerce-editorial' },
+  'portfolio-case-study': { category: 'web', recommendedDesignSystem: 'saas-modern' },
+  'dashboard-analytics': { category: 'dashboard', recommendedDesignSystem: 'executive-analytics' },
+  'dashboard-admin': { category: 'dashboard', recommendedDesignSystem: 'dense-ops' },
+  'dashboard-finance': { category: 'dashboard', recommendedDesignSystem: 'executive-analytics' },
+  'dashboard-support': { category: 'dashboard', recommendedDesignSystem: 'dense-ops' },
+  'dashboard-ai-ops': { category: 'dashboard', recommendedDesignSystem: 'ai-command' },
+  'dashboard-crm': { category: 'dashboard', recommendedDesignSystem: 'executive-analytics' },
+  'deck-pitch': { category: 'deck', recommendedDesignSystem: 'pitch-dark' },
+  'deck-product': { category: 'deck', recommendedDesignSystem: 'strategy-light' },
+  'deck-case-study': { category: 'deck', recommendedDesignSystem: 'strategy-light' },
+  'deck-investor-update': { category: 'deck', recommendedDesignSystem: 'pitch-dark' },
+  'deck-design-review': { category: 'deck', recommendedDesignSystem: 'strategy-light' },
+  'report-research': { category: 'report', recommendedDesignSystem: 'research-paper' },
+  'report-product-spec': { category: 'report', recommendedDesignSystem: 'product-spec' },
+  'report-design-system': { category: 'report', recommendedDesignSystem: 'product-spec' },
+  'image-brand-visual': { category: 'image', recommendedDesignSystem: 'brand-visual' },
+  'image-product-mockup': { category: 'image', recommendedDesignSystem: 'product-mockup' },
+  'video-launch-storyboard': { category: 'video', recommendedDesignSystem: 'launch-motion' },
+  'video-product-demo': { category: 'video', recommendedDesignSystem: 'demo-storyboard' },
+}
+
+const DESIGN_SYSTEMS: Record<string, string[]> = {
+  'studio-prototype': ['saas-modern', 'consumer-mobile', 'commerce-editorial'],
+  'studio-dashboard': ['dense-ops', 'executive-analytics', 'ai-command'],
+  'studio-deck': ['pitch-dark', 'strategy-light'],
+  'studio-report': ['research-paper', 'product-spec'],
+  'studio-image': ['brand-visual', 'product-mockup'],
+  'studio-video': ['launch-motion', 'demo-storyboard'],
+}
+
 const COMPONENTS: Record<string, string[]> = {
   'studio-prototype': ['hero', 'features', 'pricing', 'faq', 'testimonial', 'cta-band', 'app-shell', 'feature-grid', 'commerce-card', 'case-study-block'],
   'studio-dashboard': ['sidebar', 'metric-card', 'chart-panel', 'table-panel', 'filter-bar', 'status-feed', 'insight-card', 'risk-list', 'sparkline-card'],
@@ -47,11 +86,15 @@ function skillPath(skill: string, ...parts: string[]): string {
 }
 
 export function listStudioTemplates(): StudioTemplateDefinition[] {
-  return DEFINITIONS.map(def => ({
-    ...def,
-    templatePath: skillPath(def.skill, 'templates', `${def.id}.html`),
-    componentPaths: (COMPONENTS[def.skill] ?? []).map(component => skillPath(def.skill, 'components', `${component}.html`)),
-  }))
+  return DEFINITIONS.map(def => {
+    const metadata = TEMPLATE_METADATA[def.id] ?? { category: 'web' as const, recommendedDesignSystem: undefined }
+    return {
+      ...def,
+      ...metadata,
+      templatePath: skillPath(def.skill, 'templates', `${def.id}.html`),
+      componentPaths: (COMPONENTS[def.skill] ?? []).map(component => skillPath(def.skill, 'components', `${component}.html`)),
+    }
+  })
 }
 
 export function getStudioTemplate(templateId: string): StudioTemplateDefinition | undefined {
@@ -68,4 +111,23 @@ export function readStudioTemplateHtml(templateId: string): string {
 export function readStudioComponentHtml(skill: string, preset: string): string | undefined {
   const path = skillPath(skill, 'components', `${preset}.html`)
   return existsSync(path) ? readFileSync(path, 'utf-8') : undefined
+}
+
+function designSystemPath(skill: string, id: string): string {
+  return skillPath(skill, 'design-systems', `${id}.json`)
+}
+
+export function listStudioDesignSystems(): StudioDesignSystemDefinition[] {
+  return Object.entries(DESIGN_SYSTEMS).flatMap(([skill, ids]) => ids.map(id => getStudioDesignSystem(id)).filter((item): item is StudioDesignSystemDefinition => Boolean(item)))
+}
+
+export function getStudioDesignSystem(id: string): StudioDesignSystemDefinition | undefined {
+  for (const [skill, ids] of Object.entries(DESIGN_SYSTEMS)) {
+    if (!ids.includes(id)) continue
+    const path = designSystemPath(skill, id)
+    if (!existsSync(path)) return undefined
+    const parsed = JSON.parse(readFileSync(path, 'utf-8')) as StudioDesignSystemDefinition
+    return parsed.id === id ? parsed : undefined
+  }
+  return undefined
 }

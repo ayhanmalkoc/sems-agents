@@ -1,0 +1,45 @@
+{
+  "id": "saas-modern",
+  "title": "SaaS Modern",
+  "skill": "studio-prototype",
+  "tokens": {
+    "colors": {
+      "background": "#0b1020",
+      "surface": "#111833",
+      "text": "#f8fafc",
+      "muted": "#a7b0c5",
+      "accent": "#8b5cf6"
+    },
+    "typography": {
+      "display": "Inter Tight, Inter, ui-sans-serif",
+      "body": "Inter, ui-sans-serif",
+      "mono": "JetBrains Mono, ui-monospace"
+    },
+    "spacing": {
+      "xs": "4px",
+      "sm": "8px",
+      "md": "16px",
+      "lg": "24px",
+      "xl": "40px",
+      "section": "72px"
+    },
+    "radius": {
+      "sm": "10px",
+      "md": "18px",
+      "lg": "28px",
+      "full": "999px"
+    },
+    "shadow": {
+      "soft": "0 20px 60px rgba(0,0,0,.18)",
+      "panel": "0 12px 30px rgba(0,0,0,.14)"
+    },
+    "density": "balanced",
+    "motion": {
+      "duration": "180ms",
+      "easing": "cubic-bezier(.2,.8,.2,1)"
+    }
+  },
+  "usage": [
+    "Pick this system before writing HTML. Apply tokens consistently in CSS variables. Keep copy concrete and product-specific."
+  ]
+}

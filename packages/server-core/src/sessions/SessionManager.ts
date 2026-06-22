@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioTemplate, listStudioOutputsForSessions, listStudioTemplates, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSessions, listStudioTemplates, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4327,6 +4327,8 @@ export class SessionManager implements ISessionManager {
             },
             templates: async () => listStudioTemplates(),
             template: async (templateId) => getStudioTemplate(templateId),
+            designSystems: async () => listStudioDesignSystems(),
+            designSystem: async (id) => getStudioDesignSystem(id),
             create: async (input) => {
               const output = createStudioOutput(getSessionStoragePath(managed.workspace.rootPath, managed.id), input, managed.id)
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/studio/${output.metadata.id}/metadata.json`)

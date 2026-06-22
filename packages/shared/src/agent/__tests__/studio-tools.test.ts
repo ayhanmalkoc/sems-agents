@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { executeStudioCommand, type StudioFns } from '../studio-tools.ts'
-import type { StudioOutputRecord, StudioTemplateDefinition } from '../../studio/types.ts'
+import type { StudioDesignSystemDefinition, StudioOutputRecord, StudioTemplateDefinition } from '../../studio/types.ts'
 
 function record(id = 'studio-1'): StudioOutputRecord {
   return {
@@ -26,11 +26,21 @@ function record(id = 'studio-1'): StudioOutputRecord {
   }
 }
 
+const designSystem: StudioDesignSystemDefinition = {
+  id: 'saas-modern',
+  title: 'SaaS Modern',
+  skill: 'studio-prototype',
+  tokens: { colors: { accent: '#8b5cf6' }, density: 'balanced' },
+  usage: ['Use for SaaS marketing pages.'],
+}
+
 const template: StudioTemplateDefinition = {
   id: 'landing-saas',
   title: 'SaaS Landing Page',
   description: 'SaaS page',
   type: 'landing-page',
+  category: 'web',
+  recommendedDesignSystem: 'saas-modern',
   skill: 'studio-prototype',
   templatePath: '/templates/landing-saas.html',
   componentPaths: ['/components/hero.html'],
@@ -46,6 +56,8 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
     show: async id => outputs.get(id),
     templates: async () => [template],
     template: async id => id === template.id ? template : undefined,
+    designSystems: async () => [designSystem],
+    designSystem: async id => id === designSystem.id ? designSystem : undefined,
     create: async input => {
       const next = record(input.id ?? 'created')
       next.metadata.title = input.title
@@ -107,8 +119,10 @@ describe('studio tool', () => {
   it('formats status, templates, list, show, create, project, update, quality, export, and adopt', async () => {
     const mock = fns()
     expect((await executeStudioCommand('status', mock)).content[0].text).toContain('Studio: available')
-    expect((await executeStudioCommand('templates', mock)).content[0].text).toContain('landing-saas')
-    expect((await executeStudioCommand('template landing-saas', mock)).content[0].text).toContain('SaaS page')
+    expect((await executeStudioCommand('templates', mock)).content[0].text).toContain('designSystem=saas-modern')
+    expect((await executeStudioCommand('template landing-saas', mock)).content[0].text).toContain('Recommended design system: saas-modern')
+    expect((await executeStudioCommand('design-systems', mock)).content[0].text).toContain('saas-modern')
+    expect((await executeStudioCommand('design-system saas-modern', mock)).content[0].text).toContain('SaaS Modern')
     expect((await executeStudioCommand('list', mock)).content[0].text).toContain('studio-1')
     expect((await executeStudioCommand('show studio-1', mock)).content[0].text).toContain('Studio One')
 
@@ -137,6 +151,7 @@ describe('studio tool', () => {
     expect((await executeStudioCommand('', mock)).content[0].text).toContain('Studio: available')
     expect((await executeStudioCommand('show', mock)).content[0].text).toContain('show requires an output id')
     expect((await executeStudioCommand('template', mock)).content[0].text).toContain('template requires a template id')
+    expect((await executeStudioCommand('design-system', mock)).content[0].text).toContain('design-system requires a design system id')
     expect((await executeStudioCommand('create not-json', mock)).content[0].text).toContain('Invalid JSON')
     expect((await executeStudioCommand('export studio-1 pdf', mock)).content[0].text).toContain('Export format must be html or zip')
   })
