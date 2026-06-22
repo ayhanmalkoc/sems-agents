@@ -3,6 +3,7 @@
 // =============================================================================
 export * from '@craft-agent/shared/protocol'
 import type { BrowserDockBounds, BrowserDockOpenRequest, BrowserDockOpenResult, RightDockRequest, RightDockResult, RightDockToolType } from '@craft-agent/shared/protocol'
+import type { AdoptStudioOutputInput, StudioExportFormat, StudioOutputRecord } from '@craft-agent/shared/studio'
 
 // =============================================================================
 // Package re-exports (convenience for renderer imports)
@@ -718,6 +719,11 @@ export interface ElectronAPI {
   searchMemories(workspaceId: string, query: string): Promise<unknown[]>
   deleteMemory(workspaceId: string, memoryId: string): Promise<void>
   onMemoryChanged(callback: (workspaceId: string) => void): () => void
+
+  // Studio
+  adoptStudioOutput(workspaceId: string, htmlPath: string, input: AdoptStudioOutputInput): Promise<StudioOutputRecord>
+  exportStudioOutput(workspaceId: string, outputId: string, format: StudioExportFormat): Promise<StudioOutputRecord>
+  onStudioChanged(callback: (workspaceId: string) => void): () => void
 
   // Hooks
   getHooks(workspaceId: string): Promise<Array<BuiltinHookDefinition & { enabled: boolean }>>

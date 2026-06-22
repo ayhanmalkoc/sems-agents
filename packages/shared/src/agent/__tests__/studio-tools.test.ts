@@ -43,6 +43,14 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
       outputs.set(id, next)
       return next
     },
+    adopt: async (htmlPath, input) => {
+      const next = record(input.id ?? 'adopted')
+      next.entryPath = htmlPath
+      next.metadata.title = input.title
+      next.metadata.type = input.type
+      outputs.set(next.metadata.id, next)
+      return next
+    },
     exportOutput: async (id, format) => {
       const next = outputs.get(id) ?? record(id)
       next.metadata.exports.push({ format, path: `/workspace/session/data/studio/${id}/exports/${id}.${format}`, createdAt: '2026-06-21T01:00:00.000Z' })
@@ -53,7 +61,7 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
 }
 
 describe('studio tool', () => {
-  it('formats status, list, show, create, update, and export', async () => {
+  it('formats status, list, show, create, update, export, and adopt', async () => {
     const mock = fns()
     expect((await executeStudioCommand('status', mock)).content[0].text).toContain('Studio: available')
     expect((await executeStudioCommand('list', mock)).content[0].text).toContain('studio-1')
@@ -67,6 +75,9 @@ describe('studio tool', () => {
 
     const exported = await executeStudioCommand('export created zip', mock)
     expect(exported.content[0].text).toContain('Exported Studio output created')
+
+    const adopted = await executeStudioCommand('adopt /workspace/session/data/loose.html {"id":"adopted","title":"Adopted","type":"landing-page"}', mock)
+    expect(adopted.content[0].text).toContain('Adopted Studio output adopted')
   })
 
   it('rejects malformed commands', async () => {

@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { CreateStudioOutputInput, StudioExportFormat, StudioOutputRecord, UpdateStudioOutputInput } from '../studio/types.ts'
+import type { AdoptStudioOutputInput, CreateStudioOutputInput, StudioExportFormat, StudioOutputRecord, UpdateStudioOutputInput } from '../studio/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 
@@ -13,10 +13,11 @@ export interface StudioFns {
   create: (input: CreateStudioOutputInput) => Promise<StudioOutputRecord>
   update: (outputId: string, input: UpdateStudioOutputInput) => Promise<StudioOutputRecord>
   exportOutput: (outputId: string, format: StudioExportFormat) => Promise<StudioOutputRecord>
+  adopt: (htmlPath: string, input: AdoptStudioOutputInput) => Promise<StudioOutputRecord>
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, create <json>, update <outputId> <json>, export <outputId> <html|zip>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, create <json>, update <outputId> <json>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -84,6 +85,13 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       const output = await fns.exportOutput(outputId, format)
       const latest = output.metadata.exports.at(-1)
       return success(`Exported Studio output ${output.metadata.id}${latest ? `\n${latest.format}: ${latest.path}` : ''}\n${formatDetail(output)}`)
+    }
+    if (verb === 'adopt') {
+      const htmlPath = rest[0]
+      if (!htmlPath) return failure('adopt requires an absolute HTML path')
+      const payload = trimmed.slice(rawVerb.length).trim().slice(htmlPath.length).trim()
+      const output = await fns.adopt(htmlPath, parseJsonPayload<AdoptStudioOutputInput>(payload, 'adopt'))
+      return success(`Adopted Studio output ${output.metadata.id}\n${formatDetail(output)}`)
     }
     return failure(`Unknown studio command: ${verb}`)
   } catch (error) {

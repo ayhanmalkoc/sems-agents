@@ -2,7 +2,7 @@
 
 Use the native `studio` tool to manage Craft Studio outputs. Do not run `studio ...` in Bash, PowerShell, or any shell.
 
-Studio is chat-first: the agent creates/refines design outputs during the current session. The Studio page lists and previews those file-backed outputs.
+Studio is chat-first: the agent creates/refines design outputs during the current session. Prefer canonical Studio outputs: use the native `studio` tool for create, update, export, and adoption. The Studio page lists loose HTML previews too, but loose HTML should be adopted before refine/export.
 
 ## Native calls
 
@@ -13,6 +13,7 @@ studio({ command: "show <outputId>" })
 studio({ command: "create {\"title\":\"Landing page\",\"type\":\"landing-page\",\"skill\":\"studio-prototype\",\"sourcePrompt\":\"Create a landing page\",\"html\":\"<!doctype html>...\"}" })
 studio({ command: "update <outputId> {\"title\":\"Updated title\",\"html\":\"<!doctype html>...\"}" })
 studio({ command: "export <outputId> zip" })
+studio({ command: "adopt C:\\absolute\\session\\data\\preview.html {\"title\":\"Landing page\",\"type\":\"landing-page\",\"skill\":\"studio-prototype\"}" })
 ```
 
 ## Output convention
@@ -71,9 +72,12 @@ Allowed export formats:
 
 - `html`
 - `zip`
+
 ## Rules
 
 - Use Studio skills for product/design judgment.
+- For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.
+- If an HTML file already exists under session `data/`, adopt it with `studio adopt <absoluteHtmlPath> <json>` before treating it as a Studio output.
 - Use the Studio tool only for output lifecycle.
 - Never write outside session data.
 - Do not store secrets in metadata, README, HTML, or assets.

@@ -46,6 +46,16 @@ export interface UpdateStudioOutputInput {
   designSystem?: { source: string; name?: string }
 }
 
+export interface AdoptStudioOutputInput {
+  id?: string
+  title: string
+  type: StudioOutputType
+  skill?: string
+  sourcePrompt?: string
+  readme?: string
+  designSystem?: { source: string; name?: string }
+}
+
 export interface StudioOutputRecord {
   metadata: StudioOutputMetadata
   outputDir: string

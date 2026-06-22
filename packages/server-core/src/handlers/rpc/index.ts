@@ -20,6 +20,7 @@ import { registerSettingsHandlers } from './settings'
 import { registerSkillsHandlers } from './skills'
 import { registerSourcesHandlers } from './sources'
 import { registerStatusesHandlers } from './statuses'
+import { registerStudioHandlers } from './studio'
 import { registerSystemCoreHandlers } from './system'
 import { registerTransferHandlers } from './transfer'
 import { registerWorkspaceCoreHandlers } from './workspace'
@@ -53,4 +54,5 @@ export function registerCoreRpcHandlers(
   registerMessagingHandlers(server, deps)
   registerMemoryHandlers(server, deps)
   registerHooksHandlers(server, deps)
+  registerStudioHandlers(server, deps)
 }

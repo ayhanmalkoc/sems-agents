@@ -416,6 +416,11 @@ export const CHANNEL_MAP = {
   deleteMemory: invoke(RPC_CHANNELS.memory.DELETE),
   onMemoryChanged: listener(RPC_CHANNELS.memory.CHANGED),
 
+  // Studio
+  adoptStudioOutput: invoke(RPC_CHANNELS.studio.ADOPT),
+  exportStudioOutput: invoke(RPC_CHANNELS.studio.EXPORT),
+  onStudioChanged: listener(RPC_CHANNELS.studio.CHANGED),
+
   // Hooks
   getHooks: invoke(RPC_CHANNELS.hooks.GET),
   getHookRuns: invoke(RPC_CHANNELS.hooks.RUNS),

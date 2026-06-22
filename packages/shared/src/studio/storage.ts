@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync } from 'node:fs'
-import { dirname, join, normalize, relative } from 'node:path'
-import type { CreateStudioOutputInput, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
+import { basename, dirname, join, normalize, relative } from 'node:path'
+import type { AdoptStudioOutputInput, CreateStudioOutputInput, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
 
 const SCHEMA = 'craft-studio-output/v1' as const
 const ALLOWED_TYPES = new Set<StudioOutputType>(['prototype', 'landing-page', 'dashboard', 'deck', 'report', 'image-prompt', 'video-prompt'])
@@ -16,11 +16,11 @@ function assertSafeSegment(value: string, label: string): string {
   return value
 }
 
-function ensureInside(root: string, target: string): string {
+function ensureInside(root: string, target: string, message = 'Path escapes studio output directory'): string {
   const normalizedRoot = normalize(root)
   const normalizedTarget = normalize(target)
   const rel = relative(normalizedRoot, normalizedTarget)
-  if (rel.startsWith('..') || rel === '..' || rel.includes(`..${'/'}`) || rel.includes(`..${'\\'}`)) throw new Error('Path escapes studio output directory')
+  if (rel.startsWith('..') || rel === '..' || rel.includes(`..${'/'}`) || rel.includes(`..${'\\'}`)) throw new Error(message)
   return normalizedTarget
 }
 
@@ -105,6 +105,38 @@ export function updateStudioOutput(sessionPath: string, outputId: string, input:
   if (input.readme !== undefined) writeFileSync(readmePath(outputDir), input.readme, 'utf-8')
   writeFileSync(metadataPath(outputDir), JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
   return { metadata, outputDir, entryPath: record.entryPath }
+}
+
+export function adoptStudioOutput(sessionPath: string, htmlPath: string, input: AdoptStudioOutputInput, sessionId: string): StudioOutputRecord {
+  if (!ALLOWED_TYPES.has(input.type)) throw new Error(`Unsupported Studio output type: ${input.type}`)
+  const dataRoot = join(sessionPath, 'data')
+  const sourcePath = ensureInside(dataRoot, htmlPath, 'Adopt path must stay inside session data')
+  if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) throw new Error(`Adopt source not found: ${htmlPath}`)
+  if (!/\.html?$/i.test(sourcePath)) throw new Error('Adopt source must be an HTML file')
+  const id = assertSafeSegment(input.id ? slugifyStudioOutputId(input.id) : slugifyStudioOutputId(input.title), 'output id')
+  const outputDir = getStudioOutputDir(sessionPath, id)
+  mkdirSync(join(outputDir, 'assets'), { recursive: true })
+  mkdirSync(join(outputDir, 'exports'), { recursive: true })
+  const createdAt = nowIso()
+  const metadata: StudioOutputMetadata = {
+    schema: SCHEMA,
+    id,
+    title: input.title,
+    type: input.type,
+    entryFile: 'index.html',
+    skill: input.skill,
+    status: 'ready',
+    sourcePrompt: input.sourcePrompt ?? `Adopted from ${basename(sourcePath)}`,
+    createdAt,
+    updatedAt: createdAt,
+    designSystem: input.designSystem,
+    exports: [],
+    sessionId,
+  }
+  copyFileSync(sourcePath, join(outputDir, 'index.html'))
+  writeFileSync(readmePath(outputDir), input.readme ?? `# ${input.title}\n\nStudio output adopted from ${basename(sourcePath)}.\n`, 'utf-8')
+  writeFileSync(metadataPath(outputDir), JSON.stringify(metadata, null, 2) + '\n', 'utf-8')
+  return { metadata, outputDir, entryPath: join(outputDir, 'index.html') }
 }
 
 const crcTable = new Uint32Array(256).map((_, n) => {

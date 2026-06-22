@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync, existsSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createStudioOutput, exportStudioOutput, listStudioOutputsForSession, readStudioOutput, updateStudioOutput } from '../index.ts'
+import { adoptStudioOutput, createStudioOutput, exportStudioOutput, listStudioOutputsForSession, readStudioOutput, updateStudioOutput } from '../index.ts'
 
 let dirs: string[] = []
 function tempSession(): string {
@@ -39,6 +39,32 @@ describe('studio storage', () => {
     expect(exported.metadata.status).toBe('exported')
     expect(exported.metadata.exports.at(-1)?.format).toBe('zip')
     expect(existsSync(join(exported.outputDir, exported.metadata.exports.at(-1)!.path))).toBe(true)
+  })
+
+  it('adopts loose HTML outputs inside session data', () => {
+    const sessionPath = tempSession()
+    const dataDir = join(sessionPath, 'data')
+    mkdirSync(dataDir, { recursive: true })
+    const loosePath = join(dataDir, 'loose.html')
+    writeFileSync(loosePath, '<!doctype html><html><body>Loose</body></html>', 'utf-8')
+
+    const adopted = adoptStudioOutput(sessionPath, loosePath, {
+      title: 'Adopted Loose',
+      type: 'landing-page',
+      skill: 'studio-prototype',
+    }, 'session-1')
+
+    expect(adopted.metadata.id).toBe('adopted-loose')
+    expect(adopted.metadata.sourcePrompt).toContain('loose.html')
+    expect(existsSync(adopted.entryPath)).toBe(true)
+    expect(listStudioOutputsForSession(sessionPath).map(output => output.metadata.id)).toContain('adopted-loose')
+  })
+
+  it('rejects adopt paths outside session data', () => {
+    const sessionPath = tempSession()
+    const externalPath = join(mkdtempSync(join(tmpdir(), 'studio-external-')), 'external.html')
+    writeFileSync(externalPath, '<!doctype html><html></html>', 'utf-8')
+    expect(() => adoptStudioOutput(sessionPath, externalPath, { title: 'External', type: 'landing-page' }, 'session-1')).toThrow('Adopt path must stay inside session data')
   })
 
   it('blocks unsafe paths and unsupported types', () => {

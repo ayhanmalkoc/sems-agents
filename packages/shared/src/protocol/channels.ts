@@ -414,6 +414,11 @@ export const RPC_CHANNELS = {
     DELETE: 'memory:delete',
     CHANGED: 'memory:changed',
   },
+  studio: {
+    ADOPT: 'studio:adopt',
+    EXPORT: 'studio:export',
+    CHANGED: 'studio:changed',
+  },
   hooks: {
     GET: 'hooks:get',
     RUNS: 'hooks:runs',

@@ -159,7 +159,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         filePath: outputDir || 'studio',
         context:
           `The user wants to refine Studio output "${outputId || 'selected output'}". Read ~/.craft-agent/docs/studio-tools.md first. ` +
-          'Use studio show/update. Do not create a new runtime or chat mode. Preserve session data boundary. ' +
+          'Use studio show/update. If this is a loose HTML file, adopt it with studio adopt before refine. Do not create a new runtime or chat mode. Preserve session data boundary. ' +
           'Update the existing output HTML/metadata through the native studio tool and summarize the change.',
       },
       example: 'Make the hero section cleaner and improve mobile spacing',

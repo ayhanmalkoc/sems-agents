@@ -4,7 +4,7 @@ import type { ISessionManager, IBrowserPaneManager, ExecutePromptAutomationInput
 import { RemoteBrowserPaneManager } from './RemoteBrowserPaneManager'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
 import { createScopedLogger, CONSOLE_LOGGER, type PlatformServices, type Logger } from '@craft-agent/server-core/runtime'
-import { basename, dirname, join } from 'path'
+import { basename, dirname, isAbsolute, join, relative } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
-import { createStudioOutput, exportStudioOutput, listStudioOutputsForSessions, updateStudioOutput } from '@craft-agent/shared/studio'
+import { adoptStudioOutput, createStudioOutput, exportStudioOutput, listStudioOutputsForSessions, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4344,6 +4344,18 @@ export class SessionManager implements ISessionManager {
               const sessionId = existing?.metadata.sessionId ?? managed.id
               const output = exportStudioOutput(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, format)
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            adopt: async (htmlPath, input) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const session = sessions.find(item => {
+                const sessionPath = getSessionStoragePath(managed.workspace.rootPath, item.id)
+                const rel = relative(join(sessionPath, 'data'), htmlPath)
+                return rel && !rel.startsWith('..') && !isAbsolute(rel)
+              })
+              if (!session) throw new Error('Adopt path must stay inside workspace session data')
+              const output = adoptStudioOutput(getSessionStoragePath(managed.workspace.rootPath, session.id), htmlPath, input, session.id)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${session.id}/data/studio/${output.metadata.id}/metadata.json`)
               return output
             },
           } satisfies StudioFns,
