@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
-import { adoptStudioOutput, createStudioOutput, exportStudioOutput, listStudioOutputsForSessions, updateStudioOutput } from '@craft-agent/shared/studio'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioTemplate, listStudioOutputsForSessions, listStudioTemplates, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4325,8 +4325,15 @@ export class SessionManager implements ISessionManager {
               const sessions = listStoredSessions(managed.workspace.rootPath)
               return listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
             },
+            templates: async () => listStudioTemplates(),
+            template: async (templateId) => getStudioTemplate(templateId),
             create: async (input) => {
               const output = createStudioOutput(getSessionStoragePath(managed.workspace.rootPath, managed.id), input, managed.id)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            createProject: async (input) => {
+              const output = createStudioProject(getSessionStoragePath(managed.workspace.rootPath, managed.id), input, managed.id)
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/studio/${output.metadata.id}/metadata.json`)
               return output
             },
@@ -4343,6 +4350,30 @@ export class SessionManager implements ISessionManager {
               const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
               const sessionId = existing?.metadata.sessionId ?? managed.id
               const output = exportStudioOutput(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, format)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            addPage: async (outputId, input) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              const output = addStudioPage(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            addComponent: async (outputId, input) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              const output = addStudioComponent(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            quality: async (outputId) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              const output = runStudioQuality(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId)
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
               return output
             },

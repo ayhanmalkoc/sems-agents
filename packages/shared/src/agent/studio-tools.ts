@@ -1,6 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
-import type { AdoptStudioOutputInput, CreateStudioOutputInput, StudioExportFormat, StudioOutputRecord, UpdateStudioOutputInput } from '../studio/types.ts'
+import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 
@@ -14,10 +14,16 @@ export interface StudioFns {
   update: (outputId: string, input: UpdateStudioOutputInput) => Promise<StudioOutputRecord>
   exportOutput: (outputId: string, format: StudioExportFormat) => Promise<StudioOutputRecord>
   adopt: (htmlPath: string, input: AdoptStudioOutputInput) => Promise<StudioOutputRecord>
+  templates: () => Promise<StudioTemplateDefinition[]>
+  template: (templateId: string) => Promise<StudioTemplateDefinition | undefined>
+  createProject: (input: CreateStudioProjectInput) => Promise<StudioOutputRecord>
+  addPage: (outputId: string, input: AddStudioPageInput) => Promise<StudioOutputRecord>
+  addComponent: (outputId: string, input: AddStudioComponentInput) => Promise<StudioOutputRecord>
+  quality: (outputId: string) => Promise<StudioOutputRecord>
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, create <json>, update <outputId> <json>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -30,17 +36,27 @@ function parseJsonPayload<T>(value: string, label: string): T {
 
 function formatOutput(record: StudioOutputRecord): string {
   const m = record.metadata
-  return `- ${m.id} type=${m.type} status=${m.status} title=${JSON.stringify(m.title)} entry=${record.entryPath} session=${m.sessionId}`
+  return `- ${m.id} type=${m.type} status=${m.status} title=${JSON.stringify(m.title)} template=${m.templateId ?? 'none'} pages=${m.pages?.length ?? 0} components=${m.components?.length ?? 0} entry=${record.entryPath} session=${m.sessionId}`
+}
+
+function formatTemplate(template: StudioTemplateDefinition): string {
+  return `- ${template.id} type=${template.type} skill=${template.skill} title=${JSON.stringify(template.title)} tags=${template.tags.join(',')}`
 }
 
 function formatDetail(record: StudioOutputRecord): string {
   const m = record.metadata
   const exports = m.exports.length ? m.exports.map(item => `${item.format}:${item.path}`).join(', ') : 'none'
+  const quality = m.quality ? `${m.quality.score}/100 (${m.quality.checks.map(check => `${check.id}:${check.status}`).join(', ')})` : 'not run'
   return [
     `Studio output ${m.id}`,
     `Title: ${m.title}`,
     `Type: ${m.type}`,
     `Status: ${m.status}`,
+    `Template: ${m.templateId ?? 'none'}`,
+    `Project: ${m.project?.kind ?? 'single-page'}`,
+    `Pages: ${m.pages?.map(page => `${page.id}:${page.file}`).join(', ') || 'none'}`,
+    `Components: ${m.components?.map(component => `${component.id}:${component.file}`).join(', ') || 'none'}`,
+    `Quality: ${quality}`,
     `Session: ${m.sessionId}`,
     `Entry: ${record.entryPath}`,
     `Exports: ${exports}`,
@@ -60,14 +76,26 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       const outputs = await fns.list()
       return success(outputs.length ? ['Studio outputs:', ...outputs.map(formatOutput)].join('\n') : 'Studio outputs: none')
     }
+    if (verb === 'templates') {
+      const templates = await fns.templates()
+      return success(templates.length ? ['Studio templates:', ...templates.map(formatTemplate)].join('\n') : 'Studio templates: none')
+    }
+    if (verb === 'template') {
+      const templateId = rest[0]
+      if (!templateId) return failure('template requires a template id')
+      const template = await fns.template(templateId)
+      return success(template ? ['Studio template:', formatTemplate(template), `Description: ${template.description}`, `Components: ${template.componentPaths.length}`].join('\n') : `Studio template not found: ${templateId}`)
+    }
     if (verb === 'show') {
       const outputId = rest[0]
       if (!outputId) return failure('show requires an output id')
       const output = await fns.show(outputId)
       return success(output ? formatDetail(output) : `Studio output not found: ${outputId}`)
     }
-    if (verb === 'create') {
-      const output = await fns.create(parseJsonPayload<CreateStudioOutputInput>(trimmed.slice(rawVerb.length).trim(), 'create'))
+    if (verb === 'create' || verb === 'create-project') {
+      const payload = trimmed.slice(rawVerb.length).trim()
+      const input = parseJsonPayload<CreateStudioProjectInput>(payload, verb)
+      const output = verb === 'create-project' ? await fns.createProject(input) : await fns.create(input)
       return success(`Created Studio output ${output.metadata.id}\n${formatDetail(output)}`)
     }
     if (verb === 'update') {
@@ -76,6 +104,26 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       const payload = trimmed.slice(rawVerb.length).trim().slice(outputId.length).trim()
       const output = await fns.update(outputId, parseJsonPayload<UpdateStudioOutputInput>(payload, 'update'))
       return success(`Updated Studio output ${output.metadata.id}\n${formatDetail(output)}`)
+    }
+    if (verb === 'add-page') {
+      const outputId = rest[0]
+      if (!outputId) return failure('add-page requires an output id')
+      const payload = trimmed.slice(rawVerb.length).trim().slice(outputId.length).trim()
+      const output = await fns.addPage(outputId, parseJsonPayload<AddStudioPageInput>(payload, 'add-page'))
+      return success(`Added Studio page to ${output.metadata.id}\n${formatDetail(output)}`)
+    }
+    if (verb === 'add-component') {
+      const outputId = rest[0]
+      if (!outputId) return failure('add-component requires an output id')
+      const payload = trimmed.slice(rawVerb.length).trim().slice(outputId.length).trim()
+      const output = await fns.addComponent(outputId, parseJsonPayload<AddStudioComponentInput>(payload, 'add-component'))
+      return success(`Added Studio component to ${output.metadata.id}\n${formatDetail(output)}`)
+    }
+    if (verb === 'quality') {
+      const outputId = rest[0]
+      if (!outputId) return failure('quality requires an output id')
+      const output = await fns.quality(outputId)
+      return success(`Studio quality ${output.metadata.id}\n${formatDetail(output)}`)
     }
     if (verb === 'export') {
       const [outputId, formatRaw] = rest
@@ -100,7 +148,7 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
 }
 
 export function createStudioTool(options: { getStudioFns: () => StudioFns | undefined }) {
-  return tool('studio', 'Manage Craft Studio outputs: create, list, inspect, update, and export file-backed design outputs. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
+  return tool('studio', 'Manage Craft Studio projects and outputs: templates, create, list, inspect, update, add pages/components, quality, adopt, and export. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
     const fns = options.getStudioFns()
     if (!fns) return failure('Studio controls are not available. This tool requires the desktop app.')
     return executeStudioCommand(String(args.command ?? 'status'), fns)

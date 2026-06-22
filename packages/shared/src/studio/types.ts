@@ -8,6 +8,41 @@ export interface StudioExportRecord {
   createdAt: string
 }
 
+export interface StudioPageRecord {
+  id: string
+  title: string
+  file: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudioComponentRecord {
+  id: string
+  title: string
+  preset?: string
+  file: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudioThemeRecord {
+  name?: string
+  tokens?: Record<string, string>
+}
+
+export interface StudioQualityCheck {
+  id: string
+  label: string
+  status: 'pass' | 'warn' | 'fail'
+  detail: string
+}
+
+export interface StudioQualityReport {
+  checkedAt: string
+  score: number
+  checks: StudioQualityCheck[]
+}
+
 export interface StudioOutputMetadata {
   schema: 'craft-studio-output/v1'
   id: string
@@ -22,6 +57,12 @@ export interface StudioOutputMetadata {
   designSystem?: { source: string; name?: string }
   exports: StudioExportRecord[]
   sessionId: string
+  project?: { kind: 'single-page' | 'multi-page'; title: string }
+  templateId?: string
+  pages?: StudioPageRecord[]
+  components?: StudioComponentRecord[]
+  theme?: StudioThemeRecord
+  quality?: StudioQualityReport
 }
 
 export interface CreateStudioOutputInput {
@@ -34,6 +75,9 @@ export interface CreateStudioOutputInput {
   html?: string
   readme?: string
   designSystem?: { source: string; name?: string }
+  template?: string
+  templateId?: string
+  theme?: StudioThemeRecord
 }
 
 export interface UpdateStudioOutputInput {
@@ -44,6 +88,7 @@ export interface UpdateStudioOutputInput {
   html?: string
   readme?: string
   designSystem?: { source: string; name?: string }
+  theme?: StudioThemeRecord
 }
 
 export interface AdoptStudioOutputInput {
@@ -54,6 +99,35 @@ export interface AdoptStudioOutputInput {
   sourcePrompt?: string
   readme?: string
   designSystem?: { source: string; name?: string }
+  theme?: StudioThemeRecord
+}
+
+export interface CreateStudioProjectInput extends CreateStudioOutputInput {
+  kind?: 'single-page' | 'multi-page'
+}
+
+export interface AddStudioPageInput {
+  id?: string
+  title: string
+  html?: string
+}
+
+export interface AddStudioComponentInput {
+  id?: string
+  title: string
+  preset?: string
+  html?: string
+}
+
+export interface StudioTemplateDefinition {
+  id: string
+  title: string
+  description: string
+  type: StudioOutputType
+  skill: string
+  templatePath: string
+  componentPaths: string[]
+  tags: string[]
 }
 
 export interface StudioOutputRecord {

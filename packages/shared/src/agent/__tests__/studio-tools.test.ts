@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { executeStudioCommand, type StudioFns } from '../studio-tools.ts'
-import type { StudioOutputRecord } from '../../studio/types.ts'
+import type { StudioOutputRecord, StudioTemplateDefinition } from '../../studio/types.ts'
 
 function record(id = 'studio-1'): StudioOutputRecord {
   return {
@@ -19,8 +19,22 @@ function record(id = 'studio-1'): StudioOutputRecord {
       updatedAt: '2026-06-21T00:00:00.000Z',
       exports: [],
       sessionId: 'session-1',
+      pages: [{ id: 'home', title: 'Home', file: 'index.html', createdAt: '2026-06-21T00:00:00.000Z', updatedAt: '2026-06-21T00:00:00.000Z' }],
+      components: [],
+      project: { kind: 'single-page', title: 'Studio One' },
     },
   }
+}
+
+const template: StudioTemplateDefinition = {
+  id: 'landing-saas',
+  title: 'SaaS Landing Page',
+  description: 'SaaS page',
+  type: 'landing-page',
+  skill: 'studio-prototype',
+  templatePath: '/templates/landing-saas.html',
+  componentPaths: ['/components/hero.html'],
+  tags: ['landing'],
 }
 
 function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
@@ -30,16 +44,45 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
     status: async () => ({ available: true, outputs: outputs.size }),
     list: async () => [...outputs.values()],
     show: async id => outputs.get(id),
+    templates: async () => [template],
+    template: async id => id === template.id ? template : undefined,
     create: async input => {
       const next = record(input.id ?? 'created')
       next.metadata.title = input.title
       next.metadata.type = input.type
+      next.metadata.templateId = input.template ?? input.templateId
+      outputs.set(next.metadata.id, next)
+      return next
+    },
+    createProject: async input => {
+      const next = record(input.id ?? 'project')
+      next.metadata.title = input.title
+      next.metadata.type = input.type
+      next.metadata.project = { kind: input.kind ?? 'single-page', title: input.title }
       outputs.set(next.metadata.id, next)
       return next
     },
     update: async (id, input) => {
       const next = outputs.get(id) ?? record(id)
       next.metadata = { ...next.metadata, ...input, updatedAt: '2026-06-21T01:00:00.000Z' }
+      outputs.set(id, next)
+      return next
+    },
+    addPage: async (id, input) => {
+      const next = outputs.get(id) ?? record(id)
+      next.metadata.pages = [...(next.metadata.pages ?? []), { id: 'pricing', title: input.title, file: 'pages/pricing.html', createdAt: '2026-06-21T01:00:00.000Z', updatedAt: '2026-06-21T01:00:00.000Z' }]
+      outputs.set(id, next)
+      return next
+    },
+    addComponent: async (id, input) => {
+      const next = outputs.get(id) ?? record(id)
+      next.metadata.components = [...(next.metadata.components ?? []), { id: 'pricing', title: input.title, preset: input.preset, file: 'components/pricing.html', createdAt: '2026-06-21T01:00:00.000Z', updatedAt: '2026-06-21T01:00:00.000Z' }]
+      outputs.set(id, next)
+      return next
+    },
+    quality: async id => {
+      const next = outputs.get(id) ?? record(id)
+      next.metadata.quality = { checkedAt: '2026-06-21T01:00:00.000Z', score: 80, checks: [{ id: 'viewport', label: 'Viewport', status: 'pass', detail: 'ok' }] }
       outputs.set(id, next)
       return next
     },
@@ -61,14 +104,23 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
 }
 
 describe('studio tool', () => {
-  it('formats status, list, show, create, update, export, and adopt', async () => {
+  it('formats status, templates, list, show, create, project, update, quality, export, and adopt', async () => {
     const mock = fns()
     expect((await executeStudioCommand('status', mock)).content[0].text).toContain('Studio: available')
+    expect((await executeStudioCommand('templates', mock)).content[0].text).toContain('landing-saas')
+    expect((await executeStudioCommand('template landing-saas', mock)).content[0].text).toContain('SaaS page')
     expect((await executeStudioCommand('list', mock)).content[0].text).toContain('studio-1')
     expect((await executeStudioCommand('show studio-1', mock)).content[0].text).toContain('Studio One')
 
-    const created = await executeStudioCommand('create {"id":"created","title":"Created","type":"dashboard"}', mock)
+    const created = await executeStudioCommand('create {"id":"created","title":"Created","type":"dashboard","template":"landing-saas"}', mock)
     expect(created.content[0].text).toContain('Created')
+
+    const project = await executeStudioCommand('create-project {"id":"project","title":"Project","type":"landing-page"}', mock)
+    expect(project.content[0].text).toContain('Project')
+
+    expect((await executeStudioCommand('add-page project {"title":"Pricing"}', mock)).content[0].text).toContain('Added Studio page')
+    expect((await executeStudioCommand('add-component project {"title":"Pricing","preset":"pricing"}', mock)).content[0].text).toContain('Added Studio component')
+    expect((await executeStudioCommand('quality project', mock)).content[0].text).toContain('Studio quality')
 
     const updated = await executeStudioCommand('update created {"title":"Updated"}', mock)
     expect(updated.content[0].text).toContain('Updated')
@@ -84,6 +136,7 @@ describe('studio tool', () => {
     const mock = fns()
     expect((await executeStudioCommand('', mock)).content[0].text).toContain('Studio: available')
     expect((await executeStudioCommand('show', mock)).content[0].text).toContain('show requires an output id')
+    expect((await executeStudioCommand('template', mock)).content[0].text).toContain('template requires a template id')
     expect((await executeStudioCommand('create not-json', mock)).content[0].text).toContain('Invalid JSON')
     expect((await executeStudioCommand('export studio-1 pdf', mock)).content[0].text).toContain('Export format must be html or zip')
   })

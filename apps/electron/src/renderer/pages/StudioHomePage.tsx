@@ -25,6 +25,11 @@ type StudioOutputMetadata = {
   updatedAt: string
   exports?: Array<{ format: string; path: string; createdAt: string }>
   sessionId: string
+  templateId?: string
+  project?: { kind: string; title: string }
+  pages?: Array<{ id: string; title: string; file: string }>
+  components?: Array<{ id: string; title: string; preset?: string; file: string }>
+  quality?: { score: number; checkedAt: string; checks: Array<{ id: string; label: string; status: string; detail: string }> }
 }
 
 type StudioOutput = {
