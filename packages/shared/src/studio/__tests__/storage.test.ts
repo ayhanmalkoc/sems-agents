@@ -21,6 +21,10 @@ describe('studio storage', () => {
     const templates = listStudioTemplates()
     expect(templates.map(template => template.id)).toContain('landing-saas')
     expect(getStudioTemplate('landing-saas')?.skill).toBe('studio-prototype')
+    expect(getStudioTemplate('report-product-spec')?.skill).toBe('studio-report')
+    expect(getStudioTemplate('image-brand-visual')?.type).toBe('image-prompt')
+    expect(getStudioTemplate('video-product-demo')?.type).toBe('video-prompt')
+    expect(templates.length).toBeGreaterThanOrEqual(26)
     expect(new Set(templates.map(template => template.id)).size).toBe(templates.length)
   })
 

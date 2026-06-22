@@ -35,7 +35,7 @@ import {
 /** Built-in Craft skills directory: ~/.craft-agent/builtin-skills/ */
 export const BUILTIN_SKILLS_DIR = join(homedir(), '.craft-agent', 'builtin-skills');
 
-export const BUILTIN_STUDIO_SKILL_SLUGS = ['studio-prototype', 'studio-dashboard', 'studio-deck'] as const;
+export const BUILTIN_STUDIO_SKILL_SLUGS = ['studio-prototype', 'studio-dashboard', 'studio-deck', 'studio-report', 'studio-image', 'studio-video'] as const;
 const RESERVED_BUILTIN_SKILL_SLUGS = new Set<string>(BUILTIN_STUDIO_SKILL_SLUGS);
 
 /** Global agent skills directory: ~/.agents/skills/ */

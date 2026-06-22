@@ -40,18 +40,21 @@ sessions/{sessionId}/data/studio/{outputId}/exports/
 
 Builtin templates live beside builtin Studio skills, not in Resources:
 
-- `landing-saas`
-- `landing-agent`
-- `dashboard-analytics`
-- `dashboard-admin`
-- `deck-pitch`
-- `deck-product`
+- Prototype/landing: `landing-saas`, `landing-agent`, `landing-mobile-app`, `landing-web-app`, `prototype-mobile-flow`, `prototype-saas-flow`, `commerce-storefront`, `portfolio-case-study`
+- Dashboard: `dashboard-analytics`, `dashboard-admin`, `dashboard-finance`, `dashboard-support`, `dashboard-ai-ops`, `dashboard-crm`
+- Deck: `deck-pitch`, `deck-product`, `deck-case-study`, `deck-investor-update`, `deck-design-review`
+- Report: `report-research`, `report-product-spec`, `report-design-system`
+- Image prompt: `image-brand-visual`, `image-product-mockup`
+- Video prompt: `video-launch-storyboard`, `video-product-demo`
 
 ## Component presets
 
-- Prototype: `hero`, `features`, `pricing`, `faq`
-- Dashboard: `sidebar`, `metric-card`, `chart-panel`, `table-panel`
-- Deck: `slide-title`, `slide-section`, `slide-comparison`
+- Prototype: `hero`, `features`, `pricing`, `faq`, `testimonial`, `cta-band`, `app-shell`, `feature-grid`, `commerce-card`, `case-study-block`
+- Dashboard: `sidebar`, `metric-card`, `chart-panel`, `table-panel`, `filter-bar`, `status-feed`, `insight-card`, `risk-list`, `sparkline-card`
+- Deck: `slide-title`, `slide-section`, `slide-comparison`, `slide-metric`, `slide-timeline`, `slide-quote`, `slide-roadmap`
+- Report: `executive-summary`, `evidence-table`, `recommendation-card`, `decision-log`
+- Image: `prompt-card`, `style-frame`, `variant-grid`
+- Video: `storyboard-scene`, `shot-list`, `timeline-beat`
 
 ## Rules
 
