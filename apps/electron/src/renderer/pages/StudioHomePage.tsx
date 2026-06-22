@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, FileArchive, FolderInput, Search } from 'lucide-react'
+import { ExternalLink, FileArchive, FolderInput, Search, X } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { AIAssistedButton } from '@/components/app-shell/AIAssistedButton'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -118,6 +118,7 @@ export default function StudioHomePage() {
   const [loading, setLoading] = React.useState(true)
   const [workspaceId, setWorkspaceId] = React.useState<string | null>(null)
   const [busyAction, setBusyAction] = React.useState<string | null>(null)
+  const [expandedPreviewOpen, setExpandedPreviewOpen] = React.useState(false)
 
   const refresh = React.useCallback(async () => {
     setLoading(true)
@@ -197,15 +198,8 @@ export default function StudioHomePage() {
 
   const openSelectedPreview = React.useCallback(async () => {
     if (!selected) return
-    const fileUrl = `file://${selected.entryPath.replace(/\\/g, '/')}`
-    if (window.electronAPI.browserPane && workspaceId) {
-      const id = await window.electronAPI.browserPane.create({ show: true, mode: 'dock', workspaceId })
-      await window.electronAPI.browserPane.navigate(id, fileUrl)
-      await window.electronAPI.browserPane.focus(id)
-      return
-    }
-    await window.electronAPI.openUrl(fileUrl)
-  }, [selected, workspaceId])
+    setExpandedPreviewOpen(true)
+  }, [selected])
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <PanelHeader title={t('studio.title')} actions={<HeaderMenu route={routes.view.studio()} />} />
@@ -288,6 +282,26 @@ export default function StudioHomePage() {
           </div>
         </div>
       </div>
+      {expandedPreviewOpen && selected ? (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/70 bg-card/90 px-4">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">{selected.metadata.title}</div>
+              <div className="truncate text-xs text-muted-foreground">{selected.entryPath}</div>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => setExpandedPreviewOpen(false)} aria-label={t('common.close')}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 bg-white">
+            {previewHtml ? (
+              <iframe title={selected.metadata.title} srcDoc={previewHtml} sandbox="allow-scripts" className="h-full w-full bg-white" />
+            ) : (
+              <div className="grid h-full place-items-center bg-background text-sm text-muted-foreground">{t('studio.previewUnavailable')}</div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
