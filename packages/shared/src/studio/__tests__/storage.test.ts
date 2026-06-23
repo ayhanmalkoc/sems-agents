@@ -26,13 +26,19 @@ describe('studio storage', () => {
     expect(getStudioTemplate('report-product-spec')?.skill).toBe('studio-report')
     expect(getStudioTemplate('image-brand-visual')?.type).toBe('image-prompt')
     expect(getStudioTemplate('video-product-demo')?.type).toBe('video-prompt')
-    expect(templates.length).toBeGreaterThanOrEqual(60)
+    expect(getStudioTemplate('audio-jingle')?.type).toBe('motion')
+    expect(getStudioTemplate('critique')?.type).toBe('critique')
+    expect(getStudioTemplate('dcf-valuation')?.type).toBe('document')
+    expect(templates.length).toBeGreaterThanOrEqual(109)
     expect(new Set(templates.map(template => template.id)).size).toBe(templates.length)
   })
 
   it('lists and resolves builtin Studio design systems', () => {
     const systems = listStudioDesignSystems()
     expect(systems.map(system => system.id)).toContain('saas-modern')
+    expect(systems.map(system => system.id)).toContain('linear')
+    expect(systems.map(system => system.id)).toContain('gradient')
+    expect(systems.length).toBeGreaterThanOrEqual(30)
     expect(getStudioDesignSystem('saas-modern')?.skill).toBe('studio-prototype')
     expect(getStudioDesignSystem('missing-system')).toBeUndefined()
     for (const template of listStudioTemplates()) {
@@ -143,5 +149,14 @@ describe('studio storage', () => {
     expect(() => createStudioOutput(sessionPath, { title: 'Bad type', type: 'unknown' as any }, 'session-1')).toThrow('Unsupported Studio output type')
     expect(() => updateStudioOutput(sessionPath, '../bad', { title: 'Nope' })).toThrow('output id must be a safe path segment')
     expect(() => createStudioOutput(sessionPath, { title: 'Missing', type: 'landing-page', template: 'missing-template' }, 'session-1')).toThrow('Studio template not found')
+  })
+
+  it('accepts document, motion, and critique Studio output types', () => {
+    const sessionPath = tempSession()
+    for (const [title, type] of [['Document QA', 'document'], ['Motion QA', 'motion'], ['Critique QA', 'critique']] as const) {
+      const output = createStudioOutput(sessionPath, { title, type }, 'session-1')
+      expect(output.metadata.type).toBe(type)
+      expect(existsSync(output.entryPath)).toBe(true)
+    }
   })
 })

@@ -4,7 +4,7 @@ import { getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, list
 import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioComponentRecord, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
 
 const SCHEMA = 'craft-studio-output/v1' as const
-const ALLOWED_TYPES = new Set<StudioOutputType>(['prototype', 'landing-page', 'dashboard', 'deck', 'report', 'image-prompt', 'video-prompt'])
+const ALLOWED_TYPES = new Set<StudioOutputType>(['prototype', 'landing-page', 'dashboard', 'deck', 'report', 'document', 'image-prompt', 'video-prompt', 'motion', 'critique'])
 
 function nowIso(): string { return new Date().toISOString() }
 

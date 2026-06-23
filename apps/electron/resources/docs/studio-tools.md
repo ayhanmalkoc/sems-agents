@@ -6,7 +6,7 @@ The visible native tool name depends on the backend: Claude-style sessions expos
 
 Studio is chat-first and project-aware: the agent creates/refines design projects during the current session. Prefer canonical Studio outputs: use the native `studio` tool for templates, create, update, add pages/components, quality, export, and adoption.
 
-For normal chat requests like landing pages, product prototypes, dashboards, decks, reports, image prompt boards, or video storyboards, use Studio as the primary path. Raw `Write` + `html-preview` is loose output only and should be adopted before treating it as Studio work.
+For normal chat requests like landing pages, product prototypes, dashboards, decks, reports, documents, image prompt boards, motion briefs, critiques, or video storyboards, use Studio as the primary path. Raw `Write` + `html-preview` is loose output only and should be adopted before treating it as Studio work.
 
 ## Native calls
 
@@ -45,14 +45,17 @@ sessions/{sessionId}/data/studio/{outputId}/exports/
 
 ## Templates
 
-Builtin templates live beside builtin Studio skills, not in Resources:
+Builtin templates live beside builtin Studio skills, not in Resources. The library includes the normalized Open Design design-template set; run `studio templates` for the full current list before selecting.
 
-- Prototype/landing: `landing-saas`, `landing-agent`, `landing-mobile-app`, `landing-web-app`, `prototype-mobile-flow`, `prototype-saas-flow`, `commerce-storefront`, `portfolio-case-study`
-- Dashboard: `dashboard-analytics`, `dashboard-admin`, `dashboard-finance`, `dashboard-support`, `dashboard-ai-ops`, `dashboard-crm`
-- Deck: `deck-pitch`, `deck-product`, `deck-case-study`, `deck-investor-update`, `deck-design-review`
-- Report: `report-research`, `report-product-spec`, `report-design-system`
-- Image prompt: `image-brand-visual`, `image-product-mockup`
-- Video prompt: `video-launch-storyboard`, `video-product-demo`
+- Prototype/landing: SaaS, agent, mobile app, web app, pricing, waitlist, docs, contact, web prototypes, mobile onboarding, app flows.
+- Dashboard: analytics, admin, finance, support, AI ops, CRM, GitHub, live, social, trading, FlowAI-style operations dashboards.
+- Deck: pitch, product, case study, investor update, design review, sales, roadmap, board update, HTML-PPT taste/style variants.
+- Report/document: research, product spec, design system, audit, QA, finance, DCF valuation, clinical case, invoice, meeting notes, OKRs, runbooks.
+- Image prompt: brand visuals, product mockups, campaign boards, social packs, posters, carousel, wireframe sketches.
+- Video/motion: launch storyboard, product demo, onboarding flow, ads, shortform video, motion frames, sprite animation, audio jingle briefs.
+- Critique: critique, tweaks, review/improve workflows.
+
+Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `report`, `document`, `image-prompt`, `video-prompt`, `motion`, `critique`.
 
 ## Component presets
 

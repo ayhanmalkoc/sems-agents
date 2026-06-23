@@ -1,0 +1,31 @@
+{
+  "id": "luxury",
+  "title": "Luxury Brand",
+  "skill": "studio-image",
+  "tokens": {
+    "colors": {
+      "background": "#111827",
+      "accent": "#d4af37",
+      "text": "#f8fafc",
+      "muted": "#94a3b8"
+    },
+    "typography": {
+      "heading": "Inter",
+      "body": "Inter"
+    },
+    "spacing": {
+      "page": "clamp(28px,6vw,76px)",
+      "card": "clamp(20px,4vw,40px)"
+    },
+    "radius": {
+      "card": "28px",
+      "control": "999px"
+    },
+    "shadow": {
+      "card": "0 24px 80px rgba(0,0,0,.28)"
+    },
+    "density": "comfortable",
+    "motion": "subtle"
+  },
+  "usage": "Use for Open Design normalized Studio templates that need this visual language."
+}
