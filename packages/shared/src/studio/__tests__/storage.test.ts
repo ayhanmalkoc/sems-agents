@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '../index.ts'
@@ -73,6 +73,8 @@ describe('studio storage', () => {
     const project = createStudioProject(sessionPath, { title: 'Template QA', type: 'landing-page', template: 'landing-saas' }, 'session-1')
     expect(project.metadata.templateId).toBe('landing-saas')
     expect(project.metadata.skill).toBe('studio-prototype')
+    expect(project.metadata.designSystem?.source).toBe('saas-modern')
+    expect(readFileSync(project.entryPath, 'utf-8')).toContain('data-studio-design-system="saas-modern"')
 
     const withPage = addStudioPage(sessionPath, project.metadata.id, { title: 'Pricing' })
     expect(withPage.metadata.pages?.map(page => page.id)).toContain('pricing')
@@ -85,7 +87,27 @@ describe('studio storage', () => {
     const quality = runStudioQuality(sessionPath, project.metadata.id)
     expect(quality.metadata.quality?.checks.map(check => check.id)).toContain('design-system')
     expect(quality.metadata.quality?.checks.map(check => check.id)).toContain('placeholder-copy')
+    expect(quality.metadata.quality?.checks.find(check => check.id === 'design-system')?.status).toBe('pass')
+    expect(quality.metadata.quality?.checks.find(check => check.id === 'viewport')?.status).toBe('pass')
     expect(quality.metadata.quality?.score).toBeGreaterThan(0)
+  })
+
+  it('keeps quality checks deterministic and avoids generic false positives', () => {
+    const sessionPath = tempSession()
+    const output = createStudioOutput(sessionPath, {
+      title: 'Quality Signals',
+      type: 'landing-page',
+      designSystem: { source: 'saas-modern' },
+      html: '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><main><section><h1>Quality Signals</h1><h2>Clear product story</h2><p>Primary action helps teams review launch readiness.</p><a href="./export.html">Open launch review</a></section></main><style>.grid{display:grid}</style></body></html>',
+    }, 'session-1')
+
+    const quality = runStudioQuality(sessionPath, output.metadata.id)
+    expect(quality.metadata.quality?.checks.find(check => check.id === 'placeholder-copy')?.status).toBe('pass')
+    expect(quality.metadata.quality?.checks.find(check => check.id === 'design-system')?.status).toBe('pass')
+
+    updateStudioOutput(sessionPath, output.metadata.id, { html: '<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body><main><section><h1>Todo</h1><h2>Placeholder</h2><p>Lorem ipsum</p></section></main></body></html>' })
+    const failed = runStudioQuality(sessionPath, output.metadata.id)
+    expect(failed.metadata.quality?.checks.find(check => check.id === 'placeholder-copy')?.status).toBe('fail')
   })
 
   it('adopts loose HTML outputs inside session data', () => {
