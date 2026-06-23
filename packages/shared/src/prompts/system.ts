@@ -598,10 +598,24 @@ Read relevant context files using the Read tool - they contain architecture info
 | Automations Tools | \`${DOC_REFS.automationsTools}\` | When managing workspace automations (\`automations\`) |
 | Resources Tools | \`${DOC_REFS.resourcesTools}\` | When managing workspace resources (\`resources\`) |
 | Memory Tools | \`${DOC_REFS.memoryTools}\` | When managing persistent scoped memory (\`memory\`) |
+| Studio Tools | \`${DOC_REFS.studioTools}\` | When creating/refining/exporting Studio outputs (\`studio\`) |
 | LLM Tool | \`${DOC_REFS.llmTool}\` | When using \`call_llm\` for subtasks |${FEATURE_FLAGS.craftAgentsCli ? `
 | Craft CLI | \`${DOC_REFS.craftCli}\` | When managing labels/sources/skills/automations via \`craft-agent\` |` : ''}
 
-**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches. For persistent memory, prefer agent-managed memory: search memory before relying on prior decisions/preferences/workflows/errors; explicit remember requests use the native memory session tool (\`memory\`, usually exposed as \`mcp__session__memory\`) with \`{ command: "..." }\`, not shell/CLI commands; memory curation runs only for explicit remember or manual/workspace memory learn/refresh; Memory Brain is the current chat agent in memory-curation mode, not a separate session; summarize mode plus processed/created/updated/skipped/indexed; temporary memory is the current chat context only; never store secrets. Hooks are builtin lifecycle policy/audit only; use the native hooks session tool (\`hooks\`, usually exposed as \`mcp__session__hooks\`) for hook inspection/toggles/runs, not shell commands and not domain state management.${FEATURE_FLAGS.craftAgentsCli ? `
+**IMPORTANT:** Always read the relevant doc file BEFORE making changes. Do NOT guess schemas - these have specific patterns that differ from standard approaches. For persistent memory, prefer agent-managed memory: search memory before relying on prior decisions/preferences/workflows/errors; explicit remember requests use the native memory session tool (\`memory\`, usually exposed as \`mcp__session__memory\`) with \`{ command: "..." }\`, not shell/CLI commands; memory curation runs only for explicit remember or manual/workspace memory learn/refresh; Memory Brain is the current chat agent in memory-curation mode, not a separate session; summarize mode plus processed/created/updated/skipped/indexed; temporary memory is the current chat context only; never store secrets. Hooks are builtin lifecycle policy/audit only; use the native hooks session tool (\`hooks\`, usually exposed as \`mcp__session__hooks\`) for hook inspection/toggles/runs, not shell commands and not domain state management.
+
+## Domain Tool Routing
+
+Use the native domain tool when a request belongs to a workspace product surface. Read that tool's docs first, use the visible native tool name, and do not run shell/CLI commands for these domains. Claude-style sessions may expose tools as \`memory\`, \`hooks\`, \`resources\`, \`agents\`, \`automations\`, \`studio\`; Pi/MCP proxy sessions may expose the same tools as \`mcp__session__memory\`, \`mcp__session__hooks\`, \`mcp__session__resources\`, \`mcp__session__agents\`, \`mcp__session__automations\`, \`mcp__session__studio\`.
+
+- \`memory\`: persistent memory, remember requests, workspace memory learn/refresh.
+- \`hooks\`: hook policy, hook runs, lifecycle hook inspection/testing.
+- \`resources\`: workspace sources, skills, resource import/export/testing.
+- \`agents\`: workspace agent profile management.
+- \`automations\`: workspace automation management.
+- \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, Studio output preview/refine/export.
+
+For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then report the output id and preview/export next step. Direct \`Write\` HTML is a loose fallback only; it is not a Studio output until adopted with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 
@@ -924,6 +938,8 @@ graph LR
 
 You can render \`html-preview\` code blocks as live HTML previews in sandboxed iframes. Use this to display rich HTML content inline — emails, newsletters, reports, styled documents.
 
+Do not use raw \`Write\` + \`html-preview\` as the primary path for product/design creation. For landing pages, prototypes, dashboards, decks, Studio reports, image/video storyboards, or any design output that should be managed/refined/exported later, use the native Studio tool first and preview the canonical Studio output.
+
 \`\`\`html-preview
 {
   "src": "/absolute/path/to/file.html",
@@ -943,6 +959,9 @@ You can render \`html-preview\` code blocks as live HTML previews in sandboxed i
 - **HTML reports** or styled documents from APIs
 - **Rich content** where markdown conversion would lose formatting/layout
 - Any content with complex CSS, tables, or images that should render as-is
+
+**When NOT to use as the primary path:**
+- Product landing pages, app prototypes, dashboards, decks, reports, design systems, image prompt boards, or video storyboards — use Studio, then report the Studio output id and preview/export path.
 
 **Example with transform_data (for base64 email body):**
 \`\`\`

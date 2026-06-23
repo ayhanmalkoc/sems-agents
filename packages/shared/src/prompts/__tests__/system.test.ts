@@ -35,6 +35,36 @@ describe('system prompt guidance', () => {
     expect(prompt).toContain('The subtask needs file/shell tools (for example, Read or Bash)')
     expect(prompt).not.toContain('The subtask needs tools (Read, Bash, Grep)')
   })
+
+  it('routes domain product surfaces through native domain tools', () => {
+    const prompt = getSystemPrompt(undefined, undefined, '/tmp/workspace', '/tmp/workspace')
+
+    expect(prompt).toContain('## Domain Tool Routing')
+    expect(prompt).toContain('`memory`: persistent memory')
+    expect(prompt).toContain('`hooks`: hook policy')
+    expect(prompt).toContain('`resources`: workspace sources')
+    expect(prompt).toContain('`agents`: workspace agent profile management')
+    expect(prompt).toContain('`automations`: workspace automation management')
+    expect(prompt).toContain('`studio`: landing pages, prototypes, dashboards, decks, reports')
+  })
+
+  it('documents Studio routing and backend-agnostic tool names', () => {
+    const prompt = getSystemPrompt(undefined, undefined, '/tmp/workspace', '/tmp/workspace')
+
+    expect(prompt).toContain('Studio Tools')
+    expect(prompt).toContain('~/.craft-agent/docs/studio-tools.md')
+    expect(prompt).toContain('`studio`')
+    expect(prompt).toContain('`mcp__session__studio`')
+    expect(prompt).toContain('run `studio quality <outputId>`')
+  })
+
+  it('keeps html-preview for loose rendering and points product design work to Studio', () => {
+    const prompt = getSystemPrompt(undefined, undefined, '/tmp/workspace', '/tmp/workspace')
+
+    expect(prompt).toContain('Do not use raw `Write` + `html-preview` as the primary path for product/design creation')
+    expect(prompt).toContain('Product landing pages, app prototypes, dashboards, decks')
+    expect(prompt).toContain('use Studio, then report the Studio output id')
+  })
 })
 
 describe('includeCoAuthoredBy handling', () => {

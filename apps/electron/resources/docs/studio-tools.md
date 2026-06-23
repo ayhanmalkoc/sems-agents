@@ -1,8 +1,12 @@
 # Studio Tools
 
-Use the native `studio` tool to manage Craft Studio projects and outputs. Do not run `studio ...` in Bash, PowerShell, or any shell.
+Use the native Studio tool to manage Craft Studio projects and outputs. Do not run `studio ...` in Bash, PowerShell, or any shell.
+
+The visible native tool name depends on the backend: Claude-style sessions expose `studio`; Pi/MCP proxy sessions expose `mcp__session__studio`. Use whichever native tool is visible in the current session.
 
 Studio is chat-first and project-aware: the agent creates/refines design projects during the current session. Prefer canonical Studio outputs: use the native `studio` tool for templates, create, update, add pages/components, quality, export, and adoption.
+
+For normal chat requests like landing pages, product prototypes, dashboards, decks, reports, image prompt boards, or video storyboards, use Studio as the primary path. Raw `Write` + `html-preview` is loose output only and should be adopted before treating it as Studio work.
 
 ## Native calls
 

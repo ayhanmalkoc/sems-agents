@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getSessionToolRegistry } from '@craft-agent/session-tools-core';
 
@@ -17,5 +17,14 @@ describe('session tool docs parity', () => {
       expect(existsSync(docPath)).toBe(true);
       expect(registry.has(toolName)).toBe(true);
     }
+  });
+
+  it('documents Studio native tool names for Claude and Pi backends', () => {
+    const docPath = join(process.cwd(), 'apps', 'electron', 'resources', 'docs', 'studio-tools.md');
+    const doc = readFileSync(docPath, 'utf-8');
+
+    expect(doc).toContain('Claude-style sessions expose `studio`');
+    expect(doc).toContain('Pi/MCP proxy sessions expose `mcp__session__studio`');
+    expect(doc).toContain('Raw `Write` + `html-preview` is loose output only');
   });
 });

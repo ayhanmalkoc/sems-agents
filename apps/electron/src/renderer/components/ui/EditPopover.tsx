@@ -181,10 +181,10 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
         filePath: outputDir || 'studio',
         context:
           `The user wants to export Studio output "${outputId || 'selected output'}". Read ~/.craft-agent/docs/studio-tools.md first. ` +
-          'Use the native studio export command. Prefer zip unless the user asks for html. Supported export formats are html and zip.',
+          'Use the native studio export command. Prefer zip unless the user asks for html or pdf. Supported export formats are html, zip, and pdf.',
       },
       example: 'Export this as a zip',
-      overridePlaceholder: 'Export as html or zip?',
+      overridePlaceholder: 'Export as html, zip, or pdf?',
       displayLabelKey: 'editPopover.label.studioExport',
       exampleKey: 'editPopover.example.studioExport',
       overridePlaceholderKey: 'editPopover.placeholder.studioExport',
