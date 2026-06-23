@@ -109,6 +109,7 @@ import { executeResourcesCommand } from './resources-tools.ts';
 import { executeMemoryCommand } from './memory-tools.ts';
 import { executeHooksCommand } from './hooks-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
+import { executeStudioCommand } from './studio-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
 // ============================================================
@@ -1670,6 +1671,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Hooks controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeHooksCommand(String(args.command ?? 'status'), hooksFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'studio') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const studioFns = callbacks?.studioFns;
+        if (!studioFns) {
+          return { content: 'Studio controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeStudioCommand(String(args.command ?? 'status'), studioFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
       const def = SESSION_TOOL_REGISTRY.get(toolName);
