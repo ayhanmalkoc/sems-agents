@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '../index.ts'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, recommendStudioScenarios, runStudioQuality, updateStudioOutput, getStudioScenario, listStudioScenarios } from '../index.ts'
 
 let dirs: string[] = []
 function tempSession(): string {
@@ -155,6 +155,27 @@ describe('studio storage', () => {
     expect(() => createStudioOutput(sessionPath, { title: 'Bad type', type: 'unknown' as any }, 'session-1')).toThrow('Unsupported Studio output type')
     expect(() => updateStudioOutput(sessionPath, '../bad', { title: 'Nope' })).toThrow('output id must be a safe path segment')
     expect(() => createStudioOutput(sessionPath, { title: 'Missing', type: 'landing-page', template: 'missing-template' }, 'session-1')).toThrow('Studio template not found')
+  })
+
+  it('keeps curated high-impact templates domain-specific', () => {
+    const curatedIds = ['web-prototype', 'saas-landing', 'dashboard', 'github-dashboard', 'html-ppt-pitch-deck', 'pm-spec', 'eng-runbook', 'critique', 'image-prompt-e-commerce-live-stream-ui-mockup', 'video-prompt-hyperframes-saas-product-promo-30s']
+    for (const id of curatedIds) {
+      const template = getStudioTemplate(id)
+      expect(template).toBeTruthy()
+      const html = readFileSync(template!.templatePath, 'utf-8')
+      expect(html).not.toContain('Production-ready prompt board for Studio')
+      expect(html).not.toContain('Open Design library')
+      expect(html).not.toContain('Use this template to shape')
+      expect(html).toContain('Curated Studio template')
+    }
+  })
+
+  it('recommends Studio scenarios for common product requests', () => {
+    expect(listStudioScenarios().map(scenario => scenario.id)).toContain('agent-platform')
+    expect(getStudioScenario('agent-platform')?.templateIds).toContain('web-prototype')
+    expect(recommendStudioScenarios('animated agent AI platform with memory and observability')[0]?.scenario.id).toBe('agent-platform')
+    expect(recommendStudioScenarios('mobile onboarding app')[0]?.scenario.id).toBe('mobile-app')
+    expect(recommendStudioScenarios('ops dashboard for monitoring incidents')[0]?.scenario.id).toBe('dashboard-ops')
   })
 
   it('accepts document, motion, and critique Studio output types', () => {

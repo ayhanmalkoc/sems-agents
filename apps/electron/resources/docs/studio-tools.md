@@ -12,7 +12,7 @@ For normal chat requests like landing pages, product prototypes, dashboards, dec
 
 ```ts
 studio({ command: "status" })
-studio({ command: "templates" })
+studio({ command: "scenarios" })`nstudio({ command: "recommend {\"prompt\":\"animated agent AI platform\"}" })`nstudio({ command: "templates" })
 studio({ command: "template landing-saas" })
 studio({ command: "design-systems" })
 studio({ command: "design-system saas-modern" })
@@ -71,7 +71,7 @@ Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `repor
 ## Rules
 
 - Use Studio skills for product/design judgment.
-- Use `studio templates` before choosing a template when the user asks for Studio creation.
+- Use `studio recommend {"prompt":"..."}` before choosing a template when the user asks for Studio creation.`n- Use `studio scenarios` / `studio scenario <id>` when the request maps to a common product scenario.`n- Use `studio templates` after recommendation to inspect the selected template.
 - Use `studio design-systems` before writing/refining visual output. Pick the recommended design system unless the user asks for a different style.
 - After create/refine, run `studio quality <outputId>` and fix important warnings.
 - For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.

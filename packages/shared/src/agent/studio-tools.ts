@@ -1,5 +1,6 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
+import { getStudioScenario, listStudioScenarios, recommendStudioScenarios, type StudioScenarioDefinition, type StudioScenarioRecommendation } from '../studio/scenarios.ts'
 import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioDesignSystemDefinition, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
@@ -25,7 +26,7 @@ export interface StudioFns {
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, scenarios, scenario <id>, recommend <json>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -45,6 +46,19 @@ function formatTemplate(template: StudioTemplateDefinition): string {
   return `- ${template.id} type=${template.type} category=${template.category} skill=${template.skill} designSystem=${template.recommendedDesignSystem ?? 'none'} title=${JSON.stringify(template.title)} tags=${template.tags.join(',')}`
 }
 
+function formatScenario(scenario: StudioScenarioDefinition): string {
+  return `- ${scenario.id} type=${scenario.outputType} skill=${scenario.skill} templates=${scenario.templateIds.slice(0, 4).join(',')} designSystems=${scenario.designSystemIds.slice(0, 3).join(',')} title=${JSON.stringify(scenario.title)}`
+}
+
+function formatRecommendation(item: StudioScenarioRecommendation): string {
+  return [
+    `- ${item.scenario.id} score=${item.score} type=${item.scenario.outputType} skill=${item.scenario.skill}`,
+    `  templates=${item.templates.slice(0, 4).map(template => template.id).join(',') || 'none'}`,
+    `  designSystems=${item.designSystems.slice(0, 3).map(system => system.id).join(',') || 'none'}`,
+    `  guidance=${item.scenario.guidance}`,
+    `  command=${item.commandExample}`,
+  ].join('\n')
+}
 function formatDesignSystem(system: StudioDesignSystemDefinition): string {
   const colors = system.tokens.colors ? Object.entries(system.tokens.colors).map(([key, value]) => `${key}:${value}`).join(',') : 'none'
   return `- ${system.id} skill=${system.skill} title=${JSON.stringify(system.title)} density=${system.tokens.density ?? 'default'} colors=${colors}`
@@ -92,6 +106,23 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       if (!templateId) return failure('template requires a template id')
       const template = await fns.template(templateId)
       return success(template ? ['Studio template:', formatTemplate(template), `Description: ${template.description}`, `Recommended design system: ${template.recommendedDesignSystem ?? 'none'}`, `Components: ${template.componentPaths.length}`].join('\n') : `Studio template not found: ${templateId}`)
+    }
+    if (verb === 'scenarios') {
+      const scenarios = listStudioScenarios()
+      return success(scenarios.length ? ['Studio scenarios:', ...scenarios.map(formatScenario)].join('\n') : 'Studio scenarios: none')
+    }
+    if (verb === 'scenario') {
+      const id = rest[0]
+      if (!id) return failure('scenario requires a scenario id')
+      const scenario = getStudioScenario(id)
+      return success(scenario ? ['Studio scenario:', formatScenario(scenario), `Description: ${scenario.description}`, `Triggers: ${scenario.triggers.join(', ')}`, `Guidance: ${scenario.guidance}`].join('\n') : `Studio scenario not found: ${id}`)
+    }
+    if (verb === 'recommend') {
+      const payload = trimmed.slice(rawVerb.length).trim()
+      const input = parseJsonPayload<{ prompt: string; limit?: number }>(payload, 'recommend')
+      if (!input.prompt?.trim()) return failure('recommend requires a prompt')
+      const recommendations = recommendStudioScenarios(input.prompt, input.limit ?? 3)
+      return success(recommendations.length ? ['Studio recommendations:', ...recommendations.map(formatRecommendation)].join('\n') : 'Studio recommendations: none')
     }
     if (verb === 'design-systems') {
       const systems = await fns.designSystems()
@@ -165,7 +196,7 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
 }
 
 export function createStudioTool(options: { getStudioFns: () => StudioFns | undefined }) {
-  return tool('studio', 'Manage Craft Studio projects and outputs: templates, design systems, create, list, inspect, update, add pages/components, quality, adopt, and export. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
+  return tool('studio', 'Manage Craft Studio projects and outputs: scenarios, recommendations, templates, design systems, create, list, inspect, update, add pages/components, quality, adopt, and export. Read studio-tools.md before use.', StudioSchema.shape, async (args) => {
     const fns = options.getStudioFns()
     if (!fns) return failure('Studio controls are not available. This tool requires the desktop app.')
     return executeStudioCommand(String(args.command ?? 'status'), fns)
