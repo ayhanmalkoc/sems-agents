@@ -208,6 +208,13 @@ interface OutboundSetAutoCompactionResult {
   enabled: boolean;
   errorMessage?: string;
 }
+interface OutboundToolRegistrationResult {
+  type: 'tool_registration_result';
+  registered: number;
+  total: number;
+  toolNames: string[];
+  hasSessionTools: boolean;
+}
 interface OutboundRuntimeConfigUpdateResult {
   type: 'update_runtime_config_result';
   id: string;
@@ -229,6 +236,7 @@ type OutboundMessage =
   | OutboundEnsureSessionReadyResult
   | OutboundCompactResult
   | OutboundSetAutoCompactionResult
+  | OutboundToolRegistrationResult
   | OutboundRuntimeConfigUpdateResult
   | OutboundSessionIdUpdate
   | OutboundError;
@@ -1363,6 +1371,13 @@ function handleRegisterTools(msg: Extract<InboundMessage, { type: 'register_tool
     ...msg.tools,
   ];
   debugLog(`Registered ${msg.tools.length} proxy tools (total: ${proxyToolDefs.length}): ${msg.tools.map(t => t.name).join(', ')}`);
+  send({
+    type: 'tool_registration_result',
+    registered: msg.tools.length,
+    total: proxyToolDefs.length,
+    toolNames: proxyToolDefs.map(t => t.name),
+    hasSessionTools: proxyToolDefs.some(t => t.name.startsWith('mcp__session__')),
+  });
 
   // If session exists, mark for recreation on next prompt.
   // Don't dispose mid-generation — the flag is checked in handlePrompt().

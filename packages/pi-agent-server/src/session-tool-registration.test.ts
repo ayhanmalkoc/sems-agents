@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   createReadToolDefinition,
   createBashToolDefinition,
@@ -130,5 +132,15 @@ describe('Pi SDK 0.70.0 CreateAgentSessionOptions contract', () => {
     for (const tool of customTools) {
       expect(allowlistSet.has(tool.name)).toBe(true);
     }
+  });
+});
+
+describe('Pi proxy tool exposure diagnostics', () => {
+  const serverSource = readFileSync(join(__dirname, 'index.ts'), 'utf-8');
+
+  it('acknowledges registered proxy tools with session-tool visibility metadata', () => {
+    expect(serverSource).toContain("type: 'tool_registration_result'");
+    expect(serverSource).toContain("hasSessionTools: proxyToolDefs.some(t => t.name.startsWith('mcp__session__'))");
+    expect(serverSource).toContain('toolNames: proxyToolDefs.map(t => t.name)');
   });
 });

@@ -549,15 +549,6 @@ export class PiAgent extends BaseAgent {
     await this.subprocessReady;
     this.debug('Pi subprocess is ready');
 
-    // Ensure auto-compaction is explicitly enabled for embedded sessions.
-    // PI defaults this to enabled, but we set it proactively for clarity and resilience.
-    try {
-      const enabled = await this.requestSetAutoCompaction(true);
-      this.debug(`PI auto-compaction enabled: ${enabled}`);
-    } catch (error) {
-      this.debug(`Failed to configure PI auto-compaction (continuing): ${error instanceof Error ? error.message : String(error)}`);
-    }
-
     // Register session-scoped tools as proxy tools in the subprocess.
     // These tools (SubmitPlan, config_validate, source auth, call_llm, etc.)
     // are executed in the main process when the LLM calls them.
@@ -588,6 +579,17 @@ export class PiAgent extends BaseAgent {
 
     // If pool has source tools, register them with the subprocess.
     this.registerPoolToolsWithSubprocess();
+
+    // Ensure auto-compaction is explicitly enabled for embedded sessions.
+    // IMPORTANT: register proxy tools first. requestSetAutoCompaction() creates
+    // the Pi session on demand, and the session must be created with the final
+    // proxy tool list so the first user turn sees session/domain tools.
+    try {
+      const enabled = await this.requestSetAutoCompaction(true);
+      this.debug(`PI auto-compaction enabled: ${enabled}`);
+    } catch (error) {
+      this.debug(`Failed to configure PI auto-compaction (continuing): ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -896,6 +898,19 @@ export class PiAgent extends BaseAgent {
         }
         this.subprocessReadyResolve?.();
         break;
+
+      case 'tool_registration_result': {
+        const toolNames = Array.isArray(msg.toolNames)
+          ? msg.toolNames.filter((name): name is string => typeof name === 'string')
+          : [];
+        const sessionToolCount = toolNames.filter(name => name.startsWith('mcp__session__')).length;
+        this.debug(
+          `Pi tool exposure snapshot: registered=${String(msg.registered)} total=${String(msg.total)} ` +
+          `sessionTools=${sessionToolCount} hasSessionTools=${String(msg.hasSessionTools)} ` +
+          `names=${toolNames.join(', ') || 'none'}`,
+        );
+        break;
+      }
 
       case 'event':
         // Pi SDK event -- forward through PiEventAdapter

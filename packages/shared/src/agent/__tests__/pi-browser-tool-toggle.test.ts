@@ -28,4 +28,13 @@ describe('pi-agent browser_tool toggle (contract)', () => {
     expect(piAgentSource).toContain('!getBrowserToolEnabled()')
     expect(piAgentSource).toContain("d.name !== 'mcp__session__browser_tool'")
   })
+
+  it('registers proxy tools before creating the Pi session for auto-compaction', () => {
+    const registerIndex = piAgentSource.indexOf("type: 'register_tools'")
+    const compactionIndex = piAgentSource.indexOf('requestSetAutoCompaction(true)')
+
+    expect(registerIndex).toBeGreaterThan(-1)
+    expect(compactionIndex).toBeGreaterThan(-1)
+    expect(registerIndex).toBeLessThan(compactionIndex)
+  })
 })
