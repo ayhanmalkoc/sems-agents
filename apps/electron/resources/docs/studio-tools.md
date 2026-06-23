@@ -21,6 +21,7 @@ studio({ command: "add-page <outputId> {\"title\":\"Pricing\"}" })
 studio({ command: "add-component <outputId> {\"title\":\"Pricing section\",\"preset\":\"pricing\"}" })
 studio({ command: "quality <outputId>" })
 studio({ command: "export <outputId> zip" })
+studio({ command: "export <outputId> pdf" })
 studio({ command: "adopt C:\\absolute\\session\\data\\preview.html {\"title\":\"Landing page\",\"type\":\"landing-page\",\"skill\":\"studio-prototype\"}" })
 ```
 

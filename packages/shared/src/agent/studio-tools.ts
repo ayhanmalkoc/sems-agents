@@ -25,7 +25,7 @@ export interface StudioFns {
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -146,7 +146,7 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       const [outputId, formatRaw] = rest
       if (!outputId) return failure('export requires an output id')
       const format = (formatRaw || 'html') as StudioExportFormat
-      if (!['html', 'zip'].includes(format)) return failure('Export format must be html or zip')
+      if (!['html', 'zip', 'pdf'].includes(format)) return failure('Export format must be html, zip, or pdf')
       const output = await fns.exportOutput(outputId, format)
       const latest = output.metadata.exports.at(-1)
       return success(`Exported Studio output ${output.metadata.id}${latest ? `\n${latest.format}: ${latest.path}` : ''}\n${formatDetail(output)}`)

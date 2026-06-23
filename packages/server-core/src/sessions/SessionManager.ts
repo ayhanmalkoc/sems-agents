@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSessions, listStudioTemplates, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSessions, listStudioTemplates, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4351,7 +4351,17 @@ export class SessionManager implements ISessionManager {
               const sessions = listStoredSessions(managed.workspace.rootPath)
               const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
               const sessionId = existing?.metadata.sessionId ?? managed.id
-              const output = exportStudioOutput(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, format)
+              const sessionPath = getSessionStoragePath(managed.workspace.rootPath, sessionId)
+              if (format === 'pdf') {
+                if (!_platform?.htmlToPdf) throw new Error('PDF export requires the desktop PDF renderer')
+                if (!existing) throw new Error(`Studio output not found: ${outputId}`)
+                const pdfPath = join(existing.outputDir, 'exports', `${outputId}.pdf`)
+                await _platform.htmlToPdf({ htmlPath: existing.entryPath, outputPath: pdfPath })
+                const output = recordStudioPdfExport(sessionPath, outputId, pdfPath)
+                this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+                return output
+              }
+              const output = exportStudioOutput(sessionPath, outputId, format)
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
               return output
             },

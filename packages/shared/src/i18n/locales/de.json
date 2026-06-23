@@ -1753,6 +1753,7 @@
   "studio.adopt": "Adopt to Studio",
   "studio.exportHtml": "Export HTML",
   "studio.exportZip": "Export ZIP",
+  "studio.exportPdf": "Export PDF",
   "studio.openRightDock": "Open preview",
   "studio.view": "View",
   "studio.folder": "Folder",

@@ -1,6 +1,6 @@
 export type StudioOutputType = 'prototype' | 'landing-page' | 'dashboard' | 'deck' | 'report' | 'image-prompt' | 'video-prompt'
 export type StudioOutputStatus = 'draft' | 'ready' | 'exported'
-export type StudioExportFormat = 'html' | 'zip'
+export type StudioExportFormat = 'html' | 'zip' | 'pdf'
 export type StudioTemplateCategory = 'web' | 'app' | 'mobile' | 'dashboard' | 'deck' | 'report' | 'image' | 'video'
 
 export interface StudioExportRecord {

@@ -486,6 +486,7 @@ app.whenReady().then(async () => {
     const platform: PlatformServices = createElectronPlatform({
       app,
       nativeImage,
+      BrowserWindow,
       shell,
       nativeTheme,
       logger: log,

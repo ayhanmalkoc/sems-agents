@@ -47,6 +47,7 @@ export interface PlatformServices {
 
   // -- Image processing (nativeImage on Electron, sharp on headless) --
   imageProcessor: ImageProcessor
+  htmlToPdf?(input: { htmlPath: string; outputPath: string }): Promise<void>
 
   // -- OS integration (no-ops on headless) --
   openPath?(path: string): Promise<void>

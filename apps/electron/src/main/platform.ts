@@ -10,6 +10,7 @@ import type { PlatformServices } from '../runtime/platform'
 export interface ElectronPlatformOptions {
   app: Electron.App
   nativeImage: typeof import('electron').nativeImage
+  BrowserWindow: typeof import('electron').BrowserWindow
   shell: typeof import('electron').shell
   nativeTheme: typeof import('electron').nativeTheme
   logger: PlatformServices['logger']
@@ -19,7 +20,7 @@ export interface ElectronPlatformOptions {
 }
 
 export function createElectronPlatform(opts: ElectronPlatformOptions): PlatformServices {
-  const { app, nativeImage, shell, nativeTheme, logger } = opts
+  const { app, nativeImage, shell, nativeTheme, logger, BrowserWindow } = opts
 
   return {
     appRootPath: app.isPackaged ? app.getAppPath() : process.cwd(),
@@ -31,6 +32,24 @@ export function createElectronPlatform(opts: ElectronPlatformOptions): PlatformS
     showItemInFolder: (p) => shell.showItemInFolder(p),
     quit: () => app.quit(),
     systemDarkMode: () => nativeTheme.shouldUseDarkColors,
+    htmlToPdf: async ({ htmlPath, outputPath }) => {
+      const window = new BrowserWindow({
+        show: false,
+        width: 1440,
+        height: 1080,
+        webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
+      })
+      try {
+        await window.loadFile(htmlPath)
+        const data = await window.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true })
+        const { mkdir, writeFile } = await import('node:fs/promises')
+        const { dirname } = await import('node:path')
+        await mkdir(dirname(outputPath), { recursive: true })
+        await writeFile(outputPath, data)
+      } finally {
+        if (!window.isDestroyed()) window.destroy()
+      }
+    },
     imageProcessor: {
       async getMetadata(buffer) {
         const img = nativeImage.createFromBuffer(buffer)

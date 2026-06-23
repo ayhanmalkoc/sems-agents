@@ -182,7 +182,7 @@ export default function StudioHomePage() {
     }
   }, [refresh, selected, workspaceId])
 
-  const exportSelected = React.useCallback(async (format: 'html' | 'zip') => {
+  const exportSelected = React.useCallback(async (format: 'html' | 'zip' | 'pdf') => {
     if (!selected || selected.kind !== 'studio' || !workspaceId) return
     setBusyAction(`export-${format}`)
     try {
@@ -262,6 +262,7 @@ export default function StudioHomePage() {
                       <Button size="sm" variant="outline" onClick={() => window.electronAPI.showInFolder(selected.entryPath)}><FolderInput className="h-3.5 w-3.5" />{t('studio.folder')}</Button>
                       {selected.kind === 'studio' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'export-html'} onClick={() => void exportSelected('html')}><ExternalLink className="h-3.5 w-3.5" />{t('studio.exportHtml')}</Button> : null}
                       {selected.kind === 'studio' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'export-zip'} onClick={() => void exportSelected('zip')}><FileArchive className="h-3.5 w-3.5" />{t('studio.exportZip')}</Button> : null}
+                      {selected.kind === 'studio' ? <Button size="sm" variant="outline" disabled={!workspaceId || busyAction === 'export-pdf'} onClick={() => void exportSelected('pdf')}><FileArchive className="h-3.5 w-3.5" />{t('studio.exportPdf')}</Button> : null}
                       {selected.session ? <Button size="sm" variant="ghost" onClick={() => navigate(routes.view.allSessions(selected.metadata.sessionId))}>{t('studio.relatedSession')}</Button> : null}
                     </div>
                   </div>

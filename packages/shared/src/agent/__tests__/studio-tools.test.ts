@@ -142,6 +142,9 @@ describe('studio tool', () => {
     const exported = await executeStudioCommand('export created zip', mock)
     expect(exported.content[0].text).toContain('Exported Studio output created')
 
+    const pdf = await executeStudioCommand('export created pdf', mock)
+    expect(pdf.content[0].text).toContain('Exported Studio output created')
+
     const adopted = await executeStudioCommand('adopt /workspace/session/data/loose.html {"id":"adopted","title":"Adopted","type":"landing-page"}', mock)
     expect(adopted.content[0].text).toContain('Adopted Studio output adopted')
   })
@@ -153,6 +156,6 @@ describe('studio tool', () => {
     expect((await executeStudioCommand('template', mock)).content[0].text).toContain('template requires a template id')
     expect((await executeStudioCommand('design-system', mock)).content[0].text).toContain('design-system requires a design system id')
     expect((await executeStudioCommand('create not-json', mock)).content[0].text).toContain('Invalid JSON')
-    expect((await executeStudioCommand('export studio-1 pdf', mock)).content[0].text).toContain('Export format must be html or zip')
+    expect((await executeStudioCommand('export studio-1 pptx', mock)).content[0].text).toContain('Export format must be html, zip, or pdf')
   })
 })

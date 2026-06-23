@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync } from 'node:fs'
-import { basename, join, normalize, relative } from 'node:path'
+import { basename, isAbsolute, join, normalize, relative } from 'node:path'
 import { getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioTemplates, readStudioComponentHtml, readStudioTemplateHtml } from './templates.ts'
 import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioComponentRecord, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
 
@@ -259,6 +259,22 @@ function collectFiles(root: string, dir = root): Array<{ name: string; data: Buf
   })
 }
 
+function finalizeStudioExport(record: StudioOutputRecord, format: StudioExportFormat, exportPath: string): StudioOutputRecord {
+  const exportRecord: StudioExportRecord = { format, path: relative(record.outputDir, exportPath).replace(/\\/g, '/'), createdAt: nowIso() }
+  const metadata: StudioOutputMetadata = { ...record.metadata, status: 'exported', updatedAt: nowIso(), exports: [...record.metadata.exports, exportRecord] }
+  writeMetadata(record.outputDir, metadata)
+  return { metadata, outputDir: record.outputDir, entryPath: record.entryPath }
+}
+
+export function recordStudioPdfExport(sessionPath: string, outputId: string, pdfPath: string): StudioOutputRecord {
+  const outputDir = getStudioOutputDir(sessionPath, outputId)
+  const record = readStudioOutput(outputDir)
+  if (!record) throw new Error(`Studio output not found: ${outputId}`)
+  const rel = relative(join(outputDir, 'exports'), pdfPath)
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('PDF export path must stay inside Studio exports')
+  return finalizeStudioExport(record, 'pdf', pdfPath)
+}
+
 export function exportStudioOutput(sessionPath: string, outputId: string, format: StudioExportFormat): StudioOutputRecord {
   const outputDir = getStudioOutputDir(sessionPath, outputId)
   const record = readStudioOutput(outputDir)
@@ -272,11 +288,10 @@ export function exportStudioOutput(sessionPath: string, outputId: string, format
   } else if (format === 'zip') {
     exportPath = join(exportsDir, `${outputId}.zip`)
     writeFileSync(exportPath, makeZip(collectFiles(outputDir)))
+  } else if (format === 'pdf') {
+    throw new Error('PDF export requires the desktop PDF renderer')
   } else {
     throw new Error(`Unsupported export format: ${format}`)
   }
-  const exportRecord: StudioExportRecord = { format, path: relative(outputDir, exportPath).replace(/\\/g, '/'), createdAt: nowIso() }
-  const metadata: StudioOutputMetadata = { ...record.metadata, status: 'exported', updatedAt: nowIso(), exports: [...record.metadata.exports, exportRecord] }
-  writeMetadata(outputDir, metadata)
-  return { metadata, outputDir, entryPath: record.entryPath }
+  return finalizeStudioExport(record, format, exportPath)
 }

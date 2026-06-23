@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, runStudioQuality, updateStudioOutput } from '../index.ts'
+import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '../index.ts'
 
 let dirs: string[] = []
 function tempSession(): string {
@@ -26,7 +26,7 @@ describe('studio storage', () => {
     expect(getStudioTemplate('report-product-spec')?.skill).toBe('studio-report')
     expect(getStudioTemplate('image-brand-visual')?.type).toBe('image-prompt')
     expect(getStudioTemplate('video-product-demo')?.type).toBe('video-prompt')
-    expect(templates.length).toBeGreaterThanOrEqual(26)
+    expect(templates.length).toBeGreaterThanOrEqual(60)
     expect(new Set(templates.map(template => template.id)).size).toBe(templates.length)
   })
 
@@ -35,6 +35,11 @@ describe('studio storage', () => {
     expect(systems.map(system => system.id)).toContain('saas-modern')
     expect(getStudioDesignSystem('saas-modern')?.skill).toBe('studio-prototype')
     expect(getStudioDesignSystem('missing-system')).toBeUndefined()
+    for (const template of listStudioTemplates()) {
+      expect(template.recommendedDesignSystem).toBeTruthy()
+      expect(getStudioDesignSystem(template.recommendedDesignSystem!)).toBeTruthy()
+      expect(existsSync(template.templatePath)).toBe(true)
+    }
   })
 
   it('creates, lists, reads, updates, and exports Studio outputs', () => {
