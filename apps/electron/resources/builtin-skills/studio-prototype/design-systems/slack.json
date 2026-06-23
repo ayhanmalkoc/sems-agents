@@ -1,0 +1,32 @@
+{
+  "id": "slack",
+  "title": "Slack",
+  "skill": "studio-prototype",
+  "tokens": {
+    "colors": {
+      "background": "#0f172a",
+      "surface": "rgba(255,255,255,.06)",
+      "text": "#f8fafc",
+      "muted": "#94a3b8",
+      "accent": "#6366f1"
+    },
+    "typography": {
+      "heading": "Inter",
+      "body": "Inter"
+    },
+    "spacing": {
+      "page": "clamp(28px,6vw,76px)",
+      "card": "clamp(20px,4vw,42px)"
+    },
+    "radius": {
+      "card": "28px",
+      "control": "999px"
+    },
+    "shadow": {
+      "card": "0 24px 80px rgba(0,0,0,.28)"
+    },
+    "density": "comfortable",
+    "motion": "subtle"
+  },
+  "usage": "Normalized Open Design Slack design system for Craft Studio templates."
+}

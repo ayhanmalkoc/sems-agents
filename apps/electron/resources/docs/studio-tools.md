@@ -45,15 +45,17 @@ sessions/{sessionId}/data/studio/{outputId}/exports/
 
 ## Templates
 
-Builtin templates live beside builtin Studio skills, not in Resources. The library includes the normalized Open Design design-template set; run `studio templates` for the full current list before selecting.
+Builtin templates live beside builtin Studio skills, not in Resources. The library includes the normalized Open Design design-template set plus image/video prompt-template libraries; run `studio templates` for the full current list before selecting.
 
 - Prototype/landing: SaaS, agent, mobile app, web app, pricing, waitlist, docs, contact, web prototypes, mobile onboarding, app flows.
 - Dashboard: analytics, admin, finance, support, AI ops, CRM, GitHub, live, social, trading, FlowAI-style operations dashboards.
 - Deck: pitch, product, case study, investor update, design review, sales, roadmap, board update, HTML-PPT taste/style variants.
 - Report/document: research, product spec, design system, audit, QA, finance, DCF valuation, clinical case, invoice, meeting notes, OKRs, runbooks.
-- Image prompt: brand visuals, product mockups, campaign boards, social packs, posters, carousel, wireframe sketches.
-- Video/motion: launch storyboard, product demo, onboarding flow, ads, shortform video, motion frames, sprite animation, audio jingle briefs.
+- Image prompt: brand visuals, product mockups, campaign boards, social packs, posters, carousel, wireframe sketches, and Open Design image prompt presets.
+- Video/motion: launch storyboard, product demo, onboarding flow, ads, shortform video, motion frames, sprite animation, audio jingle briefs, and Open Design video prompt presets.
 - Critique: critique, tweaks, review/improve workflows.
+
+Current library scale: 270+ templates, 150+ design systems, 46 image prompt templates, and 58 video prompt templates.
 
 Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `report`, `document`, `image-prompt`, `video-prompt`, `motion`, `critique`.
 

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: 12-Second App Showcase — Three Floating Phones</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Product</div>
+<h1>HyperFrames: 12-Second App Showcase — Three Floating Phones</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 12-second 16:9 app showcase composition — three floating iPhone screens hover in 3D space, each rotating in turn to surface a different feature, beat-synced label callouts, end logo lockup. Built directly on the HyperFrames `app-showcase` catalog block.</p>
+<div><span class="chip">hyperframes</span><span class="chip">app-showcase</span><span class="chip">product</span><span class="chip">3d</span><span class="chip">mobile</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 12-second HyperFrames app-showcase composition (1920×1080, 30fps) with three floating iPhone screens, each highlighting a feature of a fictional fitness app. Pull `npx hyperframes add app-showcase`, `npx hyperframes add ui-3d-reveal`, `npx hyperframes add shimmer-sweep`, and `npx hyperframes add logo-outro`.
+
+Visual identity: warm canvas #fff5e8, ink text #1a1410, single hot accent #ff5e3a, secondary teal #2bbab2 used only on the active feature pill. Display: &quot;General Sans&quot; 88px for the headline; body &quot;Inter&quot; 24px; mono on the in-app data labels.
+
+The three phones (left, center, right) carry these screens — render each as a sub-composition under `screens/`:
+1. Left phone — workout summary card (3 rings, distance / pace / heart-rate).
+2. Center phone — live activity timer (large MM:SS counter, tabular-nums), pause / resume buttons.
+3. Right phone — weekly streak grid (7 cells × 4 rows, the active week glowing).
+
+Animation (12s total):
+• 0–1.0s — headline &quot;YOUR WEEK, IN MOTION&quot; rises from y=50 → 0 over 0.7s ease expo.out at the top of the canvas. A hairline rule wipes in below it.
+• 0.6–2.0s — the three phones fly in via ui-3d-reveal: left from x=-260 + rotateY=-20°, right from x=+260 + rotateY=+20°, center from z=-300, all easing expo.out 1.4s, staggered 180ms.
+• 2.0–4.0s — left phone front-facing: rotateY tweens to 0°, scale to 1.04 over 0.6s, then a label callout &quot;workout summary&quot; types in to its left over 0.4s. Hold 1s. Then phone returns to its idle 3D pose.
+• 4.0–6.0s — center phone takes over with the same beat (label callout &quot;live activity&quot;).
+• 6.0–8.0s — right phone takes over (label callout &quot;streaks&quot;).
+• 8.0–10.0s — all three phones reset to idle, gently bobbing on a sin wave (deterministic, finite repeats — calculate cycles from the 2.0s window).
+• 10.0–12.0s — logo-outro fires in the bottom-right corner with a final shimmer-sweep across the headline.
+
+Non-negotiables: deterministic only; entrance-only animations; phones use a non-timed wrapper `&lt;div&gt;` if you nest video screens — never put video directly inside a timed clip; no `repeat: -1` (compute exact cycle count); min 24px on label callouts; all timelines paused:true; root data-duration=12. Run `npx hyperframes inspect --samples 12` to catch label overlap with phones.
+
+Output: `app-showcase-12s.mp4`.</pre></section>
+</main>
+</body>
+</html>

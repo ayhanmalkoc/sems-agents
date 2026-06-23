@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="gradient">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: 4-Second Cinematic Logo Outro</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Branding</div>
+<h1>HyperFrames: 4-Second Cinematic Logo Outro</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 4-second 16:9 logo outro — piece-by-piece wordmark assembly with bloom, shimmer sweep across the final lockup, soft grain overlay, single-line CTA. Built on the HyperFrames `logo-outro`, `shimmer-sweep`, and `grain-overlay` blocks.</p>
+<div><span class="chip">hyperframes</span><span class="chip">logo</span><span class="chip">outro</span><span class="chip">endcard</span><span class="chip">branding</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 4-second HyperFrames logo outro (1920×1080, 30fps) for a brand end-card. Pull `npx hyperframes add logo-outro`, `npx hyperframes add shimmer-sweep`, and `npx hyperframes add grain-overlay`.
+
+Visual identity: deep ink #07070a, single jewel accent #f0c14b, off-white #f7f3e8, secondary mauve #b8a3c8 used only on a 1px hairline rule. Display: &quot;General Sans&quot; 200px for the wordmark; body &quot;Inter&quot; 24px tracked +6% small caps for the CTA line.
+
+Layer structure:
+• Track 0: full-bleed background. Solid #07070a with a centered radial glow #f0c14b at 14% opacity, 720px diameter, sized by the bloom on landing.
+• Track 1: grain-overlay block at 8% opacity, full duration.
+• Track 2: logo-outro block in the center. Override the wordmark text via a slot to the user's brand name (default: &quot;OPEN DESIGN&quot;).
+• Track 3: shimmer-sweep block running across the wordmark once, starting at 2.0s, lasting 0.8s.
+• Track 4: CTA line (one of: &quot;open-design.dev&quot;, &quot;github.com/nexu-io/open-design&quot;) at y=72%, fades in at 2.6s.
+
+Animation (4s total):
+• 0–0.3s — empty stage, grain ramps from 0 → 8% opacity.
+• 0.3–1.7s — logo-outro built-in choreography: each glyph piece flies in from random offsets (use the block's seeded variant — DO NOT rewrite with Math.random) and assembles, ease expo.out, 1.4s.
+• 1.7–2.0s — radial glow pulses scale 0.96 → 1.04 → 1, 1.2s ease sine.inOut, simulating a bloom hit.
+• 2.0–2.8s — shimmer-sweep slides across the assembled wordmark using its built-in CSS gradient mask.
+• 2.6–3.4s — CTA line rises from y=20→0, opacity 0→1 ease power3.out 0.7s.
+• 3.4–4.0s — final hold, grain continues, no exits.
+
+Non-negotiables: deterministic only — use the block's built-in seed; no `repeat: -1` (calculate explicit cycle count from duration if you keep grain animated); entrance-only; all timelines paused:true; root data-duration=4. Run lint and validate (contrast on the CTA line must clear 4.5:1 against the dark canvas).
+
+Output: `logo-outro-4s.mp4`.</pre></section>
+</main>
+</body>
+</html>

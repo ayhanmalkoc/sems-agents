@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="creative">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zelda-Style Forbidden City Game Screenshot</title>
+<style>
+:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design image prompt · Game UI</div>
+<h1>Zelda-Style Forbidden City Game Screenshot</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>Generates a 16:9 original-gameplay-screenshot-style image prompt inspired by The Legend of Zelda: Breath of the Wild / Tears of the Kingdom, with Link and Zelda exploring a real-world landmark such as Beijing's Forbidden City. The template keeps the prompt concise, anchors the Nintendo Switch in-game look, adds natural BOTW/TOTK-style HUD hints, and localizes all readable UI text in Chinese.</p>
+<div><span class="chip">game-ui</span><span class="chip">zelda-style</span><span class="chip">open-world</span><span class="chip">hud</span><span class="chip">forbidden-city</span><span class="chip">botw</span><span class="chip">totk</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>塞尔达原版游戏实况截图复刻
+画风：任天堂 Switch 旷野之息/王国之泪实机游戏截图风格；不要电影 CG、不要写实摄影、不要 HDR 真实光影、不要湿润真实材质；不要标题页、不要 Nintendo 或 Zelda logo、不要商标页、不要水印
+{argument name=&quot;game_version&quot; default=&quot;TOTK 王国之泪默认造型&quot;}，{argument name=&quot;party&quot; default=&quot;林克 + 塞尔达同行&quot;}
+
+海拉鲁地图区块：{argument name=&quot;location&quot; default=&quot;北京·故宫&quot;}
+画面要素：{argument name=&quot;scene_elements&quot; default=&quot;太和殿屋脊、红墙金瓦、汉白玉台阶、宫门轴线、远处角楼&quot;}
+玩法时刻：{argument name=&quot;gameplay_moment&quot; default=&quot;林克和塞尔达正在穿过太和殿前广场调查一座嵌入宫墙阴影里的古代神庙入口，不消耗体力，不显示耐力轮&quot;}
+
+塞尔达元素：{argument name=&quot;zelda_elements&quot; default=&quot;TOTK 左纳乌神庙、原版宝箱、希卡族研究员、波克布林巡逻营地、料理锅、远空飞行魔物&quot;}
+地名 UI 文字（区域发现）：顶部「发现！」 / 中间「{argument name=&quot;main_place_name&quot; default=&quot;北京·故宫&quot;}」 / 底部「{argument name=&quot;parent_place_name&quot; default=&quot;北京·东城区&quot;}」；按原版区域发现三段式呈现，底部上级区域右对齐、只在文字左侧带短横线、淡色发光、无矩形边框、无深色底纹
+HUD：按 BOTW/TOTK 原版游戏实况自然出现，不堆满；保留小地图、心心血量、互动提示或任务标记中的 1-3 种即可
+文字：所有可读 UI 使用中文，按键动词只用中文，如「调查」「打开」「拾取」「烹饪」
+
+场景要求：真实地点的建筑轮廓和地标特征必须清晰可辨；现代游客、工作人员、闸机、售票牌、塑料护栏、二维码和旅游标识全部转译为海拉鲁村民、驿站老板、旅行商人、希卡族研究员、木牌、机关或马车道具；画面像玩家正在操作角色探索，而不是旅游海报、电影剧照、封面 key visual 或现代 App 截图。
+
+Negative prompt: no photorealistic travel photo, no cinematic CG, no official logo, no watermark, no modern tourists, no modern uniforms, no QR code, no English UI words, no garbled glyphs, no fake app interface, no overcrowded HUD, no title screen, no poster typography, no signature.</pre></section>
+</main>
+</body>
+</html>

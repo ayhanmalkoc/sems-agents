@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="editorial">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Profile / Avatar - Casual Fashion Grid Photoshoot</title>
+<style>
+:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design image prompt · Profile / Avatar</div>
+<h1>Profile / Avatar - Casual Fashion Grid Photoshoot</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A structured JSON prompt for a 4-photo collage of a casual fashion photoshoot with detailed subject and lighting parameters.</p>
+<div><span class="chip">portrait</span><span class="chip">cinematic</span><span class="chip">3d-render</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
+<div class="panel"><h2>Aspect</h2><p>1:1</p></div>
+<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>{ 
+  &quot;scene_type&quot;: &quot;smartphone fashion portrait series&quot;,
+  &quot;composition&quot;: {
+    &quot;layout&quot;: &quot;4-photo grid collage&quot;,
+    &quot;camera&quot;: &quot;smartphone photography&quot;,
+    &quot;framing&quot;: [
+      &quot;full body standing&quot;,
+      &quot;crouching pose&quot;,
+      &quot;casual seated pose&quot;,
+      &quot;upper body portrait&quot;
+    ],
+    &quot;angle&quot;: &quot;eye-level, natural perspective&quot;,
+    &quot;aspect_ratio&quot;: &quot;1:1 collage&quot;
+  },
+  &quot;subject&quot;: {
+    &quot;gender&quot;: &quot;{argument name=&quot;gender&quot; default=&quot;female&quot;}&quot;,
+    &quot;age&quot;: &quot;{argument name=&quot;age&quot; default=&quot;early 20s&quot;}&quot;,
+    &quot;aesthetic&quot;: &quot;extremely beautiful, sensual, candid&quot;,
+    &quot;appearance&quot;: {
+      &quot;skin_tone&quot;: &quot;smooth light complexion&quot;,
+      &quot;face&quot;: &quot;soft feminine features, natural symmetry, bright smile&quot;,
+      &quot;expression&quot;: &quot;playful, warm, confident, subtly sensual&quot;,
+      &quot;eyes&quot;: &quot;expressive, gentle gaze&quot;,
+      &quot;hair&quot;: {
+        &quot;color&quot;: &quot;{argument name=&quot;hair color&quot; default=&quot;deep black&quot;}&quot;,
+        &quot;style&quot;: &quot;long, loose waves&quot;,
+        &quot;texture&quot;: &quot;soft, natural shine&quot;
+      },
+      &quot;makeup&quot;: &quot;natural glam, dewy skin, soft blush, subtle lip tint&quot;
+    },
+    &quot;outfit&quot;: {
+      &quot;top&quot;: &quot;white fitted sleeveless crop top&quot;,
+      &quot;bottom&quot;: &quot;loose straight-leg blue jeans&quot;,
+      &quot;shoes&quot;: &quot;casual white sneakers&quot;,
+      &quot;style&quot;: &quot;minimal, effortless, modern casual&quot;
+    },
+    &quot;pose_style&quot;: &quot;relaxed, candid, playful fashion poses&quot;,
+    &quot;body_language&quot;: &quot;confident yet soft, natural movements, gentle sensual elegance&quot;
+  },
+  &quot;environment&quot;: {
+    &quot;location&quot;: &quot;minimal studio backdrop&quot;,
+    &quot;background&quot;: &quot;clean light gray seamless wall&quot;,
+    &quot;floor&quot;: &quot;neutral studio floor&quot;,
+    &quot;lighting&quot;: {
+      &quot;type&quot;: &quot;soft diffused studio lighting&quot;,
+      &quot;tone&quot;: &quot;neutral&quot;,
+      &quot;shadows&quot;: &quot;soft and natural&quot;,
+      &quot;highlights&quot;: &quot;subtle skin glow&quot;
+    }
+  },
+  &quot;style&quot;: {
+    &quot;photography_type&quot;: &quot;smartphone editorial fashion&quot;,
+    &quot;visual_tone&quot;: &quot;minimalist, airy, modern&quot;,
+    &quot;mood&quot;: &quot;candid, sensual elegance, fresh and confident&quot;,
+    &quot;color_palette&quot;: &quot;white, denim blue, soft gray&quot;,
+    &quot;contrast&quot;: &quot;low to medium&quot;,
+    &quot;grain&quot;: &quot;very light natural grain&quot;
+  },
+  &quot;rendering&quot;: {
+    &quot;realism&quot;: &quot;ultra-realistic&quot;,
+    &quot;detail_level&quot;: &quot;high skin and fabric texture detail&quot;,
+    &quot;sharpness&quot;: &quot;high&quot;,
+    &quot;depth_of_field&quot;: &quot;natural&quot;,
+    &quot;post_processing&quot;: &quot;minimal, clean, slightly soft finish&quot;
+  },
+  &quot;atmosphere&quot;: &quot;modern, youthful, effortless beauty, subtle sensual charm&quot;
+}</pre></section>
+</main>
+</body>
+</html>

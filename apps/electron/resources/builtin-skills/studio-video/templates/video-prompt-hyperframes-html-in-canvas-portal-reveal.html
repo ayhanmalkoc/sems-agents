@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames HTML-in-Canvas: Portal Reveal Dashboard</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · VFX / HTML-in-Canvas</div>
+<h1>HyperFrames HTML-in-Canvas: Portal Reveal Dashboard</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 10-second dimensional portal opens onto a live data dashboard — DOM captured in real time, volumetric light spill, portal-edge particles. Built on the vfx-portal catalog block. Designed for keynote-style data hero shots.</p>
+<div><span class="chip">hyperframes</span><span class="chip">html-in-canvas</span><span class="chip">portal</span><span class="chip">dashboard</span><span class="chip">keynote</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 10-second HyperFrames composition (1920×1080, 30fps) titled &quot;portal-reveal-dashboard&quot;. Pull the catalog block first: `npx hyperframes add vfx-portal`.
+
+Visual identity: jet canvas #050609, single electric accent #7df9ff for portal rim and volumetric light, secondary magenta #ff4ecd as chromatic edge tint, off-white text #f5f7fa. Display face: &quot;PP Editorial New&quot; 132px italic; body &quot;GT America&quot; 24px; mono &quot;GT America Mono&quot; 18px tabular-nums on every digit.
+
+Two nested canvases:
+• `dashboard-source` — a `&lt;canvas layoutsubtree width=&quot;1920&quot; height=&quot;1080&quot;&gt;` containing a real-looking analytics dashboard DOM: top KPI strip (4 stats, large numerals), a primary line chart (animated SVG path, 12 data points), a secondary bar chart, a live counter that increments 1247 → 1392 over the composition. Use actual CSS Grid for layout, `backdrop-filter` on the KPI cards, and tabular-nums on every numeral.
+• `theater` — WebGL canvas running the vfx-portal shader on that captured texture.
+
+Timeline (paused: true, window.__timelines.main, data-duration=10):
+
+0.0–2.4s OPEN — portal radius 0 → 1.0 (ease expo.out 1.4s, slight overshoot 1.05 → 1.0). Volumetric light cone intensity 0 → 1.6 → 1.0. Edge particles spawn count ramps 0 → 240 over 1.6s with deterministic seeded mulberry32(1337). Dashboard texture is captured every frame from 0.6s onward; before that the portal is opaque rim.
+
+2.4–7.6s INSPECT — portal stable at 1.0. Camera pushes in gently (z 0 → -120, ease sine.inOut 5.2s). Inside the source DOM, drive the live counter and chart path animations on the same window.__timelines.main timeline so they sync with the camera push. Add a subtle headline outside the portal (&quot;the numbers, in real time&quot;) fading in at 3.2s and a single mono kicker (&quot;+11.6% week over week&quot;) with the css-patterns marker sweep at 5.0s.
+
+7.6–10.0s SETTLE — portal radius 1.0 → 1.04 (gentle breathe), light cone tapers to 0.7 intensity, edge particles settle. Final 0.4s holds the hero. No opacity-to-0 exits — the portal IS the frame.
+
+Feature detection: if `drawElementImage` is unavailable, render the dashboard DOM directly without the portal, with a single text overlay &quot;open in HyperFrames render for the full effect&quot;. Studio preview must never go black.
+
+Non-negotiables: deterministic seeds, no `repeat: -1`, no async timeline construction, no `&lt;br&gt;` in content text — let it wrap. Min font 60px on the headline, 36px on KPI numerals, tabular-nums everywhere. Run `npx hyperframes lint` and `npx hyperframes inspect --samples 12 --at 1,2,3,5,7,9` before render. Output: `portal-reveal-dashboard.mp4`.</pre></section>
+</main>
+</body>
+</html>

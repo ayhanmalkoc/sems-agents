@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: $0 → $10K Money Counter Hype (9:16)</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Short Form</div>
+<h1>HyperFrames: $0 → $10K Money Counter Hype (9:16)</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 6-second vertical 1080×1920 HyperFrames hype clip — Apple-style $0 → $10,000 counter with green flash, money burst particles, cash-stack icon, kicker headline. Built on the HyperFrames `apple-money-count` catalog block.</p>
+<div><span class="chip">hyperframes</span><span class="chip">vertical</span><span class="chip">hype</span><span class="chip">counter</span><span class="chip">money</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>9:16</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 6-second vertical HyperFrames hype clip (1080×1920, 30fps) — a single dramatic counter from $0 to $10,000 with a money burst on landing. Pull `npx hyperframes add apple-money-count` and `npx hyperframes add grain-overlay`. Optional: `npx hyperframes add flash-through-white` for the moment of impact.
+
+Visual identity: deep emerald canvas #052520, single hot-green accent #00ff95, off-white #f5fff8, secondary gold #f0c14b on the burst particles only. Display: &quot;Druk Wide&quot; 280px for the counter (with `font-variant-numeric: tabular-nums slashed-zero`); body &quot;Inter&quot; 32px tracked +4% small caps for the kicker.
+
+Layer structure:
+• Track 0: full-bleed background — solid #052520 with a soft 540px radial glow #00ff95 at 10% opacity behind the counter, growing to 18% on the impact frame.
+• Track 1: grain-overlay at 6% opacity, full duration.
+• Track 2: kicker line at y=28% — &quot;WHAT $10K LOOKS LIKE&quot; small caps, fades in at 0.2s.
+• Track 3: apple-money-count block centered (use as-is — its seeded confetti/burst is deterministic). Override start=0, end=10000, format=USD.
+• Track 4: bottom caption at y=82% — &quot;day · one&quot; small caps, fades in at 4.0s.
+• Track 5 (optional): a single flash-through-white frame at 3.4s, 0.18s long.
+
+Animation (6s total):
+• 0–0.3s — grain ramps in, kicker fades in from y=14→0 ease power3.out 0.5s.
+• 0.5–3.5s — counter ticks $0 → $10,000, 3.0s, ease power2.inOut. Tabular-nums forced. Counter scale: 1.0 the whole way except a +4% pop at $10,000 landing (3.5s) ease back.out.
+• 3.4–3.6s — flash-through-white snap.
+• 3.5–4.0s — green flash on the counter color: text-color tweens to #00ff95 over 0.3s ease power2.out, then fades back to off-white over 0.6s.
+• 3.5–4.5s — money burst block fires its built-in particle system (50 deterministic shards in #f0c14b + #00ff95).
+• 4.5–6.0s — final hold. No exit animations.
+
+Non-negotiables: tabular-nums + slashed-zero on the counter; no Math.random in particle positions — use the block's seed; no `repeat: -1`; entrance-only; deterministic; all timelines paused:true; root data-duration=6, data-width=1080, data-height=1920.
+
+Output: `money-counter-6s.mp4`.</pre></section>
+</main>
+</body>
+</html>

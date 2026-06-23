@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="brand-visual">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Illustrated City Food Map</title>
+<style>
+:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design image prompt · Illustration</div>
+<h1>Illustrated City Food Map</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>Generates a hand-drawn, watercolor-style tourist map featuring numbered local food specialties, landmarks, and a legend.</p>
+<div><span class="chip">food</span><span class="chip">nature</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
+<div class="panel"><h2>Aspect</h2><p>1:1</p></div>
+<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>{
+  &quot;type&quot;: &quot;illustrated map infographic&quot;,
+  &quot;style&quot;: &quot;{argument name=\&quot;art style\&quot; default=\&quot;watercolor and ink hand-drawn illustration on vintage parchment\&quot;}&quot;,
+  &quot;title_section&quot;: {
+    &quot;text&quot;: &quot;{argument name=\&quot;city name\&quot; default=\&quot;成都\&quot;} {argument name=\&quot;map title\&quot; default=\&quot;吃货暴走地图\&quot;}&quot;,
+    &quot;mascot&quot;: &quot;cartoon red chili pepper wearing sunglasses and giving a thumbs up&quot;
+  },
+  &quot;border&quot;: &quot;{argument name=\&quot;border decoration\&quot; default=\&quot;vine of green leaves and red chili peppers\&quot;}&quot;,
+  &quot;layout&quot;: {
+    &quot;background&quot;: &quot;textured beige parchment paper with yellow roads, blue rivers, and green park areas&quot;,
+    &quot;sections&quot;: [
+      {
+        &quot;title&quot;: &quot;landmarks&quot;,
+        &quot;count&quot;: 6,
+        &quot;illustrations&quot;: [&quot;traditional pavilion&quot;, &quot;traditional monastery&quot;, &quot;modern skyscraper with climbing panda&quot;, &quot;tall TV tower&quot;, &quot;traditional gate&quot;, &quot;industrial buildings&quot;],
+        &quot;labels&quot;: [&quot;人民公园&quot;, &quot;文殊院&quot;, &quot;IFS&quot;, &quot;339电视塔&quot;, &quot;宽窄巷子&quot;, &quot;东郊记忆&quot;]
+      },
+      {
+        &quot;title&quot;: &quot;food_spots&quot;,
+        &quot;count&quot;: 12,
+        &quot;illustrations&quot;: [&quot;mapo tofu&quot;, &quot;dumplings in chili oil&quot;, &quot;skewers in pot&quot;, &quot;sticky rice balls&quot;, &quot;egg baking cake&quot;, &quot;nine-grid hotpot&quot;, &quot;sweet potato noodles&quot;, &quot;cold skewers&quot;, &quot;spicy mixed dish&quot;, &quot;covered tea bowl&quot;, &quot;ice jelly dessert&quot;, &quot;spicy rabbit heads&quot;],
+        &quot;labels&quot;: [&quot;1 陈麻婆豆腐&quot;, &quot;2 钟水饺&quot;, &quot;3 春熙路&quot;, &quot;4 宽窄巷子·三大炮&quot;, &quot;5 建设路·叶婆婆蛋烘糕&quot;, &quot;6 玉林路·小龙坎火锅&quot;, &quot;7 香香巷·肥肠粉&quot;, &quot;8 武侯祠大街·钵钵鸡&quot;, &quot;9 东郊记忆·冒椒火辣&quot;, &quot;10 人民公园·鹤鸣茶社&quot;, &quot;11 锦里古街·冰粉&quot;, &quot;12 双流老妈兔头&quot;]
+      },
+      {
+        &quot;title&quot;: &quot;图例&quot;,
+        &quot;position&quot;: &quot;bottom-right&quot;,
+        &quot;count&quot;: 5,
+        &quot;items&quot;: [&quot;red dot&quot;, &quot;green house&quot;, &quot;green tree&quot;, &quot;blue line&quot;, &quot;yellow double line&quot;],
+        &quot;labels&quot;: [&quot;美食地点&quot;, &quot;地标景点&quot;, &quot;公园绿地&quot;, &quot;河流湖泊&quot;, &quot;主要道路&quot;]
+      }
+    ],
+    &quot;centerpiece&quot;: &quot;giant panda sitting and eating bamboo&quot;,
+    &quot;bottom_right_extras&quot;: [&quot;vintage compass rose with N, S, E, W&quot;, &quot;disclaimer text '温馨提示：吃辣需谨慎，肠胃要保护~' with a red chili pepper icon&quot;]
+  }
+}</pre></section>
+</main>
+</body>
+</html>

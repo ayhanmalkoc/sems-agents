@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="brand-visual">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>E-commerce Live Stream UI Mockup</title>
+<style>
+:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design image prompt · App / Web Design</div>
+<h1>E-commerce Live Stream UI Mockup</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>Generates a realistic social media live stream interface overlaying a portrait, featuring customizable chat messages, gift popups, and a product purchase card.</p>
+<div><span class="chip">portrait</span><span class="chip">fantasy</span><span class="chip">product</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
+<div class="panel"><h2>Aspect</h2><p>1:1</p></div>
+<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>{
+  &quot;type&quot;: &quot;live stream UI mockup&quot;,
+  &quot;subject&quot;: {
+    &quot;description&quot;: &quot;portrait of {argument name=\&quot;host name\&quot; default=\&quot;Elon Musk\&quot;}, smiling, wearing a black t-shirt with a white technical schematic graphic&quot;,
+    &quot;background&quot;: &quot;left side shows a screen with '{argument name=\&quot;left background logo\&quot; default=\&quot;SPACEX\&quot;}' text, right side shows a red '{argument name=\&quot;right background logo\&quot; default=\&quot;Tesla T logo\&quot;}' and a dark car&quot;
+  },
+  &quot;ui_overlay&quot;: {
+    &quot;top_header&quot;: {
+      &quot;host_info&quot;: &quot;avatar, name '{argument name=\&quot;host name\&quot; default=\&quot;Elon Musk\&quot;}', subtext '55.6万本场点赞', red '关注' button&quot;,
+      &quot;rank_badge&quot;: &quot;gold coin icon with '全站第1名'&quot;,
+      &quot;viewer_stats&quot;: &quot;3 top viewer avatars with '12.3w', '8.6w', '5.7w', total '68.7万', 'X' close button&quot;,
+      &quot;right_links&quot;: &quot;'更多直播 &gt;', '礼物展馆 0/24' with blue '经典' tag&quot;
+    },
+    &quot;mid_left_gifts&quot;: {
+      &quot;count&quot;: 2,
+      &quot;items&quot;: [
+        &quot;avatar '科技爱好者', '送小心心', heart icon x 1314&quot;,
+        &quot;avatar '星辰大海', '送火箭', rocket icon x 666&quot;
+      ]
+    },
+    &quot;bottom_left_chat&quot;: {
+      &quot;system_message&quot;: &quot;level 37 badge '宇宙漫游者 加入了直播间'&quot;,
+      &quot;message_count&quot;: 7,
+      &quot;messages&quot;: [
+        &quot;小火箭: 马斯克！未来可期！🚀&quot;,
+        &quot;future: 特斯拉Model 2什么时候出？&quot;,
+        &quot;星空梦想家: SpaceX今年能上火星吗？&quot;,
+        &quot;AI探索者: Neuralink进展如何？&quot;,
+        &quot;帅气的网友: 马总好！&quot;,
+        &quot;Mars: 第一次来你的直播，超激动！&quot;,
+        &quot;用户123: 讲讲AI吧，会取代人类吗？&quot;
+      ]
+    },
+    &quot;bottom_right_product_card&quot;: {
+      &quot;hot_tag&quot;: &quot;orange '热卖 x 1888'&quot;,
+      &quot;image&quot;: &quot;Tesla Cybertruck&quot;,
+      &quot;title&quot;: &quot;{argument name=\&quot;product name\&quot; default=\&quot;特斯拉Cybertruck 电动皮卡\&quot;}&quot;,
+      &quot;price&quot;: &quot;{argument name=\&quot;product price\&quot; default=\&quot;¥ 1,618,000\&quot;}&quot;,
+      &quot;button&quot;: &quot;red '抢' button&quot;,
+      &quot;floating_animation&quot;: &quot;translucent hearts floating up the right edge&quot;
+    },
+    &quot;bottom_bar&quot;: {
+      &quot;input_field&quot;: &quot;'说点什么...'&quot;,
+      &quot;icons&quot;: [&quot;smiley face&quot;, &quot;three dots&quot;, &quot;shopping cart&quot;, &quot;gift box&quot;, &quot;share&quot;]
+    }
+  }
+}</pre></section>
+</main>
+</body>
+</html>

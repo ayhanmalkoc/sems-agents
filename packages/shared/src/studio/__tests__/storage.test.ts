@@ -29,7 +29,11 @@ describe('studio storage', () => {
     expect(getStudioTemplate('audio-jingle')?.type).toBe('motion')
     expect(getStudioTemplate('critique')?.type).toBe('critique')
     expect(getStudioTemplate('dcf-valuation')?.type).toBe('document')
+    expect(getStudioTemplate('image-prompt-3d-stone-staircase-evolution-infographic')?.type).toBe('image-prompt')
+    expect(getStudioTemplate('video-prompt-3d-animated-boy-building-lego')?.skill).toBe('studio-video')
     expect(templates.length).toBeGreaterThanOrEqual(109)
+    expect(templates.filter(template => template.id.startsWith('image-prompt-'))).toHaveLength(46)
+    expect(templates.filter(template => template.id.startsWith('video-prompt-'))).toHaveLength(58)
     expect(new Set(templates.map(template => template.id)).size).toBe(templates.length)
   })
 
@@ -38,7 +42,9 @@ describe('studio storage', () => {
     expect(systems.map(system => system.id)).toContain('saas-modern')
     expect(systems.map(system => system.id)).toContain('linear')
     expect(systems.map(system => system.id)).toContain('gradient')
-    expect(systems.length).toBeGreaterThanOrEqual(30)
+    expect(getStudioDesignSystem('airbnb')).toBeTruthy()
+    expect(getStudioDesignSystem('github')).toBeTruthy()
+    expect(systems.length).toBeGreaterThanOrEqual(151)
     expect(getStudioDesignSystem('saas-modern')?.skill).toBe('studio-prototype')
     expect(getStudioDesignSystem('missing-system')).toBeUndefined()
     for (const template of listStudioTemplates()) {

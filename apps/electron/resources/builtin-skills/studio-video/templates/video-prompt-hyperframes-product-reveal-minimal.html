@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: 5-Second Minimal Product Reveal</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Cinematic</div>
+<h1>HyperFrames: 5-Second Minimal Product Reveal</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 5-second HyperFrames composition for a high-end product reveal — dark canvas, single warm accent, slow push-in title card, kinetic kicker line, restrained motion. The agent renders MP4 from HTML+GSAP via puppeteer; no stock footage needed.</p>
+<div><span class="chip">hyperframes</span><span class="chip">product</span><span class="chip">minimal</span><span class="chip">title-card</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 5-second HyperFrames composition (1920×1080, 30fps) for a minimal product reveal. The brief is restraint: one product, one accent color, no clutter.
+
+Visual identity: dark canvas #0b0b0f, warm rust accent #ffb76b, off-white text #f5f1ea, secondary slate #7da4ff used only on a single hairline rule. Display face: &quot;Editorial New&quot; or fallback &quot;Times Now&quot; at 140px for the brand wordmark; body in &quot;Inter&quot; 22px tracked +2%; tabular-nums on any digits.
+
+Scene 1 (0–2.0s) — empty stage with a single hairline rule entering from the left at 0.2s, easing power3.out, 0.8s duration. At 0.6s a small caps kicker label &quot;NEW · MAY 2026&quot; fades in below the rule, x-offset 24px → 0, opacity 0 → 1, ease power2.out, 0.5s.
+
+Scene 2 (2.0–4.2s) — the brand wordmark slides up from y=80 to y=0 with opacity 0→1 over 0.7s ease expo.out, staggered 80ms per character via gsap.from with each glyph wrapped in a span. Behind it a soft 540px radial glow #ffb76b at 12% opacity pulses once (scale 1 → 1.04 → 1, 1.6s ease sine.inOut). At 3.4s a one-line tagline (max 56 chars) rises in from y=24 over 0.5s.
+
+Scene 3 (4.2–5.0s) — final hold. No exit animations on any element — the composition simply ends on the hero frame. The hairline rule extends another 80px on a 0.4s ease power2.out for a final breath.
+
+Non-negotiables (HyperFrames contract): all timelines paused: true, registered to window.__timelines[&quot;main&quot;]; deterministic only, no Math.random or Date.now; entrance-only animations (no opacity-to-0 exits); root &lt;div&gt; carries data-composition-id, data-width=&quot;1920&quot;, data-height=&quot;1080&quot;, data-duration=&quot;5&quot;.
+
+Deliverable: index.html plus hyperframes.json + meta.json scaffold from `npx hyperframes init --example blank`. Render via daemon dispatch. Output a single descriptive .mp4 in the project root (e.g. `product-reveal-minimal.mp4`).</pre></section>
+</main>
+</body>
+</html>

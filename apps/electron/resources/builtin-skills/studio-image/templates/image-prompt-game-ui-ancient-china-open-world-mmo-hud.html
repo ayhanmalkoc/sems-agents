@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="creative">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game UI - Ancient China Open-World MMO HUD</title>
+<style>
+:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design image prompt · Game UI</div>
+<h1>Game UI - Ancient China Open-World MMO HUD</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>Generates an in-game HUD screenshot mockup for a AAA ancient-China open-world MMO, in the cinematic photoreal style of Black Myth: Wukong. A beautiful female swordswoman protagonist anchors the center of the frame in a misty mountain ancient-shrine scene, surrounded by a complete MMO HUD: top-left character portrait with HP/MP/stamina bars and buff icons, bottom-center skill hotbar with Chinese-calligraphy skill icons, top-right minimap with quest markers, right-side quest tracker panel, bottom-left scrolling chat window, floating world-space NPC nameplates and quest exclamation mark. Rendered as a realistic monitor screenshot, 16:9, suitable for pitch decks, gamescom-style key art, and Xiaohongshu/bilibili game teasers.</p>
+<div><span class="chip">game-ui</span><span class="chip">mmo</span><span class="chip">hud</span><span class="chip">ancient-china</span><span class="chip">open-world</span><span class="chip">cinematic</span><span class="chip">wuxia</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>A full-screen in-game HUD screenshot of a AAA ancient-China open-world MMO, rendered in the cinematic photoreal style of Black Myth: Wukong — Unreal Engine 5 level lighting, volumetric god rays, deep filmic color grading, subtle chromatic aberration, shallow depth of field on the background, razor-sharp foreground.
+
+# 3D scene (underneath the UI)
+- Center of frame: {argument name=&quot;protagonist&quot; default=&quot;a beautiful Chinese female swordswoman in her mid 20s, flowing ivory-white Hanfu robe with pale jade embroidery, long black hair tied with a silk ribbon, jade hairpin, elegant calm expression, holding a slender straight jian sword in a low guard stance, gentle wind lifting her sleeves and hair ribbon&quot;}, captured in a cinematic third-person over-the-shoulder framing, shot from slightly behind and above her right shoulder so the viewer sees both her profile and the world ahead.
+- Environment: {argument name=&quot;environment&quot; default=&quot;a cold-toned deep-mountain ancient shrine — towering weathered stone steles carved with faded sutras, a half-ruined Tang-dynasty wooden pavilion with curled eaves and peeling vermilion paint, a massive ancient gnarled peach tree with scattered falling petals, dense low-lying mist rolling along mossy stone steps, distant jagged mountain peaks fading into cold blue fog&quot;}.
+- Lighting: cold teal and desaturated blue base palette with warm amber rim light on the protagonist, faint god rays cutting through the mist, cinematic HDR contrast, filmic grain.
+
+# HUD overlay (drawn cleanly on top of the 3D scene, readable, game-screenshot accurate)
+- Top-left — Character status panel:
+  - Circular portrait frame with ornate bronze Chinese cloud-pattern border, inside a stylized portrait of the same protagonist.
+  - To the right of the portrait: character name &quot;{argument name=&quot;character_name&quot; default=&quot;云裳&quot;}&quot;, level badge &quot;Lv.{argument name=&quot;level&quot; default=&quot;58&quot;}&quot;, and a small sect crest tag &quot;{argument name=&quot;sect&quot; default=&quot;青冥剑宗&quot;}&quot; (Qingming Sword Sect).
+  - Three stacked bars beneath: red HP bar labeled &quot;气血&quot;, blue MP/internal-energy bar labeled &quot;内力&quot;, yellow stamina bar labeled &quot;体力&quot;. Each bar has crisp numeric readouts in small Song/serif Chinese typography.
+  - A row of 5 small buff/debuff icons with faint Chinese seal-script labels and countdown timers.
+- Top-right — Minimap:
+  - Round minimap with a brass compass-style frame etched with the 8 trigrams (bagua) around the rim, N/E/S/W marked in small seal-script characters.
+  - Inside: a semi-transparent top-down terrain painted in ink-wash style, the player shown as a golden arrow in the center, nearby quest markers as yellow exclamation marks, a blue diamond waypoint, and a red skull for an elite monster.
+  - Below the minimap: current region name &quot;{argument name=&quot;region&quot; default=&quot;天牙关 · 古祠林&quot;}&quot; and in-game time &quot;{argument name=&quot;in_game_time&quot; default=&quot;戌时 · 月明&quot;}&quot; in vertical Song typography.
+- Right edge — Quest tracker panel:
+  - Semi-transparent parchment-textured vertical panel with faint ink-wash border.
+  - Header: &quot;任务追踪&quot; in bold Song typography.
+  - Active quest: &quot;{argument name=&quot;active_quest&quot; default=&quot;寻访古祠残卷&quot;}&quot; with a short one-line objective beneath in smaller type, e.g. &quot;前往古祠林深处查探异象 (1/3)&quot;.
+  - Two additional quest entries listed below in dimmer color, each with a small circular category icon (main / side / sect).
+- Bottom-center — Skill hotbar:
+  - 10 square skill slots arranged horizontally, each with an ornate bronze Chinese-motif border and a dark inner background.
+  - Each slot contains a painterly skill icon with a recognizable wuxia theme (sword qi arc, swirling internal-energy palm, stepping-on-snow lightfoot, ink-bird summon, ice-lotus burst, etc.).
+  - Hotkey letters 1-0 in small crisp white numerals at the bottom-right of each slot.
+  - Two skills are on cooldown with a faint radial sweep overlay and a small remaining-seconds number.
+  - Flanking the hotbar on the left: a round &quot;普攻&quot; basic-attack button; on the right: a round &quot;绝技&quot; ultimate button with a subtle golden glow suggesting it is ready.
+- Bottom-left — Chat window:
+  - Semi-transparent dark rounded-rectangle chat panel with a thin gold hairline border.
+  - 4-5 recent chat lines in small Chinese typography, each prefixed by a channel tag: [世界], [门派], [队伍], [系统]. Examples: &quot;[世界] 逍遥子: 天牙关有BOSS刷新了，招人！&quot;, &quot;[系统] 您已进入秘境「古祠林」，PVP 已开启&quot;, &quot;[门派] 青冥剑宗 长老: 今晚酉时门派任务集合&quot;.
+- World-space UI (floating in 3D, not screen-locked):
+  - A distant NPC in front of the pavilion has a floating nameplate &quot;{argument name=&quot;npc_name&quot; default=&quot;守祠老人&quot;}&quot; with a golden exclamation mark above their head indicating an available quest.
+  - A second NPC further back shows a small cyan question mark indicating an in-progress quest turn-in.
+  - A faint golden guide-breeze particle trail drifts from the player toward the next objective, fading into the mist.
+
+# Typography &amp; language rules
+- All in-UI text is rendered in clean, crisp Simplified or Traditional Chinese (Song/serif for headings, sans for body); no garbled glyphs, no Latin filler, no lorem.
+- Numbers are Western Arabic digits.
+- HUD elements are readable at a glance but never overpower the protagonist — UI takes no more than ~25% of total frame area in aggregate.
+
+# Final feel
+Should read as a real 4K in-game screenshot of a next-generation Chinese wuxia MMO, somewhere between a Black Myth: Wukong combat moment and a Jianwang 3 scenic screenshot. Cold mountain atmosphere, cinematic protagonist hero framing, precise game-HUD production quality, zero AI-artifact sloppiness on the UI widgets.
+
+# Negative prompt
+no warped Chinese characters, no fake gibberish glyphs, no Western medieval armor, no anime cel-shading, no low-res UI, no duplicated HUD widgets, no floating crooked text, no extra fingers on the protagonist, no modern clothing, no firearms, no generic fantasy elf look, no cluttered or overlapping UI panels, no watermark, no signature.</pre></section>
+</main>
+</body>
+</html>

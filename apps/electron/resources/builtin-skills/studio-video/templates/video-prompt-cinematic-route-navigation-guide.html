@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="gradient">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cinematic Route Navigation Guide</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Cinematic</div>
+<h1>Cinematic Route Navigation Guide</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A structured multi-scene prompt designed for Seedance to create a consistent walking navigation video featuring a recurring tour guide character and smooth transitions between real-world locations.</p>
+<div><span class="chip">cinematic</span><span class="chip">fantasy</span><span class="chip">action</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>seedance-2.0</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Create a 5-second cinematic route-guide clip for a walking navigation video.
+
+Continuity:
+This is scene {N} of 5 in a route from North Avenue MARTA Station to Coda Tech Square in Atlanta.
+The guide is the same stylish female tour guide in every scene: black sunglasses, sleeveless cream belted dress, brown leather belt, tour lanyard, small shoulder bag, brown hair tied back, confident warm expression.
+She appears on the sidewalk or plaza only, never in traffic lanes.
+
+Scene role:
+{route_step}
+
+Starting frame:
+Use the supplied Street View image as the real-world location reference. Preserve the recognizable street layout, building massing, sidewalk direction, signage, and lighting.
+
+Action:
+The guide is already in frame, slightly ahead of the viewer. She turns toward the camera, gestures toward the next walking direction, then begins to lead the viewer forward.
+
+Camera:
+Smooth handheld walking pace, slight forward push-in, no jumpy zooms, no orbit. Keep horizon stable. The final second should frame the direction of the next scene so the edit can cut naturally.
+
+End frame:
+End with the camera facing {next_direction_or_landmark}, with the guide near the edge of frame pointing forward.
+
+Restrictions:
+Do not invent a different city, indoor location, parking lot, or tourist group. Do not place the guide in the road. Do not block crosswalks, street signs, building entrances, or the Coda facade.</pre></section>
+</main>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: Animated Bar-Chart Race (NYT-style)</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Data</div>
+<h1>HyperFrames: Animated Bar-Chart Race (NYT-style)</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 12-second 16:9 data infographic — animated bar + line chart with staggered category reveal, NYT-style serif headline, footnote source, kinetic value labels. Built directly on the HyperFrames `data-chart` catalog block.</p>
+<div><span class="chip">hyperframes</span><span class="chip">data-viz</span><span class="chip">chart</span><span class="chip">infographic</span><span class="chip">editorial</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 12-second HyperFrames data composition (1920×1080, 30fps) showing a 6-bar animated bar-chart race with a NYT-style headline. Pull the catalog block first: `npx hyperframes add data-chart`. Use it as the render surface and override the data via a small JSON inline.
+
+Dataset (provide inline; choose the topic from the user's brief or default to AI labs market share):
+• Anthropic — 28%
+• OpenAI — 31%
+• Google — 18%
+• xAI — 9%
+• Meta — 8%
+• Other — 6%
+
+Visual identity: cream canvas #f5efe4, ink text #161312, single rust accent #b14a2c on the active/leading bar only, hairline rules in #b3a692. Display headline: &quot;Editorial New&quot; or &quot;Tiempos Headline&quot; 84px; deck face &quot;Inter&quot; 22px tracked +1%; mono &quot;JetBrains Mono&quot; 16px for value labels with `font-variant-numeric: tabular-nums`.
+
+Layout:
+• Top 18% of canvas — headline (one line, max 64 chars) + a 16px-high deck line below, separated by a hairline rule.
+• Middle 64% — the data-chart block, padded 120px left / 80px right.
+• Bottom 18% — source line (small caps, tracked +6%) like &quot;source · sec filings · may 2026&quot; and a kinetic ticking timestamp counter (0 → &quot;may 1 2026&quot; using apple-money-count-style logic on a date string is wrong — instead do a clean fade-in at 11.0s).
+
+Animation (12s total):
+• 0–0.4s — page hairline rule wipes in from left, ease power3.out.
+• 0.3–1.2s — headline rises from y=40 → 0 over 0.7s ease expo.out, then deck line fades in at 0.9s over 0.4s.
+• 1.2–9.0s — data-chart block runs its built-in stagger: each bar grows from width 0 → final value over 1.4s, ease power2.out, staggered 180ms per bar; value labels count up tabular-nums at the same easing; the leading bar (`#b14a2c`) gets a 4% scale pulse on landing.
+• 9.5–11.5s — annotation callout pointing at the leader: a 360px box with a one-line analysis (&quot;Anthropic narrowed the gap to 3 points&quot;) fades + slides in from x=40 over 0.5s.
+• 11.5–12s — final hold. Source line fades in. No exit animations (this is the only scene).
+
+Non-negotiables: tabular-nums on every digit; min 16px on data labels; deterministic; entrance-only; all timelines paused:true; root data-duration=12. Run `npx hyperframes inspect --at 1.5,5,9,11.5` to catch any value-label overflow.
+
+Output: `data-chart-race-12s.mp4`.</pre></section>
+</main>
+</body>
+</html>

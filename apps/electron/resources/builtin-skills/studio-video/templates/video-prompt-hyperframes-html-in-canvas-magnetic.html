@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames HTML-in-Canvas: Magnetic Field Visualisation</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · VFX / HTML-in-Canvas</div>
+<h1>HyperFrames HTML-in-Canvas: Magnetic Field Visualisation</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>A 15-second magnetic-field particle visualisation reacting to a live DOM heatmap or chart — particles trace field lines that bend around the captured HTML, ideal for ML/data products. Built on the vfx-magnetic catalog block.</p>
+<div><span class="chip">hyperframes</span><span class="chip">html-in-canvas</span><span class="chip">magnetic</span><span class="chip">particles</span><span class="chip">data</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build a 15-second HyperFrames composition (1920×1080, 30fps) titled &quot;magnetic-field-data&quot;. Pull the catalog block first: `npx hyperframes add vfx-magnetic`.
+
+Visual identity: graphite canvas #0a0c11, single primary particle color #ff6a00 with a cool secondary #38e6ff for opposing-pole particles, off-white text #eef2f7. Display face: &quot;PP Neue Machina&quot; 124px Plain Ultrabold; body &quot;PP Mondwest&quot; Regular 24px; mono &quot;Berkeley Mono&quot; 18px on labels. Tabular-nums on every numeral.
+
+Layer A — `field-source`: a `&lt;canvas layoutsubtree width=&quot;1920&quot; height=&quot;1080&quot;&gt;` containing real DOM that drives the magnetic field — a centered chart card (760×520px) with a live SVG line chart (12 data points, animated path), two KPI labels above (&quot;signal strength&quot; 0.84 and &quot;coverage&quot; 92%), and a small mono caption beneath (&quot;polling 412 nodes · realtime&quot;). The chart card acts as the magnetic source — particles repel from its bounds, attract toward dipole anchors at the chart's two endpoints.
+
+Layer B — `theater`: WebGL canvas running the vfx-magnetic shader. Particle count 1800, deterministic spawn seeded mulberry32(91347), spawn distribution rim-biased so the field lines read clearly. Two opposing dipoles at the chart's first and last data points sample the captured DOM bounds every frame so the field re-flows when the chart line animates.
+
+Timeline (paused: true, window.__timelines.main, data-duration=15):
+
+0.0–2.4s ENTRY — particles spawn invisible, opacity ramps 0 → 0.85 over 2.0s ease expo.out. Field strength 0 → 1.0 ease power3.out 1.6s. Chart card fades in at 0.4s (`gsap.from('.chart-card', { y: 60, opacity: 0, scale: 0.96, duration: 0.9, ease: 'power3.out' })`). KPI labels stagger in at 0.9s and 1.2s (200ms apart, y:30 → 0).
+
+2.4–10.0s FLOW — particles trace field lines. Chart line animates over 6.0s (`gsap.from('.chart-line', { strokeDashoffset: pathLength, duration: 6.0, ease: 'sine.inOut' })`); the captured-DOM resampling means particles bend around the moving chart line in real time. KPI numerals tick: signal strength 0.84 → 0.91, coverage 92% → 96%, both ease none. At 6.0s, brief field-strength pulse from 1.0 → 1.4 → 1.0 over 0.5s; particles speed up correspondingly.
+
+10.0–13.5s STATEMENT — headline appears (&quot;see the field, not the dots&quot;) with marker-sweep highlight from `references/css-patterns.md` at 10.4s. Particles dim slightly (opacity 0.85 → 0.55) so the headline reads cleanly above them.
+
+13.5–15.0s SETTLE — field strength tapers 1.0 → 0.6, particle speed halves, ambient drift only. Final 0.6s holds the hero frame. No opacity-to-0 exits.
+
+Feature detection: if `drawElementImage` is unavailable, render the chart card DOM directly on a flat #0a0c11 background without the particle field. Studio preview must never go black.
+
+Non-negotiables: deterministic seeds, finite repeats only, no Math.random / Date.now, no `&lt;br&gt;` in headline (let it wrap with `max-width`). Particle position update runs inside the same window.__timelines.main timeline ticker — don't spin off requestAnimationFrame outside the framework's clock. Run `npx hyperframes lint` and `npx hyperframes inspect --samples 12 --at 1,2.5,4,6,8,11,13.5` before render. Output: `magnetic-field-data.mp4`.</pre></section>
+</main>
+</body>
+</html>

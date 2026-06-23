@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-studio-design-system="launch-motion">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HyperFrames: Apple-Style Flight Map (Origin → Destination)</title>
+<style>
+:root{color-scheme:dark;--accent:#ec4899}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<div class="eyebrow">Open Design video prompt · Travel</div>
+<h1>HyperFrames: Apple-Style Flight Map (Origin → Destination)</h1>
+<h2>Production-ready prompt board for Studio.</h2>
+<p>An 8-second 16:9 cinematic flight-route map — realistic terrain zoom, animated plane gliding from origin to destination along a curved path, labelled cities, kinetic distance counter. Built directly on the HyperFrames `nyc-paris-flight` catalog block, repurposable for any city pair.</p>
+<div><span class="chip">hyperframes</span><span class="chip">map</span><span class="chip">travel</span><span class="chip">route</span><span class="chip">cinematic</span></div>
+<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+</section>
+<section class="grid" id="spec">
+<div class="panel"><h2>Model</h2><p>hyperframes-html</p></div>
+<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
+<div class="panel"><h2>Output</h2><p>Video sequence, motion, pacing, camera, and scene direction.</p></div>
+</section>
+<section class="panel" id="prompt"><h2>Prompt</h2><pre>Build an 8-second HyperFrames cinematic flight-map (1920×1080, 30fps) showing a plane traveling between two named cities. Pull `npx hyperframes add nyc-paris-flight` and override the two endpoint coordinates plus city labels with the user's chosen pair (default: New York → Paris, ~5,837 km).
+
+Visual identity: dark map canvas #0a0e1a (Apple Maps dark style), warm route accent #ffb76b, off-white labels #f5f1ea, secondary slate #7da4ff for distance / coordinate text. Display: &quot;Inter&quot; 64px for city names; mono &quot;JetBrains Mono&quot; 18px for coordinates; tabular-nums forced on the distance counter.
+
+Animation (8s total):
+• 0–1.2s — globe / map zooms in from a wide world view to a regional view spanning both cities, ease expo.inOut, with a slight rotation correction. Use the catalog block's built-in zoom hook.
+• 1.0–1.8s — origin city label fades in at the origin marker, x-axis offset 0, opacity 0→1 + scale 0.92→1 ease power3.out 0.6s. The marker (a 14px ring + 4px dot in #ffb76b) pulses scale 1→1.18→1 over 1.0s ease sine.inOut.
+• 1.8–6.0s — the route arc draws progressively from origin to destination using stroke-dashoffset on an SVG path, 4.0s ease power2.inOut. The plane icon (small 36px svg) rides the path with motionPath, rotating to match the bearing. A small cluster of &quot;distance traveled&quot; text in tabular-nums counts up below the plane: 0 → 5,837 km.
+• 5.5–6.5s — destination city label fades in at the destination marker on landing, same pattern as origin.
+• 6.5–8.0s — final hold. The full route + both labels remain on screen. A small footer line &quot;flight time · 7h 42m&quot; fades in at 7.0s. No exit animations.
+
+Non-negotiables: tabular-nums on the distance readout; min 16px on coordinate labels; deterministic only (no Math.random for plane jitter — use a seeded mulberry32 if you need any noise); entrance-only; all timelines paused:true; root data-duration=8.
+
+Quality: run `npx hyperframes inspect --at 1.5,3,5.5,7.5` to confirm both labels fit inside the canvas, then dispatch render. Output: `flight-route-{origin}-{destination}.mp4`.</pre></section>
+</main>
+</body>
+</html>
