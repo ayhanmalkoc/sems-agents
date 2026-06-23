@@ -10,4 +10,12 @@ describe('Claude backend session tool parity', () => {
 
     expect(missing).toEqual([]);
   });
+
+  it('does not expose backend tools outside the core registry', () => {
+    const extra = [...CLAUDE_BACKEND_SESSION_TOOL_NAMES].filter(
+      (toolName) => !SESSION_BACKEND_TOOL_NAMES.has(toolName),
+    );
+
+    expect(extra).toEqual([]);
+  });
 });

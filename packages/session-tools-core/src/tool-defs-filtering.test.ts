@@ -4,6 +4,7 @@ import {
   getSessionToolDefs,
   getSessionToolNames,
   getSessionToolRegistry,
+  getSessionBackendToolNames,
   getSessionSafeAllowedToolNames,
   getSessionSafeBlockedToolNames,
   getToolDefsAsJsonSchema,
@@ -61,6 +62,7 @@ describe('session tool filtering helpers', () => {
     expect(blocked.has('source_oauth_trigger')).toBe(true);
     expect(blocked.has('source_credential_prompt')).toBe(true);
     expect(blocked.has('sessions')).toBe(true);
+    expect(blocked.has('studio')).toBe(true);
     expect(blocked.has('spawn_session')).toBe(true);
     expect(blocked.has('set_session_agent')).toBe(true);
     expect(blocked.has('rename_session')).toBe(true);
@@ -78,11 +80,22 @@ describe('session tool filtering helpers', () => {
     expect(allowedPrefixed.has('mcp__session__script_sandbox')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__source_oauth_trigger')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__sessions')).toBe(true);
+    expect(blockedPrefixed.has('mcp__session__studio')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__spawn_session')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__set_session_agent')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__rename_session')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__archive_session')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__pin_session')).toBe(true);
     expect(blockedPrefixed.has('mcp__session__delete_session')).toBe(true);
+  });
+
+  it('exposes Studio as backend MCP proxy tool', () => {
+    const backend = getSessionBackendToolNames();
+    const defs = getToolDefsAsJsonSchema({ prefix: 'mcp__session__' });
+    const studio = defs.find(def => def.name === 'mcp__session__studio');
+
+    expect(backend.has('studio')).toBe(true);
+    expect(studio).toBeTruthy();
+    expect(JSON.stringify(studio?.inputSchema)).toContain('command');
   });
 });

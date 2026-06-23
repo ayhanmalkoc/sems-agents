@@ -34,6 +34,7 @@ describe('session tool safe-mode classification', () => {
       'mcp__session__archive_session',
       'mcp__session__pin_session',
       'mcp__session__delete_session',
+      'mcp__session__studio',
     ] as const;
 
     for (const toolName of blockedTools) {

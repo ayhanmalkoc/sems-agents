@@ -126,6 +126,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'resources',
   'memory',
   'hooks',
+  'studio',
 ]);
 
 /**
