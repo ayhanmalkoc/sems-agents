@@ -2658,6 +2658,7 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
     baseUrl: updates.baseUrl !== undefined ? updates.baseUrl : existing.baseUrl,
     models: updates.models !== undefined ? updates.models : existing.models,
     defaultModel: updates.defaultModel !== undefined ? updates.defaultModel : existing.defaultModel,
+    defaultModels: updates.defaultModels !== undefined ? updates.defaultModels : existing.defaultModels,
     modelSelectionMode: updates.modelSelectionMode !== undefined ? updates.modelSelectionMode : existing.modelSelectionMode,
     // Pi auth provider
     piAuthProvider: updates.piAuthProvider !== undefined ? updates.piAuthProvider : existing.piAuthProvider,
@@ -2675,6 +2676,7 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
     const afterModelIds = toModelIds(updated.models);
     const changed =
       existing.defaultModel !== updated.defaultModel ||
+      JSON.stringify(existing.defaultModels ?? {}) !== JSON.stringify(updated.defaultModels ?? {}) ||
       existing.modelSelectionMode !== updated.modelSelectionMode ||
       !modelSetEquals(beforeModelIds, afterModelIds);
 
@@ -2685,18 +2687,21 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
         before: {
           mode: existing.modelSelectionMode,
           defaultModel: existing.defaultModel,
+          defaultModels: existing.defaultModels,
           modelCount: beforeModelIds.length,
           modelsFirst5: beforeModelIds.slice(0, 5),
         },
         after: {
           mode: updated.modelSelectionMode,
           defaultModel: updated.defaultModel,
+          defaultModels: updated.defaultModels,
           modelCount: afterModelIds.length,
           modelsFirst5: afterModelIds.slice(0, 5),
         },
         updates: {
           keys: Object.keys(updates),
           defaultModel: updates.defaultModel,
+          defaultModels: updates.defaultModels,
           modelSelectionMode: updates.modelSelectionMode,
           modelsCount: Array.isArray(updates.models) ? updates.models.length : undefined,
         },
