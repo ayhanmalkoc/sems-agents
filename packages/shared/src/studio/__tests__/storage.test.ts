@@ -157,6 +157,35 @@ describe('studio storage', () => {
     expect(() => createStudioOutput(sessionPath, { title: 'Missing', type: 'landing-page', template: 'missing-template' }, 'session-1')).toThrow('Studio template not found')
   })
 
+  it('keeps every Studio template out of the generic normalized shell', () => {
+    for (const template of listStudioTemplates()) {
+      const html = readFileSync(template.templatePath, 'utf-8')
+      expect(html).not.toContain('Production-ready prompt board for Studio')
+      expect(html).not.toContain('Open Design library')
+      expect(html).not.toContain('Use this template to shape')
+      expect(html).toContain('Curated Studio library')
+      expect(html).toContain('name="viewport"')
+      expect(html).toContain('<main>')
+      expect(html).toContain('<h1>')
+      expect(html).toContain('<h2>')
+      expect(html).toContain('data-studio-design-system=')
+    }
+  })
+
+  it('keeps top Studio design systems rich enough for product use', () => {
+    const topSystemIds = ['apple', 'linear', 'figma', 'github', 'glassmorphism', 'gradient', 'minimal', 'editorial', 'brutalism', 'dashboard', 'hud', 'enterprise', 'material', 'friendly', 'luxury', 'creative', 'saas-modern', 'consumer-mobile', 'pitch-dark', 'dense-ops']
+    for (const id of topSystemIds) {
+      const system = getStudioDesignSystem(id) as any
+      expect(system).toBeTruthy()
+      expect(system.tokens.colors.elevated).toBeTruthy()
+      expect(system.tokens.typography.scale).toBeTruthy()
+      expect(system.tokens.motion.hover).toBeTruthy()
+      expect(system.layout.principles.length).toBeGreaterThanOrEqual(3)
+      expect(system.layout.componentGuidance.length).toBeGreaterThanOrEqual(3)
+      expect(system.usage.join(' ')).toContain('rich Studio design system')
+    }
+  })
+
   it('keeps curated high-impact templates domain-specific', () => {
     const curatedIds = ['web-prototype', 'saas-landing', 'dashboard', 'github-dashboard', 'html-ppt-pitch-deck', 'pm-spec', 'eng-runbook', 'critique', 'image-prompt-e-commerce-live-stream-ui-mockup', 'video-prompt-hyperframes-saas-product-promo-30s']
     for (const id of curatedIds) {
@@ -166,7 +195,7 @@ describe('studio storage', () => {
       expect(html).not.toContain('Production-ready prompt board for Studio')
       expect(html).not.toContain('Open Design library')
       expect(html).not.toContain('Use this template to shape')
-      expect(html).toContain('Curated Studio template')
+      expect(html).toContain('Curated Studio library')
     }
   })
 

@@ -1,28 +1,34 @@
 <!doctype html>
-<html lang="en" data-studio-design-system="minimal">
+<html lang="en" data-studio-design-system="linear">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Meeting notes</title>
+<title>Meeting Notes</title>
 <style>
-:root{color-scheme:dark;--accent:#10b981}*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui;background:#080b16;color:#f8fafc}main{min-height:100vh;padding:clamp(28px,6vw,80px);display:grid;gap:24px;background:radial-gradient(circle at top left,color-mix(in srgb,var(--accent) 32%,transparent),transparent 34%),linear-gradient(135deg,#080b16,#111827)}.hero,.card{border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.045));border-radius:30px;padding:clamp(24px,4vw,46px);box-shadow:0 28px 90px rgba(0,0,0,.34);backdrop-filter:blur(18px)}.eyebrow{color:var(--accent);font-weight:900;letter-spacing:.14em;text-transform:uppercase;font-size:12px}.hero-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:28px;align-items:center}h1{font-size:clamp(42px,7vw,86px);line-height:.94;margin:12px 0 18px}h2{font-size:clamp(22px,3vw,34px);margin:0 0 12px}p{font-size:clamp(16px,2vw,20px);line-height:1.65;color:#cbd5e1}.visual{min-height:300px;border-radius:28px;background:radial-gradient(circle at 30% 20%,var(--accent),transparent 30%),linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04));position:relative;overflow:hidden}.orb{position:absolute;width:120px;height:120px;border-radius:50%;background:var(--accent);filter:blur(12px);opacity:.5;animation:float 7s ease-in-out infinite}.orb.two{right:18%;bottom:14%;animation-delay:-3s}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--accent);color:#08111f;font-weight:900;margin-bottom:14px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}a,button{border:0;border-radius:999px;padding:13px 18px;background:var(--accent);color:#07101f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.12);color:#fff}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(28px,-24px) scale(1.12)}}@media(max-width:820px){.hero-grid{grid-template-columns:1fr}.visual{min-height:220px}}
+:root{color-scheme:dark;--accent:#10b981;--bg:#080b16;--surface:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--text:#f8fafc;--muted:#cbd5e1}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;display:grid;gap:24px;padding:clamp(28px,6vw,78px);background:radial-gradient(circle at 18% 0,color-mix(in srgb,var(--accent) 34%,transparent),transparent 34%),linear-gradient(135deg,#080b16,#121827 58%,#09090f)}.hero,.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.045));border-radius:30px;padding:clamp(24px,4vw,46px);box-shadow:0 26px 90px rgba(0,0,0,.34);backdrop-filter:blur(18px)}.hero{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr);gap:28px;align-items:center}.eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.chip{display:inline-flex;margin:6px 8px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.visual{position:relative;min-height:300px;border-radius:28px;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04))}.visual:before,.visual:after{content:"";position:absolute;border-radius:999px;background:var(--accent);filter:blur(14px);opacity:.48;animation:float 8s ease-in-out infinite}.visual:before{width:150px;height:150px;left:14%;top:20%}.visual:after{width:110px;height:110px;right:18%;bottom:16%;animation-delay:-3s}.rail{position:absolute;inset:auto 24px 24px 24px;display:grid;gap:10px}.rail span{height:12px;border-radius:999px;background:rgba(255,255,255,.14)}h1{font-size:clamp(42px,7vw,84px);line-height:.94;margin:12px 0 18px}h2{font-size:clamp(22px,3vw,34px);margin:0 0 12px}p{font-size:clamp(16px,2vw,20px);line-height:1.65;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--accent);color:#07101f;font-weight:900;margin-bottom:14px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}a,button{border:0;border-radius:999px;padding:13px 18px;background:var(--accent);color:#07101f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.12);color:#fff}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-22px) scale(1.12)}}@media(max-width:820px){main{padding:22px}.hero{grid-template-columns:1fr}.visual{min-height:220px}}
 </style>
 </head>
 <body>
 <main>
-<section class="hero hero-grid">
-<div><div class="eyebrow">Curated Studio template · document</div><h1>Meeting notes</h1><h2>Domain-specific structure with production-ready hierarchy.</h2><p>This curated template gives the agent stronger sections, clearer product language, and a better visual starting point for real Studio outputs.</p><div class="actions"><a href="#sections">Start from structure</a><a class="secondary" href="#quality">Review quality bar</a></div></div>
-<div class="visual" aria-label="Animated preview"><span class="orb"></span><span class="orb two"></span></div>
+<section class="hero">
+<div>
+<div class="eyebrow">Curated Studio library · document</div>
+<h1>Meeting Notes</h1>
+<h2>Open Design Meeting Notes template normalized for Craft Studio document workflows.</h2>
+<p>A specialized document starting point with concrete structure, visual direction, and output-ready sections.</p>
+<div><span class="chip">document</span><span class="chip">document</span><span class="chip">studio-report</span><span class="chip">linear</span></div>
+<div class="actions"><a href="#structure">Start with structure</a><a class="secondary" href="#quality">Review quality bar</a></div>
+</div>
+<div class="visual" aria-label="Meeting Notes preview motif"><div class="rail"><span></span><span></span><span></span></div></div>
 </section>
-<section class="grid" id="sections">
-<article class="card"><span class="num">1</span><h2>Agenda</h2><p>Provide concrete document content for agenda, including user value, structure, and next action.</p></article>
-<article class="card"><span class="num">2</span><h2>Decisions</h2><p>Provide concrete document content for decisions, including user value, structure, and next action.</p></article>
-<article class="card"><span class="num">3</span><h2>Open questions</h2><p>Provide concrete document content for open questions, including user value, structure, and next action.</p></article>
-<article class="card"><span class="num">4</span><h2>Action owners</h2><p>Provide concrete document content for action owners, including user value, structure, and next action.</p></article>
-<article class="card"><span class="num">5</span><h2>Risks</h2><p>Provide concrete document content for risks, including user value, structure, and next action.</p></article>
-<article class="card"><span class="num">6</span><h2>Follow-up</h2><p>Provide concrete document content for follow-up, including user value, structure, and next action.</p></article>
+<section class="grid" id="structure">
+<article class="card"><span class="num">1</span><h2>Context</h2><p>Context should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">2</span><h2>Requirements</h2><p>Requirements should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">3</span><h2>Decision log</h2><p>Decision log should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">4</span><h2>Risks</h2><p>Risks should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">5</span><h2>Next steps</h2><p>Next steps should contain concrete product details, decision context, and a visible next action.</p></article>
 </section>
-<section class="card" id="quality"><h2>Quality bar</h2><p>Responsive viewport, semantic regions, visible actions, concrete copy, local assets, and design-system metadata are built into this template.</p></section>
+<section class="card" id="quality"><h2>Quality bar</h2><p>Responsive viewport, semantic regions, clear headings, visible actions, concrete copy, local assets, and design-system metadata are included.</p></section>
 </main>
 </body>
 </html>

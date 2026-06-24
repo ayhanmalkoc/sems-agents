@@ -1,17 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-studio-design-system="product-mockup">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Product Mockup Prompt Board</title>
 <style>
-:root{--accent:#38bdf8;--bg:#0b1020;--panel:#111833;--text:#f8fafc;--muted:#a7b0c5;--line:rgba(255,255,255,.12)}
-*{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at top left,color-mix(in srgb,var(--accent) 28%,transparent),transparent 34rem),var(--bg);color:var(--text)}
-main{min-height:100vh;padding:56px clamp(20px,5vw,72px)} .shell{max-width:1180px;margin:auto} .eyebrow{color:var(--accent);font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:12px} h1{font-size:clamp(42px,7vw,88px);line-height:.92;margin:16px 0;letter-spacing:-.07em;max-width:980px} .lead{max-width:720px;color:var(--muted);font-size:20px;line-height:1.6} .actions{display:flex;gap:12px;flex-wrap:wrap;margin:32px 0 48px} a,button{border:1px solid var(--line);background:var(--text);color:#08111f;border-radius:999px;padding:12px 18px;font-weight:800;text-decoration:none} button.secondary{background:transparent;color:var(--text)} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px} article{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));border-radius:28px;padding:22px;min-height:190px;box-shadow:0 20px 60px rgba(0,0,0,.22)} article span{color:var(--accent);font-weight:900} h2{font-size:22px;margin:18px 0 10px} article p{color:var(--muted);line-height:1.55;margin:0} .footer{margin-top:48px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+:root{color-scheme:dark;--accent:#f97316;--bg:#080b16;--surface:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--text:#f8fafc;--muted:#cbd5e1}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;display:grid;gap:24px;padding:clamp(28px,6vw,78px);background:radial-gradient(circle at 18% 0,color-mix(in srgb,var(--accent) 34%,transparent),transparent 34%),linear-gradient(135deg,#080b16,#121827 58%,#09090f)}.hero,.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.045));border-radius:30px;padding:clamp(24px,4vw,46px);box-shadow:0 26px 90px rgba(0,0,0,.34);backdrop-filter:blur(18px)}.hero{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr);gap:28px;align-items:center}.eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.chip{display:inline-flex;margin:6px 8px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.visual{position:relative;min-height:300px;border-radius:28px;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04))}.visual:before,.visual:after{content:"";position:absolute;border-radius:999px;background:var(--accent);filter:blur(14px);opacity:.48;animation:float 8s ease-in-out infinite}.visual:before{width:150px;height:150px;left:14%;top:20%}.visual:after{width:110px;height:110px;right:18%;bottom:16%;animation-delay:-3s}.rail{position:absolute;inset:auto 24px 24px 24px;display:grid;gap:10px}.rail span{height:12px;border-radius:999px;background:rgba(255,255,255,.14)}h1{font-size:clamp(42px,7vw,84px);line-height:.94;margin:12px 0 18px}h2{font-size:clamp(22px,3vw,34px);margin:0 0 12px}p{font-size:clamp(16px,2vw,20px);line-height:1.65;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--accent);color:#07101f;font-weight:900;margin-bottom:14px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}a,button{border:0;border-radius:999px;padding:13px 18px;background:var(--accent);color:#07101f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.12);color:#fff}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-22px) scale(1.12)}}@media(max-width:820px){main{padding:22px}.hero{grid-template-columns:1fr}.visual{min-height:220px}}
 </style>
 </head>
-<body><main><div class="shell"><div class="eyebrow">Image prompt</div><h1>Product Mockup Prompt Board</h1><p class="lead">A polished Studio starter with responsive hierarchy, reusable sections, and production-ready spacing.</p><div class="actions"><a href="#">Primary action</a><button class="secondary">Explore flow</button></div><section class="grid"><article><span>01</span><h2>Scene</h2><p>Device, lighting, environment.</p></article>
-<article><span>02</span><h2>UI focus</h2><p>What screen/state to emphasize.</p></article>
-<article><span>03</span><h2>Variants</h2><p>Dark, light, editorial, ad.</p></article>
-<article><span>04</span><h2>Delivery</h2><p>Prompt-ready cards.</p></article></section><div class="footer"><span>Built for Craft Studio</span><span>Responsive / accessible / local-first</span></div></div></main></body>
+<body>
+<main>
+<section class="hero">
+<div>
+<div class="eyebrow">Curated Studio library · image</div>
+<h1>Product Mockup Prompt Board</h1>
+<h2>Image prompt board for product mockups, UI states, scenes, and variants.</h2>
+<p>A curated image Studio starting point with strong hierarchy, specific copy guidance, and export-safe structure.</p>
+<div><span class="chip">image-prompt</span><span class="chip">image</span><span class="chip">studio-image</span><span class="chip">product-mockup</span></div>
+<div class="actions"><a href="#structure">Start with structure</a><a class="secondary" href="#quality">Review quality bar</a></div>
+</div>
+<div class="visual" aria-label="Product Mockup Prompt Board preview motif"><div class="rail"><span></span><span></span><span></span></div></div>
+</section>
+<section class="grid" id="structure">
+<article class="card"><span class="num">1</span><h2>Subject</h2><p>Subject should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">2</span><h2>Art direction</h2><p>Art direction should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">3</span><h2>Composition</h2><p>Composition should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">4</span><h2>Variants</h2><p>Variants should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">5</span><h2>Constraints</h2><p>Constraints should contain concrete product details, decision context, and a visible next action.</p></article>
+</section>
+<section class="card" id="quality"><h2>Quality bar</h2><p>Responsive viewport, semantic regions, clear headings, visible actions, concrete copy, local assets, and design-system metadata are included.</p></section>
+</main>
+</body>
 </html>

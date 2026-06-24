@@ -4,28 +4,61 @@
   "skill": "studio-prototype",
   "tokens": {
     "colors": {
-      "background": "#ffffff",
-      "accent": "#a259ff",
+      "background": "#0b1020",
+      "surface": "rgba(255,255,255,.07)",
+      "elevated": "rgba(255,255,255,.12)",
       "text": "#f8fafc",
-      "muted": "#94a3b8"
+      "muted": "#94a3b8",
+      "accent": "#a259ff",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "danger": "#ef4444"
     },
     "typography": {
       "heading": "Inter",
-      "body": "Inter"
+      "body": "Inter",
+      "scale": "fluid clamp scale, 12/14/16/20/28/44/72",
+      "weight": "600-900 for hierarchy"
     },
     "spacing": {
-      "page": "clamp(28px,6vw,76px)",
-      "card": "clamp(20px,4vw,40px)"
+      "page": "clamp(28px,6vw,78px)",
+      "section": "clamp(24px,4vw,46px)",
+      "card": "18px",
+      "stack": "12px"
     },
     "radius": {
       "card": "28px",
+      "panel": "22px",
       "control": "999px"
     },
     "shadow": {
-      "card": "0 24px 80px rgba(0,0,0,.28)"
+      "card": "0 26px 90px rgba(0,0,0,.34)",
+      "glow": "0 0 60px color-mix(in srgb, accent 28%, transparent)"
     },
     "density": "comfortable",
-    "motion": "subtle"
+    "motion": {
+      "entrance": "subtle fade and lift",
+      "hover": "soft scale and glow",
+      "background": "slow orbital gradient",
+      "duration": "180ms controls, 7000ms ambient"
+    }
   },
-  "usage": "Use for Open Design normalized Studio templates that need this visual language."
+  "usage": [
+    "Use for Open Design normalized Studio templates that need this visual language.",
+    "Use as a rich Studio design system with explicit color roles, typography scale, layout principles, component guidance, and motion guidance."
+  ],
+  "layout": {
+    "principles": [
+      "clear hero hierarchy",
+      "responsive grid",
+      "visible action area",
+      "preview-safe local assets"
+    ],
+    "componentGuidance": [
+      "cards use elevated surface plus border",
+      "actions use pill controls",
+      "data surfaces expose status and owner",
+      "sections end with next action"
+    ]
+  }
 }

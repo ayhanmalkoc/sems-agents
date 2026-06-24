@@ -5,40 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Zelda-Style Forbidden City Game Screenshot</title>
 <style>
-:root{color-scheme:dark;--accent:#f97316}*{box-sizing:border-box}body{margin:0;background:#09090f;color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;padding:clamp(28px,6vw,76px);display:grid;gap:24px;background:radial-gradient(circle at 20% 0,color-mix(in srgb,var(--accent) 26%,transparent),transparent 35%),#09090f}.panel{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:28px;padding:clamp(22px,4vw,42px);box-shadow:0 24px 80px rgba(0,0,0,.3)}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:900}h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:12px 0 16px}h2{font-size:clamp(22px,3vw,32px);margin:0 0 12px}p,pre{color:#cbd5e1;font-size:16px;line-height:1.65}pre{white-space:pre-wrap;overflow:auto;background:rgba(0,0,0,.28);border-radius:20px;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.chip{display:inline-flex;margin:6px 6px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}a,button{border:0;border-radius:999px;padding:12px 16px;background:var(--accent);color:#09090f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.1);color:#fff}@media(max-width:720px){main{padding:22px}.panel{border-radius:22px}}
+:root{color-scheme:dark;--accent:#f97316;--bg:#080b16;--surface:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--text:#f8fafc;--muted:#cbd5e1}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui}main{min-height:100vh;display:grid;gap:24px;padding:clamp(28px,6vw,78px);background:radial-gradient(circle at 18% 0,color-mix(in srgb,var(--accent) 34%,transparent),transparent 34%),linear-gradient(135deg,#080b16,#121827 58%,#09090f)}.hero,.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.045));border-radius:30px;padding:clamp(24px,4vw,46px);box-shadow:0 26px 90px rgba(0,0,0,.34);backdrop-filter:blur(18px)}.hero{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr);gap:28px;align-items:center}.eyebrow{color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}.chip{display:inline-flex;margin:6px 8px 0 0;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#e2e8f0;font-size:13px}.visual{position:relative;min-height:300px;border-radius:28px;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.04))}.visual:before,.visual:after{content:"";position:absolute;border-radius:999px;background:var(--accent);filter:blur(14px);opacity:.48;animation:float 8s ease-in-out infinite}.visual:before{width:150px;height:150px;left:14%;top:20%}.visual:after{width:110px;height:110px;right:18%;bottom:16%;animation-delay:-3s}.rail{position:absolute;inset:auto 24px 24px 24px;display:grid;gap:10px}.rail span{height:12px;border-radius:999px;background:rgba(255,255,255,.14)}h1{font-size:clamp(42px,7vw,84px);line-height:.94;margin:12px 0 18px}h2{font-size:clamp(22px,3vw,34px);margin:0 0 12px}p{font-size:clamp(16px,2vw,20px);line-height:1.65;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--accent);color:#07101f;font-weight:900;margin-bottom:14px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}a,button{border:0;border-radius:999px;padding:13px 18px;background:var(--accent);color:#07101f;font-weight:900;text-decoration:none}.secondary{background:rgba(255,255,255,.12);color:#fff}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(26px,-22px) scale(1.12)}}@media(max-width:820px){main{padding:22px}.hero{grid-template-columns:1fr}.visual{min-height:220px}}
 </style>
 </head>
 <body>
 <main>
-<section class="panel">
-<div class="eyebrow">Open Design image prompt · Game UI</div>
+<section class="hero">
+<div>
+<div class="eyebrow">Curated Studio library · image</div>
 <h1>Zelda-Style Forbidden City Game Screenshot</h1>
-<h2>Production-ready prompt board for Studio.</h2>
-<p>Generates a 16:9 original-gameplay-screenshot-style image prompt inspired by The Legend of Zelda: Breath of the Wild / Tears of the Kingdom, with Link and Zelda exploring a real-world landmark such as Beijing's Forbidden City. The template keeps the prompt concise, anchors the Nintendo Switch in-game look, adds natural BOTW/TOTK-style HUD hints, and localizes all readable UI text in Chinese.</p>
-<div><span class="chip">game-ui</span><span class="chip">zelda-style</span><span class="chip">open-world</span><span class="chip">hud</span><span class="chip">forbidden-city</span><span class="chip">botw</span><span class="chip">totk</span></div>
-<div class="actions"><a href="#prompt">Use prompt</a><a class="secondary" href="#spec">Review spec</a></div>
+<h2>Generates a 16:9 original-gameplay-screenshot-style image prompt inspired by The Legend of Zelda: Breath of the Wild / Tears of the Kingdom, with Link and Zelda exploring a real-world landmark such as Beijing's Forbidden City. The template keeps the prompt concise, anchors the Nintendo Switch in-game look, adds natural BOTW/TOTK-style HUD hints, and localizes all readable UI text in Chinese.</h2>
+<p>A specialized image starting point with concrete structure, visual direction, and output-ready sections.</p>
+<div><span class="chip">image-prompt</span><span class="chip">image</span><span class="chip">studio-image</span><span class="chip">creative</span></div>
+<div class="actions"><a href="#structure">Start with structure</a><a class="secondary" href="#quality">Review quality bar</a></div>
+</div>
+<div class="visual" aria-label="Zelda-Style Forbidden City Game Screenshot preview motif"><div class="rail"><span></span><span></span><span></span></div></div>
 </section>
-<section class="grid" id="spec">
-<div class="panel"><h2>Model</h2><p>gpt-image-2</p></div>
-<div class="panel"><h2>Aspect</h2><p>16:9</p></div>
-<div class="panel"><h2>Output</h2><p>Image direction, composition, constraints, and variants.</p></div>
+<section class="grid" id="structure">
+<article class="card"><span class="num">1</span><h2>Subject</h2><p>Subject should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">2</span><h2>Art direction</h2><p>Art direction should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">3</span><h2>Composition</h2><p>Composition should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">4</span><h2>Variants</h2><p>Variants should contain concrete product details, decision context, and a visible next action.</p></article>
+<article class="card"><span class="num">5</span><h2>Constraints</h2><p>Constraints should contain concrete product details, decision context, and a visible next action.</p></article>
 </section>
-<section class="panel" id="prompt"><h2>Prompt</h2><pre>塞尔达原版游戏实况截图复刻
-画风：任天堂 Switch 旷野之息/王国之泪实机游戏截图风格；不要电影 CG、不要写实摄影、不要 HDR 真实光影、不要湿润真实材质；不要标题页、不要 Nintendo 或 Zelda logo、不要商标页、不要水印
-{argument name=&quot;game_version&quot; default=&quot;TOTK 王国之泪默认造型&quot;}，{argument name=&quot;party&quot; default=&quot;林克 + 塞尔达同行&quot;}
-
-海拉鲁地图区块：{argument name=&quot;location&quot; default=&quot;北京·故宫&quot;}
-画面要素：{argument name=&quot;scene_elements&quot; default=&quot;太和殿屋脊、红墙金瓦、汉白玉台阶、宫门轴线、远处角楼&quot;}
-玩法时刻：{argument name=&quot;gameplay_moment&quot; default=&quot;林克和塞尔达正在穿过太和殿前广场调查一座嵌入宫墙阴影里的古代神庙入口，不消耗体力，不显示耐力轮&quot;}
-
-塞尔达元素：{argument name=&quot;zelda_elements&quot; default=&quot;TOTK 左纳乌神庙、原版宝箱、希卡族研究员、波克布林巡逻营地、料理锅、远空飞行魔物&quot;}
-地名 UI 文字（区域发现）：顶部「发现！」 / 中间「{argument name=&quot;main_place_name&quot; default=&quot;北京·故宫&quot;}」 / 底部「{argument name=&quot;parent_place_name&quot; default=&quot;北京·东城区&quot;}」；按原版区域发现三段式呈现，底部上级区域右对齐、只在文字左侧带短横线、淡色发光、无矩形边框、无深色底纹
-HUD：按 BOTW/TOTK 原版游戏实况自然出现，不堆满；保留小地图、心心血量、互动提示或任务标记中的 1-3 种即可
-文字：所有可读 UI 使用中文，按键动词只用中文，如「调查」「打开」「拾取」「烹饪」
-
-场景要求：真实地点的建筑轮廓和地标特征必须清晰可辨；现代游客、工作人员、闸机、售票牌、塑料护栏、二维码和旅游标识全部转译为海拉鲁村民、驿站老板、旅行商人、希卡族研究员、木牌、机关或马车道具；画面像玩家正在操作角色探索，而不是旅游海报、电影剧照、封面 key visual 或现代 App 截图。
-
-Negative prompt: no photorealistic travel photo, no cinematic CG, no official logo, no watermark, no modern tourists, no modern uniforms, no QR code, no English UI words, no garbled glyphs, no fake app interface, no overcrowded HUD, no title screen, no poster typography, no signature.</pre></section>
+<section class="card" id="quality"><h2>Quality bar</h2><p>Responsive viewport, semantic regions, clear headings, visible actions, concrete copy, local assets, and design-system metadata are included.</p></section>
 </main>
 </body>
 </html>

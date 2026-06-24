@@ -5,41 +5,60 @@
   "tokens": {
     "colors": {
       "background": "#0b1020",
-      "surface": "#111833",
+      "surface": "rgba(255,255,255,.07)",
+      "elevated": "rgba(255,255,255,.12)",
       "text": "#f8fafc",
-      "muted": "#a7b0c5",
-      "accent": "#8b5cf6"
+      "muted": "#94a3b8",
+      "accent": "#8b5cf6",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "danger": "#ef4444"
     },
     "typography": {
-      "display": "Inter Tight, Inter, ui-sans-serif",
+      "heading": "Inter",
       "body": "Inter, ui-sans-serif",
-      "mono": "JetBrains Mono, ui-monospace"
+      "scale": "fluid clamp scale, 12/14/16/20/28/44/72",
+      "weight": "600-900 for hierarchy"
     },
     "spacing": {
-      "xs": "4px",
-      "sm": "8px",
-      "md": "16px",
-      "lg": "24px",
-      "xl": "40px",
-      "section": "72px"
+      "page": "clamp(28px,6vw,78px)",
+      "section": "clamp(24px,4vw,46px)",
+      "card": "18px",
+      "stack": "12px"
     },
     "radius": {
-      "sm": "10px",
-      "md": "18px",
-      "lg": "28px",
-      "full": "999px"
+      "card": "28px",
+      "panel": "22px",
+      "control": "999px"
     },
     "shadow": {
-      "soft": "0 20px 60px rgba(0,0,0,.18)",
-      "panel": "0 12px 30px rgba(0,0,0,.14)"
+      "card": "0 26px 90px rgba(0,0,0,.34)",
+      "glow": "0 0 60px color-mix(in srgb, accent 28%, transparent)"
     },
     "density": "balanced",
     "motion": {
-      "duration": "180ms",
-      "easing": "cubic-bezier(.2,.8,.2,1)"
+      "entrance": "subtle fade and lift",
+      "hover": "soft scale and glow",
+      "background": "slow orbital gradient",
+      "duration": "180ms controls, 7000ms ambient"
     }
   },
   "usage": [
-    "Pick this system before writing HTML. Apply tokens consistently in CSS variables. Keep copy concrete and product-specific."
-  ]
+    "Pick this system before writing HTML. Apply tokens consistently in CSS variables. Keep copy concrete and product-specific.",
+    "Use as a rich Studio design system with explicit color roles, typography scale, layout principles, component guidance, and motion guidance."
+  ],
+  "layout": {
+    "principles": [
+      "clear hero hierarchy",
+      "responsive grid",
+      "visible action area",
+      "preview-safe local assets"
+    ],
+    "componentGuidance": [
+      "cards use elevated surface plus border",
+      "actions use pill controls",
+      "data surfaces expose status and owner",
+      "sections end with next action"
+    ]
+  }
 }
