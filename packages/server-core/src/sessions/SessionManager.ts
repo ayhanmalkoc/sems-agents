@@ -22,6 +22,7 @@ import {
 } from '@craft-agent/shared/agent/backend'
 import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior } from '@craft-agent/shared/config'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
+import { generateImage } from '../services/image-generation'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
 import { i18n, LOCALE_REGISTRY, type LanguageCode } from '@craft-agent/shared/i18n'
@@ -4385,12 +4386,24 @@ export class SessionManager implements ISessionManager {
               const sessions = listStoredSessions(managed.workspace.rootPath)
               const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
               const sessionId = existing?.metadata.sessionId ?? managed.id
-              if (!input.bytesBase64) throw new Error('Image generation provider is not configured yet for this backend')
+              const generated = input.bytesBase64
+                ? { bytesBase64: input.bytesBase64, mimeType: input.mimeType ?? 'image/png', provider: input.provider ?? 'manual', model: input.model ?? 'manual-image', size: input.size, format: input.format ?? 'png' as const }
+                : await generateImage({
+                    connectionSlug: input.provider,
+                    defaultConnectionSlug: managed.llmConnection ?? getDefaultLlmConnection() ?? undefined,
+                    model: input.model,
+                    prompt: input.prompt,
+                    size: input.size,
+                    format: input.format,
+                  })
               const output = addStudioImageAsset(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, {
                 ...input,
-                bytesBase64: input.bytesBase64,
-                provider: input.provider ?? 'mock',
-                model: input.model ?? 'mock-image',
+                bytesBase64: generated.bytesBase64,
+                mimeType: generated.mimeType,
+                provider: generated.provider,
+                model: generated.model,
+                size: generated.size ?? input.size,
+                format: generated.format,
               })
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
               return output

@@ -70,6 +70,7 @@ Use `studio generate-image` for product visuals, hero images, campaign assets, m
 
 - The chat model writes the art direction and final prompt.
 - The Studio tool resolves the configured `imageGeneration` model through Craft model capabilities.
+- V1 real generation uses the configured OpenAI image-capable connection/model. Set `imageGeneration` in Settings → AI → Task defaults.
 - `Image input` means a model can read images; `Image output` means a model can generate images.
 - Generated images are Studio assets under `data/studio/{outputId}/assets/` and are recorded in `metadata.json`.
 - Return an `image-preview` block when an image asset is generated.
