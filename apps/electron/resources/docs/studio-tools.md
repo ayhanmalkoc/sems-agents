@@ -12,7 +12,9 @@ For normal chat requests like landing pages, product prototypes, dashboards, dec
 
 ```ts
 studio({ command: "status" })
-studio({ command: "scenarios" })`nstudio({ command: "recommend {\"prompt\":\"animated agent AI platform\"}" })`nstudio({ command: "templates" })
+studio({ command: "scenarios" })
+studio({ command: "recommend {\"prompt\":\"animated agent AI platform\"}" })
+studio({ command: "templates" })
 studio({ command: "template landing-saas" })
 studio({ command: "design-systems" })
 studio({ command: "design-system saas-modern" })
@@ -71,7 +73,9 @@ Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `repor
 ## Rules
 
 - Use Studio skills for product/design judgment.
-- Use `studio recommend {"prompt":"..."}` before choosing a template when the user asks for Studio creation.`n- Use `studio scenarios` / `studio scenario <id>` when the request maps to a common product scenario.`n- Use `studio templates` after recommendation to inspect the selected template.
+- Use `studio recommend {"prompt":"..."}` before choosing a template when the user asks for Studio creation.
+- Use `studio scenarios` / `studio scenario <id>` when the request maps to a common product scenario.
+- Use `studio templates` after recommendation to inspect the selected template.
 - Use `studio design-systems` before writing/refining visual output. Pick the recommended design system unless the user asks for a different style.
 - After create/refine, run `studio quality <outputId>` and fix important warnings.
 - For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.
@@ -80,4 +84,4 @@ Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `repor
 - Never write outside session data.
 - Do not store secrets in metadata, README, HTML, or assets.
 - Keep exports relative and local-first.
-- After create/update/export, report the output id, selected template/design system, quality result, and next preview/export step.
+- After create/update/refine, include the matching preview block when the Studio output has a previewable file. For canonical `index.html`, use `html-preview`. Then report the output id, selected template/design system, quality result, and export next step.

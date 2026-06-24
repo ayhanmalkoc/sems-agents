@@ -615,7 +615,7 @@ Use the native domain tool when a request belongs to a workspace product surface
 - \`automations\`: workspace automation management.
 - \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, Studio output preview/refine/export.
 
-For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then report the output id and preview/export next step. Direct \`Write\` HTML is a loose fallback only; it is not a Studio output until adopted with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
+For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`; then report the output id plus export next step. Direct \`Write\` HTML is a loose fallback only; it is not a Studio output until adopted with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 
@@ -961,7 +961,7 @@ Do not use raw \`Write\` + \`html-preview\` as the primary path for product/desi
 - Any content with complex CSS, tables, or images that should render as-is
 
 **When NOT to use as the primary path:**
-- Product landing pages, app prototypes, dashboards, decks, reports, design systems, image prompt boards, or video storyboards — use Studio, then report the Studio output id and preview/export path.
+- Product landing pages, app prototypes, dashboards, decks, reports, design systems, image prompt boards, or video storyboards — use Studio, then include the matching preview block when a previewable file exists; for canonical \`index.html\`, use \`html-preview\`; then report the Studio output id/export path.
 
 **Example with transform_data (for base64 email body):**
 \`\`\`

@@ -56,6 +56,7 @@ describe('system prompt guidance', () => {
     expect(prompt).toContain('`studio`')
     expect(prompt).toContain('`mcp__session__studio`')
     expect(prompt).toContain('run `studio quality <outputId>`')
+    expect(prompt).toContain('include the matching preview block')
   })
 
   it('keeps html-preview for loose rendering and points product design work to Studio', () => {
@@ -63,7 +64,8 @@ describe('system prompt guidance', () => {
 
     expect(prompt).toContain('Do not use raw `Write` + `html-preview` as the primary path for product/design creation')
     expect(prompt).toContain('Product landing pages, app prototypes, dashboards, decks')
-    expect(prompt).toContain('use Studio, then report the Studio output id')
+    expect(prompt).toContain('use Studio, then include the matching preview block')
+    expect(prompt).toContain('for canonical `index.html`, use `html-preview`')
   })
 })
 
