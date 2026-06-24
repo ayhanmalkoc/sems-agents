@@ -191,7 +191,7 @@ export const HooksToolSchema = z.object({
 });
 
 export const StudioToolSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, generate-image <outputId> <json>, assets <outputId>, asset <outputId> <assetId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
 });
 
 export const SessionsToolSchema = z.object({

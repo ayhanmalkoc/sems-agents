@@ -613,9 +613,9 @@ Use the native domain tool when a request belongs to a workspace product surface
 - \`resources\`: workspace sources, skills, resource import/export/testing.
 - \`agents\`: workspace agent profile management.
 - \`automations\`: workspace automation management.
-- \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, Studio output preview/refine/export.
+- \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, generated product visuals/images, Studio output preview/refine/export.
 
-For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`; then report the output id plus export next step. Direct \`Write\` HTML is a loose fallback only; it is not a Studio output until adopted with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
+For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`; for generated image assets, use \`image-preview\`. For product visuals or generated images, the chat model writes the art direction/prompt and the native Studio tool runs \`generate-image\` through Craft's capability-aware \`imageGeneration\` model. Direct \`Write\` HTML/image files are loose fallback only; they are not Studio outputs until adopted or recorded with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 

@@ -9,6 +9,20 @@ export interface StudioExportRecord {
   createdAt: string
 }
 
+export interface StudioAssetRecord {
+  id: string
+  type: 'image'
+  path: string
+  mimeType: string
+  prompt: string
+  provider: string
+  model: string
+  size?: string
+  aspectRatio?: string
+  createdAt: string
+  source: 'generated' | 'uploaded' | 'derived'
+}
+
 export interface StudioPageRecord {
   id: string
   title: string
@@ -57,6 +71,7 @@ export interface StudioOutputMetadata {
   updatedAt: string
   designSystem?: { source: string; name?: string }
   exports: StudioExportRecord[]
+  assets?: StudioAssetRecord[]
   sessionId: string
   project?: { kind: 'single-page' | 'multi-page'; title: string }
   templateId?: string
@@ -118,6 +133,19 @@ export interface AddStudioComponentInput {
   title: string
   preset?: string
   html?: string
+}
+
+export interface AddStudioImageAssetInput {
+  id?: string
+  bytesBase64: string
+  mimeType?: string
+  prompt: string
+  provider: string
+  model: string
+  size?: string
+  aspectRatio?: string
+  format?: 'png' | 'webp' | 'jpeg'
+  source?: 'generated' | 'uploaded' | 'derived'
 }
 
 export interface StudioDesignSystemDefinition {

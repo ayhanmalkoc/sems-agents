@@ -26,6 +26,9 @@ studio({ command: "update <outputId> {\"title\":\"Updated title\",\"html\":\"<!d
 studio({ command: "add-page <outputId> {\"title\":\"Pricing\"}" })
 studio({ command: "add-component <outputId> {\"title\":\"Pricing section\",\"preset\":\"pricing\"}" })
 studio({ command: "quality <outputId>" })
+studio({ command: "generate-image <outputId> {\"prompt\":\"Hero image for an AI platform\",\"size\":\"1024x1024\",\"format\":\"png\"}" })
+studio({ command: "assets <outputId>" })
+studio({ command: "asset <outputId> <assetId>" })
 studio({ command: "export <outputId> zip" })
 studio({ command: "export <outputId> pdf" })
 studio({ command: "adopt C:\\absolute\\session\\data\\preview.html {\"title\":\"Landing page\",\"type\":\"landing-page\",\"skill\":\"studio-prototype\"}" })
@@ -61,6 +64,17 @@ Current library scale: 270+ templates, 150+ design systems, 46 image prompt temp
 
 Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `report`, `document`, `image-prompt`, `video-prompt`, `motion`, `critique`.
 
+## Real image generation
+
+Use `studio generate-image` for product visuals, hero images, campaign assets, mockups, social visuals, generated illustrations, and generated Studio assets.
+
+- The chat model writes the art direction and final prompt.
+- The Studio tool resolves the configured `imageGeneration` model through Craft model capabilities.
+- `Image input` means a model can read images; `Image output` means a model can generate images.
+- Generated images are Studio assets under `data/studio/{outputId}/assets/` and are recorded in `metadata.json`.
+- Return an `image-preview` block when an image asset is generated.
+- If the configured provider/model does not support image output, report the exact capability error. Do not fake or placeholder the image.
+
 ## Component presets
 
 - Prototype: `hero`, `features`, `pricing`, `faq`, `testimonial`, `cta-band`, `app-shell`, `feature-grid`, `commerce-card`, `case-study-block`
@@ -79,6 +93,7 @@ Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `repor
 - Use `studio design-systems` before writing/refining visual output. Pick the recommended design system unless the user asks for a different style.
 - After create/refine, run `studio quality <outputId>` and fix important warnings.
 - For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.
+- For Studio image generation, use `studio generate-image`; do not write loose image files outside Studio assets.
 - If an HTML file already exists under session `data/`, adopt it with `studio adopt <absoluteHtmlPath> <json>` before treating it as a Studio output.
 - Use the Studio tool only for output lifecycle.
 - Never write outside session data.

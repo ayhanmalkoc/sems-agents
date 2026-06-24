@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, recommendStudioScenarios, runStudioQuality, updateStudioOutput, getStudioScenario, listStudioScenarios } from '../index.ts'
+import { addStudioComponent, addStudioImageAsset, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSession, listStudioTemplates, readStudioOutput, recordStudioPdfExport, recommendStudioScenarios, runStudioQuality, updateStudioOutput, getStudioScenario, listStudioScenarios } from '../index.ts'
 
 let dirs: string[] = []
 function tempSession(): string {
@@ -73,6 +73,18 @@ describe('studio storage', () => {
 
     const updated = updateStudioOutput(sessionPath, created.metadata.id, { title: 'Updated QA', html: '<!doctype html><html><body>Updated</body></html>' })
     expect(updated.metadata.title).toBe('Updated QA')
+
+    const withAsset = addStudioImageAsset(sessionPath, created.metadata.id, {
+      id: 'hero-image',
+      bytesBase64: Buffer.from('png-bytes').toString('base64'),
+      mimeType: 'image/png',
+      prompt: 'Hero image',
+      provider: 'mock',
+      model: 'mock-image',
+      size: '1024x1024',
+    })
+    expect(withAsset.metadata.assets?.at(-1)?.id).toBe('hero-image')
+    expect(existsSync(join(withAsset.outputDir, withAsset.metadata.assets!.at(-1)!.path))).toBe(true)
 
     const exported = exportStudioOutput(sessionPath, created.metadata.id, 'zip')
     expect(exported.metadata.status).toBe('exported')

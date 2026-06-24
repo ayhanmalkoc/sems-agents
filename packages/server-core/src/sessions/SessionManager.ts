@@ -41,7 +41,7 @@ import {
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { createMemory, updateMemory, deleteMemory, loadMemories, searchMemories, findMemoryHygieneItems, loadMemoryWorkspaceIndex, markMemoryStale, mergeMemories, refreshMemory, updateMemoryWorkspaceIndex, type MemoryRecord, type MemoryWorkspaceSessionIndexEntry } from '@craft-agent/shared/memory'
-import { addStudioComponent, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSessions, listStudioTemplates, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
+import { addStudioComponent, addStudioImageAsset, addStudioPage, adoptStudioOutput, createStudioOutput, createStudioProject, exportStudioOutput, getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioOutputsForSessions, listStudioTemplates, recordStudioPdfExport, runStudioQuality, updateStudioOutput } from '@craft-agent/shared/studio'
 import { HookEngine, loadHookRuns, setHookEnabled, getHookRun, loadHooksPolicy, saveHooksPolicy, loadCustomHooks, getCustomHook, saveCustomHook, deleteCustomHook, trustReviewCustomHook, trustApproveCustomHook, trustRevokeCustomHook, setCustomHookMatcher } from '@craft-agent/shared/hooks'
 import { DEFAULT_AGENT_PROFILE_ID, getAgentProfile, listAgentProfiles, saveAgentProfile, updateAgentProfile, deleteAgentProfile, cloneAgentProfileInput } from '@craft-agent/shared/agent-profiles'
 
@@ -4378,6 +4378,20 @@ export class SessionManager implements ISessionManager {
               const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
               const sessionId = existing?.metadata.sessionId ?? managed.id
               const output = addStudioComponent(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+              return output
+            },
+            generateImage: async (outputId, input) => {
+              const sessions = listStoredSessions(managed.workspace.rootPath)
+              const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === outputId)
+              const sessionId = existing?.metadata.sessionId ?? managed.id
+              if (!input.bytesBase64) throw new Error('Image generation provider is not configured yet for this backend')
+              const output = addStudioImageAsset(getSessionStoragePath(managed.workspace.rootPath, sessionId), outputId, {
+                ...input,
+                bytesBase64: input.bytesBase64,
+                provider: input.provider ?? 'mock',
+                model: input.model ?? 'mock-image',
+              })
               this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
               return output
             },

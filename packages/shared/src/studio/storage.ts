@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, copyFileSync } from 'node:fs'
 import { basename, isAbsolute, join, normalize, relative } from 'node:path'
 import { getStudioDesignSystem, getStudioTemplate, listStudioDesignSystems, listStudioTemplates, readStudioComponentHtml, readStudioTemplateHtml } from './templates.ts'
-import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioComponentRecord, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
+import type { AddStudioComponentInput, AddStudioImageAssetInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioAssetRecord, StudioComponentRecord, StudioExportFormat, StudioExportRecord, StudioOutputMetadata, StudioOutputRecord, StudioOutputType, UpdateStudioOutputInput } from './types.ts'
 
 const SCHEMA = 'craft-studio-output/v1' as const
 const ALLOWED_TYPES = new Set<StudioOutputType>(['prototype', 'landing-page', 'dashboard', 'deck', 'report', 'document', 'image-prompt', 'video-prompt', 'motion', 'critique'])
@@ -181,6 +181,46 @@ export function addStudioComponent(sessionPath: string, outputId: string, input:
   const components = [...(record.metadata.components ?? [])].filter(component => component.id !== id)
   components.push({ id, title: input.title, preset: input.preset, file, createdAt: now, updatedAt: now } satisfies StudioComponentRecord)
   const metadata: StudioOutputMetadata = { ...record.metadata, components, updatedAt: now }
+  writeMetadata(outputDir, metadata)
+  return { metadata, outputDir, entryPath: record.entryPath }
+}
+
+function extensionForMime(mimeType: string, format?: string): 'png' | 'webp' | 'jpg' {
+  if (format === 'webp' || mimeType === 'image/webp') return 'webp'
+  if (format === 'jpeg' || mimeType === 'image/jpeg') return 'jpg'
+  return 'png'
+}
+
+export function addStudioImageAsset(sessionPath: string, outputId: string, input: AddStudioImageAssetInput): StudioOutputRecord {
+  const outputDir = getStudioOutputDir(sessionPath, outputId)
+  const record = readStudioOutput(outputDir)
+  if (!record) throw new Error(`Studio output not found: ${outputId}`)
+  const mimeType = input.mimeType ?? 'image/png'
+  if (!['image/png', 'image/webp', 'image/jpeg'].includes(mimeType)) throw new Error(`Unsupported Studio image MIME type: ${mimeType}`)
+  const assetId = assertSafeSegment(input.id ? slugifyStudioOutputId(input.id) : `image-${Date.now()}`, 'asset id')
+  const ext = extensionForMime(mimeType, input.format)
+  const relPath = `assets/${assetId}.${ext}`
+  const assetPath = ensureInside(outputDir, join(outputDir, relPath))
+  const bytes = Buffer.from(input.bytesBase64, 'base64')
+  if (!bytes.length) throw new Error('Studio image asset is empty')
+  if (bytes.byteLength > 25_000_000) throw new Error('Studio image asset exceeds 25MB')
+  writeFileSync(assetPath, bytes)
+  const now = nowIso()
+  const asset: StudioAssetRecord = {
+    id: assetId,
+    type: 'image',
+    path: relPath,
+    mimeType,
+    prompt: input.prompt,
+    provider: input.provider,
+    model: input.model,
+    size: input.size,
+    aspectRatio: input.aspectRatio,
+    createdAt: now,
+    source: input.source ?? 'generated',
+  }
+  const assets = [...(record.metadata.assets ?? []).filter(item => item.id !== assetId), asset]
+  const metadata: StudioOutputMetadata = { ...record.metadata, assets, updatedAt: now }
   writeMetadata(outputDir, metadata)
   return { metadata, outputDir, entryPath: record.entryPath }
 }

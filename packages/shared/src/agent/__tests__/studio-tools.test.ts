@@ -98,6 +98,24 @@ function fns(): StudioFns & { outputs: Map<string, StudioOutputRecord> } {
       outputs.set(id, next)
       return next
     },
+    generateImage: async (id, input) => {
+      const next = outputs.get(id) ?? record(id)
+      next.metadata.assets = [...(next.metadata.assets ?? []), {
+        id: input.id ?? 'hero-image',
+        type: 'image',
+        path: `assets/${input.id ?? 'hero-image'}.png`,
+        mimeType: input.mimeType ?? 'image/png',
+        prompt: input.prompt,
+        provider: input.provider ?? 'mock',
+        model: input.model ?? 'mock-image',
+        size: input.size,
+        aspectRatio: input.aspectRatio,
+        createdAt: '2026-06-21T01:00:00.000Z',
+        source: input.source ?? 'generated',
+      }]
+      outputs.set(id, next)
+      return next
+    },
     adopt: async (htmlPath, input) => {
       const next = record(input.id ?? 'adopted')
       next.entryPath = htmlPath
@@ -144,6 +162,13 @@ describe('studio tool', () => {
 
     const exported = await executeStudioCommand('export created zip', mock)
     expect(exported.content[0].text).toContain('Exported Studio output created')
+
+    const generated = await executeStudioCommand('generate-image created {"id":"hero","prompt":"A clean hero visual","provider":"mock","model":"mock-image"}', mock)
+    expect(generated.content[0].text).toContain('Generated Studio image created')
+    expect(generated.content[0].text).toContain('asset=hero')
+
+    expect((await executeStudioCommand('assets created', mock)).content[0].text).toContain('hero')
+    expect((await executeStudioCommand('asset created hero', mock)).content[0].text).toContain('A clean hero visual')
 
     const pdf = await executeStudioCommand('export created pdf', mock)
     expect(pdf.content[0].text).toContain('Exported Studio output created')
