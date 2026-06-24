@@ -24,6 +24,10 @@ import {
   ANTHROPIC_MODELS,
   getModelDisplayName,
   getModelShortName,
+  MODEL_TASK_CAPABILITIES,
+  modelHasCapabilities,
+  normalizeModelCapabilities,
+  type ModelDefinition,
 } from '@config/models'
 import {
   isCompatProvider,
@@ -110,7 +114,13 @@ export function CompactModelSelector({
   const availableModels = React.useMemo(() => {
     if (connectionUnavailable) return []
     if (!effectiveConnectionDetails) return ANTHROPIC_MODELS
-    return effectiveConnectionDetails.models || ANTHROPIC_MODELS
+    const models = effectiveConnectionDetails.models || ANTHROPIC_MODELS
+    return models.filter((model) => {
+      const definition: ModelDefinition = typeof model === 'string'
+        ? { id: model, name: model, shortName: model, description: '', provider: 'pi', contextWindow: 0, capabilities: normalizeModelCapabilities({}) }
+        : { ...model, capabilities: normalizeModelCapabilities(model) }
+      return modelHasCapabilities(definition, MODEL_TASK_CAPABILITIES.chat)
+    })
   }, [effectiveConnectionDetails, connectionUnavailable])
 
   const currentModelDisplayName = React.useMemo(() => {
@@ -502,8 +512,8 @@ function VisionToggle({
       role="button"
       tabIndex={0}
       aria-label={visionOn
-        ? t('chat.modelPicker.supportsImagesOn')
-        : t('chat.modelPicker.supportsImagesOff')}
+        ? t('chat.modelPicker.imageInputOn')
+        : t('chat.modelPicker.imageInputOff')}
       className="inline-flex items-center justify-center p-2 rounded hover:bg-foreground/5 cursor-pointer"
       onClick={onToggle}
       onKeyDown={(e) => {

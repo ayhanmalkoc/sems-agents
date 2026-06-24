@@ -2256,8 +2256,8 @@ export function FreeFormInput({
                                 role="button"
                                 tabIndex={0}
                                 aria-label={visionOn
-                                  ? t('chat.modelPicker.supportsImagesOn')
-                                  : t('chat.modelPicker.supportsImagesOff')}
+                                  ? t('chat.modelPicker.imageInputOn')
+                                  : t('chat.modelPicker.imageInputOff')}
                                 className="inline-flex items-center justify-center p-1 rounded pointer-events-auto opacity-100 hover:bg-foreground/5 cursor-pointer"
                                 onClick={(e) => {
                                   e.preventDefault()
@@ -2280,8 +2280,8 @@ export function FreeFormInput({
                             </TooltipTrigger>
                             <TooltipContent>
                               {visionOn
-                                ? t('chat.modelPicker.supportsImagesOn')
-                                : t('chat.modelPicker.supportsImagesOff')}
+                                ? t('chat.modelPicker.imageInputOn')
+                                : t('chat.modelPicker.imageInputOff')}
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -2354,8 +2354,8 @@ export function FreeFormInput({
                                               role="button"
                                               tabIndex={0}
                                               aria-label={visionOn
-                                                ? t('chat.modelPicker.supportsImagesOn')
-                                                : t('chat.modelPicker.supportsImagesOff')}
+                                                ? t('chat.modelPicker.imageInputOn')
+                                                : t('chat.modelPicker.imageInputOff')}
                                               className="inline-flex items-center justify-center p-1 rounded hover:bg-foreground/5 cursor-pointer"
                                               onClick={(e) => {
                                                 e.preventDefault()
@@ -2378,8 +2378,8 @@ export function FreeFormInput({
                                           </TooltipTrigger>
                                           <TooltipContent>
                                             {visionOn
-                                              ? t('chat.modelPicker.supportsImagesOn')
-                                              : t('chat.modelPicker.supportsImagesOff')}
+                                              ? t('chat.modelPicker.imageInputOn')
+                                              : t('chat.modelPicker.imageInputOff')}
                                           </TooltipContent>
                                         </Tooltip>
                                       )}
@@ -2444,8 +2444,8 @@ export function FreeFormInput({
                                   role="button"
                                   tabIndex={0}
                                   aria-label={visionOn
-                                    ? t('chat.modelPicker.supportsImagesOn')
-                                    : t('chat.modelPicker.supportsImagesOff')}
+                                    ? t('chat.modelPicker.imageInputOn')
+                                    : t('chat.modelPicker.imageInputOff')}
                                   className="inline-flex items-center justify-center p-1 rounded hover:bg-foreground/5 cursor-pointer"
                                   onClick={(e) => {
                                     e.preventDefault()
@@ -2468,8 +2468,8 @@ export function FreeFormInput({
                               </TooltipTrigger>
                               <TooltipContent>
                                 {visionOn
-                                  ? t('chat.modelPicker.supportsImagesOn')
-                                  : t('chat.modelPicker.supportsImagesOff')}
+                                  ? t('chat.modelPicker.imageInputOn')
+                                  : t('chat.modelPicker.imageInputOff')}
                               </TooltipContent>
                             </Tooltip>
                           )}

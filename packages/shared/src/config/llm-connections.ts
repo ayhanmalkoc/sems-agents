@@ -490,16 +490,16 @@ export function resolveMidStreamBehavior(
 }
 
 /**
- * Return a new LlmConnection with the given model's `supportsImages` override set.
+ * Return a new LlmConnection with the given model's image input capability set.
  *
  * Centralizes the string-vs-object normalization for `connection.models[]`:
- *   - string entry → promoted to `{ id, name, shortName, supportsImages: enabled }`
- *   - object entry → only `supportsImages` is updated
+ *   - string entry → promoted to `{ id, name, shortName, capabilities: { input: { image } } }`
+ *   - object entry → only `capabilities.input.image` is updated
  *   - model not in array → connection returned unchanged (defensive)
  *
  * Pure function — does not mutate the input. Storage round-trip is handled
  * upstream via `saveLlmConnection`. The stored object form for custom-endpoint
- * models is `{ id, name?, shortName?, contextWindow?, supportsImages? }`
+ * models is `{ id, name?, shortName?, contextWindow?, capabilities? }`
  * (passthrough-validated by the storage schema). `name` and `shortName` default
  * to the model's `id` when promoting so that downstream renderer surfaces that
  * read `m.name` (the trigger button display, picker row labels) keep showing a
@@ -517,10 +517,14 @@ export function setModelSupportsImages(
   if (idx === -1) return connection;
 
   const entry = connection.models[idx]!;
+  const nextCapabilities = (base?: ModelDefinition) => ({
+    ...(base?.capabilities ?? {}),
+    input: { ...(base?.capabilities?.input ?? {}), image: enabled },
+  });
   const nextEntry =
     typeof entry === 'string'
-      ? { id: entry, name: entry, shortName: entry, supportsImages: enabled }
-      : { ...entry, supportsImages: enabled };
+      ? { id: entry, name: entry, shortName: entry, capabilities: nextCapabilities() }
+      : (() => { const { supportsImages: _legacy, ...rest } = entry; return { ...rest, capabilities: nextCapabilities(entry) } })();
 
   const nextModels = connection.models.slice();
   nextModels[idx] = nextEntry as ModelDefinition;
@@ -551,6 +555,9 @@ export function modelSupportsImages(
   const entry = connection.models?.find(m =>
     (typeof m === 'string' ? m : m.id) === modelId,
   );
+  if (entry && typeof entry !== 'string' && typeof entry.capabilities?.input?.image === 'boolean') {
+    return entry.capabilities.input.image;
+  }
   if (entry && typeof entry !== 'string' && typeof entry.supportsImages === 'boolean') {
     return entry.supportsImages;
   }
