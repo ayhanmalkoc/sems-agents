@@ -20,12 +20,28 @@ export interface GeneratedImageResult {
   format: 'png' | 'webp' | 'jpeg'
 }
 
-export interface ImageGenerationAdapter {
-  generate(input: { apiKey: string; baseUrl?: string; model: string; prompt: string; size?: string; format: 'png' | 'webp' | 'jpeg' }): Promise<GeneratedImageResult>
+export interface ProviderAdapterGenerateImageInput {
+  apiKey: string
+  baseUrl?: string
+  model: string
+  prompt: string
+  size?: string
+  format: 'png' | 'webp' | 'jpeg'
+}
+
+export interface ProviderAdapterContext {
+  connection: LlmConnection
+  model: ModelDefinition
+}
+
+export interface ProviderAdapter {
+  id: string
+  supportsImageGeneration(context: ProviderAdapterContext): boolean
+  generateImage(input: ProviderAdapterGenerateImageInput): Promise<GeneratedImageResult>
 }
 
 export interface GenerateImageOptions {
-  adapter?: ImageGenerationAdapter
+  registry?: ProviderAdapterRegistry
   getApiKey?: (connection: LlmConnection) => Promise<string>
 }
 
@@ -40,12 +56,6 @@ function mimeForFormat(format: 'png' | 'webp' | 'jpeg'): string {
   return 'image/png'
 }
 
-function assertOpenAiCapable(connection: LlmConnection): void {
-  if (connection.providerType === 'pi' && connection.piAuthProvider === 'openai') return
-  if (connection.providerType === 'pi_compat' && connection.customEndpoint?.api === 'openai-completions') return
-  throw new Error(`Image generation is not supported for provider ${connection.providerType}${connection.piAuthProvider ? `/${connection.piAuthProvider}` : ''}`)
-}
-
 async function getApiKey(connection: LlmConnection): Promise<string> {
   const credential = await getCredentialManager().get({ type: 'llm_api_key', connectionSlug: connection.slug })
   const key = credential?.value?.trim()
@@ -53,8 +63,25 @@ async function getApiKey(connection: LlmConnection): Promise<string> {
   return key
 }
 
-export class OpenAiImageGenerationAdapter implements ImageGenerationAdapter {
-  async generate(input: { apiKey: string; baseUrl?: string; model: string; prompt: string; size?: string; format: 'png' | 'webp' | 'jpeg' }): Promise<GeneratedImageResult> {
+export class UnsupportedProviderAdapter implements ProviderAdapter {
+  constructor(public readonly id: string) {}
+  supportsImageGeneration(): boolean { return false }
+  async generateImage(): Promise<GeneratedImageResult> {
+    throw new Error(`Media provider type ${this.id} is not implemented yet`)
+  }
+}
+
+export class OpenAiCompatibleImageAdapter implements ProviderAdapter {
+  readonly id = 'openai-compatible'
+
+  supportsImageGeneration(context: ProviderAdapterContext): boolean {
+    const connection = context.connection
+    if (connection.providerType === 'pi' && connection.piAuthProvider === 'openai') return true
+    if (connection.providerType === 'pi_compat' && connection.customEndpoint?.api === 'openai-completions') return true
+    return false
+  }
+
+  async generateImage(input: ProviderAdapterGenerateImageInput): Promise<GeneratedImageResult> {
     const endpoint = `${(input.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '')}/images/generations`
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -70,10 +97,28 @@ export class OpenAiImageGenerationAdapter implements ImageGenerationAdapter {
       }),
     })
     const json = await response.json().catch(() => ({})) as { data?: Array<{ b64_json?: string; url?: string }>; error?: { message?: string } }
-    if (!response.ok) throw new Error(json.error?.message || `OpenAI image generation failed (${response.status})`)
+    if (!response.ok) throw new Error(json.error?.message || `OpenAI-compatible image generation failed (${response.status})`)
     const b64 = json.data?.[0]?.b64_json
-    if (!b64) throw new Error('OpenAI image generation returned no image data')
-    return { bytesBase64: b64, mimeType: mimeForFormat(input.format), provider: 'openai', model: input.model, size: input.size, format: input.format }
+    if (!b64) throw new Error('OpenAI-compatible image generation returned no image data')
+    return { bytesBase64: b64, mimeType: mimeForFormat(input.format), provider: this.id, model: input.model, size: input.size, format: input.format }
+  }
+}
+
+export class ProviderAdapterRegistry {
+  constructor(private readonly adapters: ProviderAdapter[] = [
+    new OpenAiCompatibleImageAdapter(),
+    new UnsupportedProviderAdapter('gemini'),
+    new UnsupportedProviderAdapter('stability'),
+    new UnsupportedProviderAdapter('replicate'),
+    new UnsupportedProviderAdapter('fal'),
+    new UnsupportedProviderAdapter('custom-http'),
+  ]) {}
+
+  resolveImageAdapter(context: ProviderAdapterContext): ProviderAdapter {
+    const adapter = this.adapters.find(item => item.supportsImageGeneration(context))
+    if (adapter) return adapter
+    const provider = context.connection.piAuthProvider ?? context.connection.providerType
+    throw new Error(`Media provider type ${provider} is not implemented yet`)
   }
 }
 
@@ -83,8 +128,8 @@ export async function generateImage(input: GenerateImageInput & { defaultConnect
   if (!slug) throw new Error('No image generation connection configured')
   const connection = getLlmConnection(slug)
   if (!connection) throw new Error(`Image generation connection not found: ${slug}`)
-  assertOpenAiCapable(connection)
   const resolved = resolveModelForTask({ connection, task: 'imageGeneration', model: input.model }) as { connection: LlmConnection; model: ModelDefinition }
+  const adapter = (options.registry ?? new ProviderAdapterRegistry()).resolveImageAdapter({ connection: resolved.connection, model: resolved.model })
   const apiKey = await (options.getApiKey ?? getApiKey)(resolved.connection)
-  return (options.adapter ?? new OpenAiImageGenerationAdapter()).generate({ apiKey, baseUrl: resolved.connection.baseUrl, model: resolved.model.id, prompt: input.prompt, size: input.size, format: normalizeFormat(input.format) })
+  return adapter.generateImage({ apiKey, baseUrl: resolved.connection.baseUrl, model: resolved.model.id, prompt: input.prompt, size: input.size, format: normalizeFormat(input.format) })
 }
