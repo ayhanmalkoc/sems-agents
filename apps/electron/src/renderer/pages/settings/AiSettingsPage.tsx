@@ -53,7 +53,7 @@ import { OnboardingWizard, type ApiSetupMethod } from '@/components/onboarding'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { getModelShortName, MODEL_TASK_CAPABILITIES, modelHasCapabilities, normalizeModelCapabilities, type ModelCapabilities, type ModelDefinition, type ModelInputCapability, type ModelOutputCapability, type ModelTask } from '@config/models'
-import { getModelsForProviderType, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
+import { getModelsForProviderType, isCompatProvider, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
 import { toast } from 'sonner'
 
 /**
@@ -121,8 +121,9 @@ function capLabel(value: string): string {
 function modelEntriesForConnection(connection: LlmConnectionWithStatus | undefined): ModelDefinition[] {
   if (!connection) return []
   const entries = connection.models?.length ? connection.models : getModelsForProviderType(connection.providerType, connection.piAuthProvider)
+  const defaultInput = !isCompatProvider(connection.providerType) || connection.customEndpoint?.supportsImages ? { image: true } : undefined
   return entries.map((model) => {
-    if (typeof model !== 'string') return { ...model, capabilities: normalizeModelCapabilities(model) }
+    if (typeof model !== 'string') return { ...model, capabilities: normalizeModelCapabilities({ ...model, capabilities: { ...(model.capabilities ?? {}), input: { ...defaultInput, ...(model.capabilities?.input ?? {}) } } }) }
     return {
       id: model,
       name: getModelShortName(model),
@@ -130,9 +131,15 @@ function modelEntriesForConnection(connection: LlmConnectionWithStatus | undefin
       description: '',
       provider: 'pi',
       contextWindow: 0,
-      capabilities: normalizeModelCapabilities({ capabilities: connection.customEndpoint?.supportsImages ? { input: { image: true } } : undefined }),
+      capabilities: normalizeModelCapabilities({ capabilities: defaultInput ? { input: defaultInput } : undefined }),
     }
   })
+}
+
+function taskDefaultValue(connection: LlmConnectionWithStatus, task: ModelTask): string {
+  if (connection.defaultModels?.[task]) return connection.defaultModels[task]!
+  if (['chat', 'reasoning', 'summarization', 'vision'].includes(task)) return connection.defaultModels?.chat ?? connection.defaultModel ?? ''
+  return ''
 }
 
 function promoteModelsWithCapabilities(connection: LlmConnectionWithStatus, modelId: string, capabilities: ModelCapabilities): Array<ModelDefinition | string> {
@@ -712,7 +719,7 @@ function ModelCapabilitiesCard({
                   inCard={false}
                   label={TASK_LABELS[task]}
                   description={options.length ? undefined : t('settings.ai.noCompatibleModel')}
-                  value={connection.defaultModels?.[task] ?? (task === 'chat' ? connection.defaultModel ?? '' : '')}
+                  value={taskDefaultValue(connection, task)}
                   onValueChange={(modelId) => onTaskDefaultChange(connection, task, modelId)}
                   options={options}
                   disabled={!options.length}
