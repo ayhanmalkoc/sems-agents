@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { modelSupportsImages, resolveModelForTask, type LlmConnection } from '../llm-connections.ts'
+import { listCompatibleModelsForTask, modelSupportsImages, resolveModelForTask, sanitizeDefaultModelsForConnection, type LlmConnection } from '../llm-connections.ts'
 
 const BASE_COMPAT: LlmConnection = {
   slug: 'custom',
@@ -105,5 +105,39 @@ describe('resolveModelForTask', () => {
   it('rejects incompatible explicit model', () => {
     const conn: LlmConnection = { ...BASE_COMPAT, models: ['plain'] }
     expect(() => resolveModelForTask({ connection: conn, task: 'imageGeneration', model: 'plain' })).toThrow('does not support task imageGeneration')
+  })
+
+  it('falls back when a task default is no longer compatible', () => {
+    const conn: LlmConnection = {
+      ...BASE_COMPAT,
+      models: [
+        { id: 'chat', name: 'Chat', shortName: 'Chat', description: 'Chat', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { text: true } } },
+        { id: 'image-old', name: 'Old', shortName: 'Old', description: 'Old', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { text: true } } },
+        { id: 'image-new', name: 'New', shortName: 'New', description: 'New', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { image: true } } },
+      ],
+      defaultModels: { imageGeneration: 'image-old' },
+    }
+    expect(resolveModelForTask({ connection: conn, task: 'imageGeneration' }).model.id).toBe('image-new')
+  })
+
+  it('lists media-only models only for compatible task routing', () => {
+    const conn: LlmConnection = {
+      ...BASE_COMPAT,
+      models: [
+        { id: 'chat', name: 'Chat', shortName: 'Chat', description: 'Chat', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { text: true } } },
+        { id: 'image-only', name: 'Image', shortName: 'Image', description: 'Image', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { text: false, image: true } } },
+      ],
+    }
+    expect(listCompatibleModelsForTask(conn, 'chat').map(model => model.id)).toEqual(['chat'])
+    expect(listCompatibleModelsForTask(conn, 'imageGeneration').map(model => model.id)).toEqual(['image-only'])
+  })
+
+  it('sanitizes stale task defaults', () => {
+    const conn: LlmConnection = {
+      ...BASE_COMPAT,
+      models: [{ id: 'chat', name: 'Chat', shortName: 'Chat', description: 'Chat', provider: 'pi', contextWindow: 1, capabilities: { input: { text: true }, output: { text: true } } }],
+      defaultModels: { chat: 'chat', imageGeneration: 'chat' },
+    }
+    expect(sanitizeDefaultModelsForConnection(conn)).toEqual({ chat: 'chat' })
   })
 })

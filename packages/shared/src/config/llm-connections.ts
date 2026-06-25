@@ -17,6 +17,7 @@ import {
   ANTHROPIC_MODELS,
   MODEL_TASK_CAPABILITIES,
   modelHasCapabilities,
+  normalizeModelCapabilities,
   normalizeDeprecatedModelId,
 } from './models';
 import type { CredentialManager } from '../credentials/manager.ts';
@@ -568,20 +569,62 @@ function modelIdOf(model: ModelDefinition | string): string {
   return typeof model === 'string' ? model : model.id;
 }
 
-function modelDefinitionForTask(connection: Pick<LlmConnection, 'models' | 'customEndpoint'>, model: ModelDefinition | string): ModelDefinition {
-  if (typeof model !== 'string') return model;
+function modelDefinitionForConnection(connection: Pick<LlmConnection, 'providerType' | 'customEndpoint'>, model: ModelDefinition | string): ModelDefinition {
+  if (typeof model !== 'string') return { ...model, capabilities: normalizeModelCapabilities(model) };
   return {
     id: model,
     name: model,
     shortName: model,
     description: model,
-    provider: 'pi',
+    provider: connection.providerType === 'anthropic' ? 'anthropic' : 'pi',
     contextWindow: 0,
-    capabilities: {
-      input: { text: true, ...(connection.customEndpoint?.supportsImages ? { image: true } : {}) },
-      output: { text: true },
-    },
+    capabilities: normalizeModelCapabilities({
+      capabilities: {
+        input: { text: true, ...(connection.customEndpoint?.supportsImages ? { image: true } : {}) },
+        output: { text: true },
+      },
+    }),
   };
+}
+
+export function listModelDefinitionsForConnection(
+  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
+): ModelDefinition[] {
+  const models = connection.models?.length
+    ? connection.models
+    : getDefaultModelsForConnection(connection.providerType, connection.piAuthProvider);
+  return models.map(model => modelDefinitionForConnection(connection, model));
+}
+
+export function listCompatibleModelsForTask(
+  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
+  task: ModelTask,
+): ModelDefinition[] {
+  const required = MODEL_TASK_CAPABILITIES[task];
+  return listModelDefinitionsForConnection(connection).filter(model => modelHasCapabilities(model, required));
+}
+
+export function isModelCompatibleWithTask(
+  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
+  modelId: string | undefined,
+  task: ModelTask,
+): boolean {
+  if (!modelId) return false;
+  const normalized = normalizeDeprecatedModelId(modelId);
+  return listCompatibleModelsForTask(connection, task).some(model =>
+    model.id === modelId || normalizeDeprecatedModelId(model.id) === normalized,
+  );
+}
+
+export function sanitizeDefaultModelsForConnection<T extends Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint' | 'defaultModels'>>(
+  connection: T,
+): Partial<Record<ModelTask, string>> | undefined {
+  const current = connection.defaultModels ?? {};
+  const next: Partial<Record<ModelTask, string>> = {};
+  for (const [task, modelId] of Object.entries(current) as Array<[ModelTask, string]>) {
+    if (isModelCompatibleWithTask(connection, modelId, task)) next[task] = modelId;
+  }
+  return Object.keys(next).length ? next : undefined;
 }
 
 export interface ResolveModelForTaskInput {
@@ -599,8 +642,7 @@ export interface ResolvedModelForTask {
 export function resolveModelForTask(input: ResolveModelForTaskInput): ResolvedModelForTask {
   const { connection, task } = input;
   const required = MODEL_TASK_CAPABILITIES[task];
-  const models = (connection.models?.length ? connection.models : getDefaultModelsForConnection(connection.providerType, connection.piAuthProvider))
-    .map(model => modelDefinitionForTask(connection, model));
+  const models = listModelDefinitionsForConnection(connection);
   const byId = (id?: string) => id ? models.find(model => model.id === id || normalizeDeprecatedModelId(model.id) === normalizeDeprecatedModelId(id)) : undefined;
   const ensureCompatible = (model: ModelDefinition, source: string): ResolvedModelForTask => {
     if (!modelHasCapabilities(model, required)) throw new Error(`Model ${model.id} does not support task ${task} (${source})`);
@@ -614,8 +656,11 @@ export function resolveModelForTask(input: ResolveModelForTaskInput): ResolvedMo
   }
 
   const taskDefault = connection.defaultModels?.[task] ?? (task === 'chat' ? connection.defaultModels?.chat : undefined);
-  const defaultCandidate = byId(taskDefault) ?? (task === 'chat' ? byId(connection.defaultModel) : undefined);
-  if (defaultCandidate) return ensureCompatible(defaultCandidate, `default for ${task}`);
+  const defaultCandidate = byId(taskDefault);
+  if (defaultCandidate && modelHasCapabilities(defaultCandidate, required)) return { connection, model: defaultCandidate, task };
+
+  const legacyChatDefault = task === 'chat' ? byId(connection.defaultModel) : undefined;
+  if (legacyChatDefault && modelHasCapabilities(legacyChatDefault, required)) return { connection, model: legacyChatDefault, task };
 
   const compatible = models.find(model => modelHasCapabilities(model, required));
   if (compatible) return { connection, model: compatible, task };

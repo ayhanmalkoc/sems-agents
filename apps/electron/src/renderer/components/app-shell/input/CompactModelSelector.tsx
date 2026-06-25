@@ -24,13 +24,10 @@ import {
   ANTHROPIC_MODELS,
   getModelDisplayName,
   getModelShortName,
-  MODEL_TASK_CAPABILITIES,
-  modelHasCapabilities,
-  normalizeModelCapabilities,
-  type ModelDefinition,
 } from '@config/models'
 import {
   isCompatProvider,
+  listCompatibleModelsForTask,
   modelSupportsImages,
   resolveEffectiveConnectionSlug,
   type LlmConnectionWithStatus,
@@ -114,13 +111,7 @@ export function CompactModelSelector({
   const availableModels = React.useMemo(() => {
     if (connectionUnavailable) return []
     if (!effectiveConnectionDetails) return ANTHROPIC_MODELS
-    const models = effectiveConnectionDetails.models || ANTHROPIC_MODELS
-    return models.filter((model) => {
-      const definition: ModelDefinition = typeof model === 'string'
-        ? { id: model, name: model, shortName: model, description: '', provider: 'pi', contextWindow: 0, capabilities: normalizeModelCapabilities({}) }
-        : { ...model, capabilities: normalizeModelCapabilities(model) }
-      return modelHasCapabilities(definition, MODEL_TASK_CAPABILITIES.chat)
-    })
+    return listCompatibleModelsForTask(effectiveConnectionDetails, 'chat')
   }, [effectiveConnectionDetails, connectionUnavailable])
 
   const currentModelDisplayName = React.useMemo(() => {
@@ -291,11 +282,9 @@ export function CompactModelSelector({
                       </button>
                       {isAuthenticated && isExpanded && (
                         <div className="pl-6 flex flex-col gap-0.5">
-                          {(conn.models || ANTHROPIC_MODELS).map(model => {
-                            const modelId = typeof model === 'string' ? model : model.id
-                            const modelName = typeof model === 'string'
-                              ? stripPiPrefixForDisplay(getModelShortName(model))
-                              : (model.name ?? stripPiPrefixForDisplay(model.id))
+                          {listCompatibleModelsForTask(conn, 'chat').map(model => {
+                            const modelId = model.id
+                            const modelName = model.name ?? stripPiPrefixForDisplay(model.id)
                             const isSelectedModel =
                               isCurrentConnection && currentModel === modelId
                             const showVision = isCompatProvider(conn.providerType)

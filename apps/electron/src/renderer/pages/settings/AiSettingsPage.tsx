@@ -52,8 +52,8 @@ import { useWorkspaceIcon } from '@/hooks/useWorkspaceIcon'
 import { OnboardingWizard, type ApiSetupMethod } from '@/components/onboarding'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { getModelShortName, MODEL_TASK_CAPABILITIES, modelHasCapabilities, normalizeModelCapabilities, type ModelCapabilities, type ModelDefinition, type ModelInputCapability, type ModelOutputCapability, type ModelTask } from '@config/models'
-import { getModelsForProviderType, isCompatProvider, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
+import { getModelShortName, normalizeModelCapabilities, type ModelCapabilities, type ModelDefinition, type ModelInputCapability, type ModelOutputCapability, type ModelTask } from '@config/models'
+import { getModelsForProviderType, isCompatProvider, listCompatibleModelsForTask, listModelDefinitionsForConnection, sanitizeDefaultModelsForConnection, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
 import { toast } from 'sonner'
 
 /**
@@ -120,20 +120,7 @@ function capLabel(value: string): string {
 
 function modelEntriesForConnection(connection: LlmConnectionWithStatus | undefined): ModelDefinition[] {
   if (!connection) return []
-  const entries = connection.models?.length ? connection.models : getModelsForProviderType(connection.providerType, connection.piAuthProvider)
-  const defaultInput = !isCompatProvider(connection.providerType) || connection.customEndpoint?.supportsImages ? { image: true } : undefined
-  return entries.map((model) => {
-    if (typeof model !== 'string') return { ...model, capabilities: normalizeModelCapabilities({ ...model, capabilities: { ...(model.capabilities ?? {}), input: { ...defaultInput, ...(model.capabilities?.input ?? {}) } } }) }
-    return {
-      id: model,
-      name: getModelShortName(model),
-      shortName: getModelShortName(model),
-      description: '',
-      provider: 'pi',
-      contextWindow: 0,
-      capabilities: normalizeModelCapabilities({ capabilities: defaultInput ? { input: defaultInput } : undefined }),
-    }
-  })
+  return listModelDefinitionsForConnection(connection)
 }
 
 function taskDefaultValue(connection: LlmConnectionWithStatus, task: ModelTask): string {
@@ -156,9 +143,8 @@ function promoteModelsWithCapabilities(connection: LlmConnectionWithStatus, mode
 }
 
 function compatibleTaskOptions(connection: LlmConnectionWithStatus | undefined, task: ModelTask) {
-  const required = MODEL_TASK_CAPABILITIES[task]
-  return modelEntriesForConnection(connection)
-    .filter(model => modelHasCapabilities(model, required))
+  if (!connection) return []
+  return listCompatibleModelsForTask(connection, task)
     .map(model => ({ value: model.id, label: model.name || model.id, description: model.description }))
 }
 
@@ -663,7 +649,7 @@ function CapabilityPill({ label, active, onClick }: { label: string; active: boo
   )
 }
 
-function ModelCapabilitiesCard({
+function AdvancedModelSettings({
   connection,
   onToggleCapability,
   onTaskDefaultChange,
@@ -676,10 +662,40 @@ function ModelCapabilitiesCard({
   if (!connection) return null
   const models = modelEntriesForConnection(connection)
   return (
-    <SettingsSection title={t('settings.ai.modelCapabilities')} description={t('settings.ai.modelCapabilitiesDesc')}>
-      <SettingsCard>
+    <SettingsSection title={t('settings.ai.advancedModelSettings')} description={t('settings.ai.advancedModelSettingsDesc')}>
+      <div className="space-y-3">
+        <SettingsCard>
+          <div className="px-4 py-3.5 space-y-3">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.taskModelRouting')}</div>
+              <div className="text-xs text-muted-foreground mt-1">{t('settings.ai.taskModelRoutingDesc')}</div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {MODEL_TASKS.map((task) => {
+                const options = compatibleTaskOptions(connection, task)
+                return (
+                  <SettingsMenuSelectRow
+                    key={task}
+                    inCard={false}
+                    label={TASK_LABELS[task]}
+                    description={options.length ? t(`settings.ai.taskDesc.${task}`) : t('settings.ai.noCompatibleModel')}
+                    value={taskDefaultValue(connection, task)}
+                    onValueChange={(modelId) => onTaskDefaultChange(connection, task, modelId)}
+                    options={options}
+                    disabled={!options.length}
+                    menuWidth={320}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        </SettingsCard>
+        <SettingsCard>
         <div className="px-4 py-3.5 space-y-3">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.models')}</div>
+          <div>
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.modelAbilities')}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('settings.ai.modelAbilitiesDesc')}</div>
+          </div>
           <div className="space-y-3">
             {models.map((model) => {
               const capabilities = normalizeModelCapabilities(model)
@@ -708,28 +724,8 @@ function ModelCapabilitiesCard({
             })}
           </div>
         </div>
-        <div className="border-t border-border/60 px-4 py-3.5 space-y-3">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.taskDefaults')}</div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {MODEL_TASKS.map((task) => {
-              const options = compatibleTaskOptions(connection, task)
-              return (
-                <SettingsMenuSelectRow
-                  key={task}
-                  inCard={false}
-                  label={TASK_LABELS[task]}
-                  description={options.length ? undefined : t('settings.ai.noCompatibleModel')}
-                  value={taskDefaultValue(connection, task)}
-                  onValueChange={(modelId) => onTaskDefaultChange(connection, task, modelId)}
-                  options={options}
-                  disabled={!options.length}
-                  menuWidth={320}
-                />
-              )
-            })}
-          </div>
-        </div>
-      </SettingsCard>
+        </SettingsCard>
+      </div>
     </SettingsSection>
   )
 }
@@ -1100,7 +1096,8 @@ export default function AiSettingsPage() {
     const nextCapabilities = normalizeModelCapabilities(current ?? {})
     if (direction === 'input') nextCapabilities.input = { ...(nextCapabilities.input ?? {}), [capability]: enabled }
     else nextCapabilities.output = { ...(nextCapabilities.output ?? {}), [capability]: enabled }
-    await saveConnection({ ...connection, models: promoteModelsWithCapabilities(connection, modelId, nextCapabilities) })
+    const nextConnection = { ...connection, models: promoteModelsWithCapabilities(connection, modelId, nextCapabilities) }
+    await saveConnection({ ...nextConnection, defaultModels: sanitizeDefaultModelsForConnection(nextConnection) })
   }, [saveConnection])
 
   const handleTaskDefaultChange = useCallback(async (connection: LlmConnectionWithStatus, task: ModelTask, modelId: string) => {
@@ -1229,30 +1226,6 @@ export default function AiSettingsPage() {
               </SettingsSection>
               )}
 
-              {defaultConnection && (
-                <ModelCapabilitiesCard
-                  connection={defaultConnection}
-                  onToggleCapability={handleToggleModelCapability}
-                  onTaskDefaultChange={handleTaskDefaultChange}
-                />
-              )}
-
-              {/* Workspace Overrides - only show if connections exist */}
-              {workspaces.length > 0 && llmConnections.length > 0 && (
-                <SettingsSection title={t("settings.ai.workspaceOverrides")} description={t("settings.ai.workspaceOverridesDesc")}>
-                  <div className="space-y-2">
-                    {workspaces.map((workspace) => (
-                      <WorkspaceOverrideCard
-                        key={workspace.id}
-                        workspace={workspace}
-                        llmConnections={llmConnections}
-                        onSettingsChange={handleWorkspaceSettingsChange}
-                      />
-                    ))}
-                  </div>
-                </SettingsSection>
-              )}
-
               {/* Connections Management */}
               <SettingsSection title={t("settings.ai.connections")} description={t("settings.ai.connectionsDesc")}>
                 <SettingsCard>
@@ -1294,6 +1267,30 @@ export default function AiSettingsPage() {
                   </button>
                 </div>
               </SettingsSection>
+
+              {/* Workspace Overrides - only show if connections exist */}
+              {workspaces.length > 0 && llmConnections.length > 0 && (
+                <SettingsSection title={t("settings.ai.workspaceOverrides")} description={t("settings.ai.workspaceOverridesDesc")}>
+                  <div className="space-y-2">
+                    {workspaces.map((workspace) => (
+                      <WorkspaceOverrideCard
+                        key={workspace.id}
+                        workspace={workspace}
+                        llmConnections={llmConnections}
+                        onSettingsChange={handleWorkspaceSettingsChange}
+                      />
+                    ))}
+                  </div>
+                </SettingsSection>
+              )}
+
+              {defaultConnection && (
+                <AdvancedModelSettings
+                  connection={defaultConnection}
+                  onToggleCapability={handleToggleModelCapability}
+                  onTaskDefaultChange={handleTaskDefaultChange}
+                />
+              )}
 
               {/* Performance */}
               <SettingsSection title={t("settings.ai.performance")} description={t("settings.ai.performanceDesc")}>
