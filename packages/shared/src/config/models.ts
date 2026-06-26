@@ -83,24 +83,6 @@ export function normalizeDeprecatedModelId(modelId: string): string {
  */
 export type ModelProvider = 'anthropic' | 'pi';
 
-export type ModelInputCapability = 'text' | 'image' | 'audio' | 'video';
-export type ModelOutputCapability = 'text' | 'image' | 'audio' | 'video' | 'embedding' | 'structured';
-export type ModelTask =
-  | 'chat'
-  | 'reasoning'
-  | 'summarization'
-  | 'vision'
-  | 'imageGeneration'
-  | 'videoGeneration'
-  | 'audioGeneration'
-  | 'transcription'
-  | 'embedding';
-
-export interface ModelCapabilities {
-  input?: Partial<Record<ModelInputCapability, boolean>>;
-  output?: Partial<Record<ModelOutputCapability, boolean>>;
-}
-
 /**
  * Full model definition with capabilities and costs.
  * Used throughout the application for model selection and display.
@@ -123,48 +105,9 @@ export interface ModelDefinition {
   contextWindow: number;
   /** Whether this model supports thinking/reasoning effort. Defaults to true when undefined. */
   supportsThinking?: boolean;
-  /** Canonical input/output capability declaration. */
-  capabilities?: ModelCapabilities;
-  /** Legacy image input hint. New writes should use capabilities.input.image. */
+  /** Legacy image input hint for vision/image input support. */
   supportsImages?: boolean;
 }
-
-export function normalizeModelCapabilities(model: Pick<ModelDefinition, 'capabilities' | 'supportsImages'>): ModelCapabilities {
-  return {
-    input: {
-      text: true,
-      ...(model.capabilities?.input ?? {}),
-      ...(model.supportsImages === true ? { image: true } : {}),
-    },
-    output: {
-      text: true,
-      ...(model.capabilities?.output ?? {}),
-    },
-  };
-}
-
-export function modelHasCapabilities(model: Pick<ModelDefinition, 'capabilities' | 'supportsImages'>, required: ModelCapabilities): boolean {
-  const capabilities = normalizeModelCapabilities(model);
-  for (const key of Object.keys(required.input ?? {}) as ModelInputCapability[]) {
-    if (required.input?.[key] && !capabilities.input?.[key]) return false;
-  }
-  for (const key of Object.keys(required.output ?? {}) as ModelOutputCapability[]) {
-    if (required.output?.[key] && !capabilities.output?.[key]) return false;
-  }
-  return true;
-}
-
-export const MODEL_TASK_CAPABILITIES: Record<ModelTask, ModelCapabilities> = {
-  chat: { input: { text: true }, output: { text: true } },
-  reasoning: { input: { text: true }, output: { text: true } },
-  summarization: { input: { text: true }, output: { text: true } },
-  vision: { input: { image: true }, output: { text: true } },
-  imageGeneration: { input: { text: true }, output: { image: true } },
-  videoGeneration: { input: { text: true }, output: { video: true } },
-  audioGeneration: { input: { text: true }, output: { audio: true } },
-  transcription: { input: { audio: true }, output: { text: true } },
-  embedding: { input: { text: true }, output: { embedding: true } },
-};
 
 // ============================================
 // MODEL REGISTRY (Single Source of Truth)

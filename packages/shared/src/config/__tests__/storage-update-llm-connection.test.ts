@@ -114,34 +114,4 @@ describe('updateLlmConnection – customEndpoint', () => {
     const conn = readConnection('custom-compat')
     expect(conn.customEndpoint).toEqual({ api: 'anthropic-messages' })
   })
-
-  it('persists task-specific default models', () => {
-    const { runUpdate, readConnection } = setup([makeConnection({
-      models: [{
-        id: 'image-gen',
-        name: 'Image Gen',
-        provider: 'pi',
-        contextWindow: 0,
-        capabilities: { input: { text: true }, output: { image: true } },
-      }],
-    })])
-
-    const ok = runUpdate('custom-compat', { defaultModels: { imageGeneration: 'image-gen' } })
-    expect(ok).toBe(true)
-
-    const conn = readConnection('custom-compat')
-    expect(conn.defaultModels).toEqual({ imageGeneration: 'image-gen' })
-  })
-
-  it('preserves existing task defaults when updating another field', () => {
-    const { runUpdate, readConnection } = setup([makeConnection({
-      defaultModels: { imageGeneration: 'image-gen', videoGeneration: 'video-gen' },
-    })])
-
-    const ok = runUpdate('custom-compat', { name: 'Renamed Endpoint' })
-    expect(ok).toBe(true)
-
-    const conn = readConnection('custom-compat')
-    expect(conn.defaultModels).toEqual({ imageGeneration: 'image-gen', videoGeneration: 'video-gen' })
-  })
 })

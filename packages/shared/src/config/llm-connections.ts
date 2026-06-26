@@ -13,11 +13,7 @@
 // injected at app startup via registerPiModelResolver().
 import {
   type ModelDefinition,
-  type ModelTask,
   ANTHROPIC_MODELS,
-  MODEL_TASK_CAPABILITIES,
-  modelHasCapabilities,
-  normalizeModelCapabilities,
   normalizeDeprecatedModelId,
 } from './models';
 import type { CredentialManager } from '../credentials/manager.ts';
@@ -163,9 +159,6 @@ export interface LlmConnection {
 
   /** Default model for this connection */
   defaultModel?: string;
-
-  /** Task-specific default models. `defaultModel` remains the legacy chat default. */
-  defaultModels?: Partial<Record<ModelTask, string>>;
 
   /**
    * Ownership mode for the model list.
@@ -494,13 +487,13 @@ export function resolveMidStreamBehavior(
  * Return a new LlmConnection with the given model's image input capability set.
  *
  * Centralizes the string-vs-object normalization for `connection.models[]`:
- *   - string entry → promoted to `{ id, name, shortName, capabilities: { input: { image } } }`
- *   - object entry → only `capabilities.input.image` is updated
+ *   - string entry → promoted to `{ id, name, shortName, supportsImages }`
+ *   - object entry → only `supportsImages` is updated
  *   - model not in array → connection returned unchanged (defensive)
  *
  * Pure function — does not mutate the input. Storage round-trip is handled
  * upstream via `saveLlmConnection`. The stored object form for custom-endpoint
- * models is `{ id, name?, shortName?, contextWindow?, capabilities? }`
+ * models is `{ id, name?, shortName?, contextWindow?, supportsImages? }`
  * (passthrough-validated by the storage schema). `name` and `shortName` default
  * to the model's `id` when promoting so that downstream renderer surfaces that
  * read `m.name` (the trigger button display, picker row labels) keep showing a
@@ -518,14 +511,10 @@ export function setModelSupportsImages(
   if (idx === -1) return connection;
 
   const entry = connection.models[idx]!;
-  const nextCapabilities = (base?: ModelDefinition) => ({
-    ...(base?.capabilities ?? {}),
-    input: { ...(base?.capabilities?.input ?? {}), image: enabled },
-  });
   const nextEntry =
     typeof entry === 'string'
-      ? { id: entry, name: entry, shortName: entry, capabilities: nextCapabilities() }
-      : (() => { const { supportsImages: _legacy, ...rest } = entry; return { ...rest, capabilities: nextCapabilities(entry) } })();
+      ? { id: entry, name: entry, shortName: entry, supportsImages: enabled }
+      : { ...entry, supportsImages: enabled };
 
   const nextModels = connection.models.slice();
   nextModels[idx] = nextEntry as ModelDefinition;
@@ -556,9 +545,6 @@ export function modelSupportsImages(
   const entry = connection.models?.find(m =>
     (typeof m === 'string' ? m : m.id) === modelId,
   );
-  if (entry && typeof entry !== 'string' && typeof entry.capabilities?.input?.image === 'boolean') {
-    return entry.capabilities.input.image;
-  }
   if (entry && typeof entry !== 'string' && typeof entry.supportsImages === 'boolean') {
     return entry.supportsImages;
   }
@@ -567,104 +553,6 @@ export function modelSupportsImages(
 
 function modelIdOf(model: ModelDefinition | string): string {
   return typeof model === 'string' ? model : model.id;
-}
-
-function modelDefinitionForConnection(connection: Pick<LlmConnection, 'providerType' | 'customEndpoint'>, model: ModelDefinition | string): ModelDefinition {
-  if (typeof model !== 'string') return { ...model, capabilities: normalizeModelCapabilities(model) };
-  return {
-    id: model,
-    name: model,
-    shortName: model,
-    description: model,
-    provider: connection.providerType === 'anthropic' ? 'anthropic' : 'pi',
-    contextWindow: 0,
-    capabilities: normalizeModelCapabilities({
-      capabilities: {
-        input: { text: true, ...(connection.customEndpoint?.supportsImages ? { image: true } : {}) },
-        output: { text: true },
-      },
-    }),
-  };
-}
-
-export function listModelDefinitionsForConnection(
-  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
-): ModelDefinition[] {
-  const models = connection.models?.length
-    ? connection.models
-    : getDefaultModelsForConnection(connection.providerType, connection.piAuthProvider);
-  return models.map(model => modelDefinitionForConnection(connection, model));
-}
-
-export function listCompatibleModelsForTask(
-  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
-  task: ModelTask,
-): ModelDefinition[] {
-  const required = MODEL_TASK_CAPABILITIES[task];
-  return listModelDefinitionsForConnection(connection).filter(model => modelHasCapabilities(model, required));
-}
-
-export function isModelCompatibleWithTask(
-  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint'>,
-  modelId: string | undefined,
-  task: ModelTask,
-): boolean {
-  if (!modelId) return false;
-  const normalized = normalizeDeprecatedModelId(modelId);
-  return listCompatibleModelsForTask(connection, task).some(model =>
-    model.id === modelId || normalizeDeprecatedModelId(model.id) === normalized,
-  );
-}
-
-export function sanitizeDefaultModelsForConnection<T extends Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider' | 'customEndpoint' | 'defaultModels'>>(
-  connection: T,
-): Partial<Record<ModelTask, string>> | undefined {
-  const current = connection.defaultModels ?? {};
-  const next: Partial<Record<ModelTask, string>> = {};
-  for (const [task, modelId] of Object.entries(current) as Array<[ModelTask, string]>) {
-    if (isModelCompatibleWithTask(connection, modelId, task)) next[task] = modelId;
-  }
-  return Object.keys(next).length ? next : undefined;
-}
-
-export interface ResolveModelForTaskInput {
-  connection: LlmConnection;
-  task: ModelTask;
-  model?: string;
-}
-
-export interface ResolvedModelForTask {
-  connection: LlmConnection;
-  model: ModelDefinition;
-  task: ModelTask;
-}
-
-export function resolveModelForTask(input: ResolveModelForTaskInput): ResolvedModelForTask {
-  const { connection, task } = input;
-  const required = MODEL_TASK_CAPABILITIES[task];
-  const models = listModelDefinitionsForConnection(connection);
-  const byId = (id?: string) => id ? models.find(model => model.id === id || normalizeDeprecatedModelId(model.id) === normalizeDeprecatedModelId(id)) : undefined;
-  const ensureCompatible = (model: ModelDefinition, source: string): ResolvedModelForTask => {
-    if (!modelHasCapabilities(model, required)) throw new Error(`Model ${model.id} does not support task ${task} (${source})`);
-    return { connection, model, task };
-  };
-
-  if (input.model) {
-    const explicit = byId(input.model);
-    if (!explicit) throw new Error(`Model not found on connection ${connection.slug}: ${input.model}`);
-    return ensureCompatible(explicit, 'explicit model');
-  }
-
-  const taskDefault = connection.defaultModels?.[task] ?? (task === 'chat' ? connection.defaultModels?.chat : undefined);
-  const defaultCandidate = byId(taskDefault);
-  if (defaultCandidate && modelHasCapabilities(defaultCandidate, required)) return { connection, model: defaultCandidate, task };
-
-  const legacyChatDefault = task === 'chat' ? byId(connection.defaultModel) : undefined;
-  if (legacyChatDefault && modelHasCapabilities(legacyChatDefault, required)) return { connection, model: legacyChatDefault, task };
-
-  const compatible = models.find(model => modelHasCapabilities(model, required));
-  if (compatible) return { connection, model: compatible, task };
-  throw new Error(`No ${task} capable model configured for connection ${connection.slug}`);
 }
 
 /**

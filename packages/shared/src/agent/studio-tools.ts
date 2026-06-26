@@ -1,7 +1,7 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
 import { getStudioScenario, listStudioScenarios, recommendStudioScenarios, type StudioScenarioDefinition, type StudioScenarioRecommendation } from '../studio/scenarios.ts'
-import type { AddStudioComponentInput, AddStudioImageAssetInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioAssetRecord, StudioDesignSystemDefinition, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
+import type { AddStudioComponentInput, AddStudioPageInput, AdoptStudioOutputInput, CreateStudioOutputInput, CreateStudioProjectInput, StudioAssetRecord, StudioDesignSystemDefinition, StudioExportFormat, StudioOutputRecord, StudioTemplateDefinition, UpdateStudioOutputInput } from '../studio/types.ts'
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 
@@ -23,11 +23,10 @@ export interface StudioFns {
   addPage: (outputId: string, input: AddStudioPageInput) => Promise<StudioOutputRecord>
   addComponent: (outputId: string, input: AddStudioComponentInput) => Promise<StudioOutputRecord>
   quality: (outputId: string) => Promise<StudioOutputRecord>
-  generateImage?: (outputId: string, input: Omit<AddStudioImageAssetInput, 'bytesBase64'> & { bytesBase64?: string }) => Promise<StudioOutputRecord>
 }
 
 const StudioSchema = z.object({
-  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, scenarios, scenario <id>, recommend <json>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, generate-image <outputId> <json>, assets <outputId>, asset <outputId> <assetId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
+  command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, scenarios, scenario <id>, recommend <json>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, assets <outputId>, asset <outputId> <assetId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
 })
 
 function success(text: string): ToolResult { return { content: [{ type: 'text', text }] } }
@@ -195,15 +194,6 @@ export async function executeStudioCommand(command: string, fns: StudioFns): Pro
       if (!output) return success(`Studio output not found: ${outputId}`)
       const asset = output.metadata.assets?.find(item => item.id === assetId)
       return success(asset ? [`Studio asset ${outputId}/${assetId}:`, formatAsset(asset)].join('\n') : `Studio asset not found: ${assetId}`)
-    }
-    if (verb === 'generate-image') {
-      if (!fns.generateImage) return failure('Studio image generation is not available in this backend')
-      const outputId = rest[0]
-      if (!outputId) return failure('generate-image requires an output id')
-      const payload = trimmed.slice(rawVerb.length).trim().slice(outputId.length).trim()
-      const output = await fns.generateImage(outputId, parseJsonPayload<Omit<AddStudioImageAssetInput, 'bytesBase64'> & { bytesBase64?: string }>(payload, 'generate-image'))
-      const latest = output.metadata.assets?.at(-1)
-      return success(`Generated Studio image ${output.metadata.id}${latest ? `\nasset=${latest.id}\npath=${latest.path}\nmodel=${latest.provider}/${latest.model}` : ''}\n${formatDetail(output)}`)
     }
     if (verb === 'export') {
       const [outputId, formatRaw] = rest

@@ -27,7 +27,6 @@ import {
 } from '@config/models'
 import {
   isCompatProvider,
-  listCompatibleModelsForTask,
   modelSupportsImages,
   resolveEffectiveConnectionSlug,
   type LlmConnectionWithStatus,
@@ -111,7 +110,7 @@ export function CompactModelSelector({
   const availableModels = React.useMemo(() => {
     if (connectionUnavailable) return []
     if (!effectiveConnectionDetails) return ANTHROPIC_MODELS
-    return listCompatibleModelsForTask(effectiveConnectionDetails, 'chat')
+    return effectiveConnectionDetails.models || ANTHROPIC_MODELS
   }, [effectiveConnectionDetails, connectionUnavailable])
 
   const currentModelDisplayName = React.useMemo(() => {
@@ -282,9 +281,11 @@ export function CompactModelSelector({
                       </button>
                       {isAuthenticated && isExpanded && (
                         <div className="pl-6 flex flex-col gap-0.5">
-                          {listCompatibleModelsForTask(conn, 'chat').map(model => {
-                            const modelId = model.id
-                            const modelName = model.name ?? stripPiPrefixForDisplay(model.id)
+                          {(conn.models || ANTHROPIC_MODELS).map(model => {
+                            const modelId = typeof model === 'string' ? model : model.id
+                            const modelName = typeof model === 'string'
+                              ? stripPiPrefixForDisplay(getModelShortName(model))
+                              : (model.name ?? stripPiPrefixForDisplay(model.id))
                             const isSelectedModel =
                               isCurrentConnection && currentModel === modelId
                             const showVision = isCompatProvider(conn.providerType)

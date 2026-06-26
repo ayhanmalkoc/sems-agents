@@ -52,8 +52,8 @@ import { useWorkspaceIcon } from '@/hooks/useWorkspaceIcon'
 import { OnboardingWizard, type ApiSetupMethod } from '@/components/onboarding'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { getModelShortName, normalizeModelCapabilities, type ModelCapabilities, type ModelDefinition, type ModelInputCapability, type ModelOutputCapability, type ModelTask } from '@config/models'
-import { getModelsForProviderType, isCompatProvider, listCompatibleModelsForTask, listModelDefinitionsForConnection, sanitizeDefaultModelsForConnection, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
+import { getModelShortName, type ModelDefinition } from '@config/models'
+import { getModelsForProviderType, isCompatProvider, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
 import { toast } from 'sonner'
 
 /**
@@ -96,56 +96,6 @@ function getModelOptionsForConnection(
     description: m.description,
     descriptionKey: m.descriptionKey,
   }))
-}
-
-const MODEL_TASKS: ModelTask[] = ['chat', 'reasoning', 'summarization', 'vision', 'imageGeneration', 'videoGeneration', 'audioGeneration', 'transcription', 'embedding']
-const INPUT_CAPABILITIES: ModelInputCapability[] = ['text', 'image', 'audio', 'video']
-const OUTPUT_CAPABILITIES: ModelOutputCapability[] = ['text', 'image', 'audio', 'video', 'embedding', 'structured']
-
-const TASK_LABELS: Record<ModelTask, string> = {
-  chat: 'Chat',
-  reasoning: 'Reasoning',
-  summarization: 'Summarization',
-  vision: 'Vision',
-  imageGeneration: 'Image generation',
-  videoGeneration: 'Video generation',
-  audioGeneration: 'Audio generation',
-  transcription: 'Transcription',
-  embedding: 'Embedding',
-}
-
-function capLabel(value: string): string {
-  return value.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase())
-}
-
-function modelEntriesForConnection(connection: LlmConnectionWithStatus | undefined): ModelDefinition[] {
-  if (!connection) return []
-  return listModelDefinitionsForConnection(connection)
-}
-
-function taskDefaultValue(connection: LlmConnectionWithStatus, task: ModelTask): string {
-  if (connection.defaultModels?.[task]) return connection.defaultModels[task]!
-  if (['chat', 'reasoning', 'summarization', 'vision'].includes(task)) return connection.defaultModels?.chat ?? connection.defaultModel ?? ''
-  return ''
-}
-
-function promoteModelsWithCapabilities(connection: LlmConnectionWithStatus, modelId: string, capabilities: ModelCapabilities): Array<ModelDefinition | string> {
-  const existing = connection.models?.length ? connection.models : getModelsForProviderType(connection.providerType, connection.piAuthProvider)
-  return existing.map((model) => {
-    const id = typeof model === 'string' ? model : model.id
-    if (id !== modelId) return model
-    const base = typeof model === 'string'
-      ? { id: model, name: getModelShortName(model), shortName: getModelShortName(model), description: '', provider: 'pi' as const, contextWindow: 0 }
-      : model
-    const { supportsImages: _legacy, ...rest } = base
-    return { ...rest, capabilities }
-  })
-}
-
-function compatibleTaskOptions(connection: LlmConnectionWithStatus | undefined, task: ModelTask) {
-  if (!connection) return []
-  return listCompatibleModelsForTask(connection, task)
-    .map(model => ({ value: model.id, label: model.name || model.id, description: model.description }))
 }
 
 export const meta: DetailsPageMeta = {
@@ -634,102 +584,6 @@ function WorkspaceOverrideCard({ workspace, llmConnections, onSettingsChange }: 
   )
 }
 
-function CapabilityPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'h-6 px-2 rounded-full text-[11px] font-medium transition-colors border',
-        active ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-muted-foreground border-border hover:bg-foreground/5',
-      )}
-    >
-      {label}
-    </button>
-  )
-}
-
-function AdvancedModelSettings({
-  connection,
-  onToggleCapability,
-  onTaskDefaultChange,
-}: {
-  connection: LlmConnectionWithStatus | undefined
-  onToggleCapability: (connection: LlmConnectionWithStatus, modelId: string, direction: 'input' | 'output', capability: ModelInputCapability | ModelOutputCapability, enabled: boolean) => void
-  onTaskDefaultChange: (connection: LlmConnectionWithStatus, task: ModelTask, modelId: string) => void
-}) {
-  const { t } = useTranslation()
-  if (!connection) return null
-  const models = modelEntriesForConnection(connection)
-  return (
-    <SettingsSection title={t('settings.ai.advancedModelSettings')} description={t('settings.ai.advancedModelSettingsDesc')}>
-      <div className="space-y-3">
-        <SettingsCard>
-          <div className="px-4 py-3.5 space-y-3">
-            <div>
-              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.taskModelRouting')}</div>
-              <div className="text-xs text-muted-foreground mt-1">{t('settings.ai.taskModelRoutingDesc')}</div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {MODEL_TASKS.map((task) => {
-                const options = compatibleTaskOptions(connection, task)
-                return (
-                  <SettingsMenuSelectRow
-                    key={task}
-                    inCard={false}
-                    label={TASK_LABELS[task]}
-                    description={options.length ? t(`settings.ai.taskDesc.${task}`) : t('settings.ai.noCompatibleModel')}
-                    value={taskDefaultValue(connection, task)}
-                    onValueChange={(modelId) => onTaskDefaultChange(connection, task, modelId)}
-                    options={options}
-                    disabled={!options.length}
-                    menuWidth={320}
-                  />
-                )
-              })}
-            </div>
-          </div>
-        </SettingsCard>
-        <SettingsCard>
-        <div className="px-4 py-3.5 space-y-3">
-          <div>
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('settings.ai.modelAbilities')}</div>
-            <div className="text-xs text-muted-foreground mt-1">{t('settings.ai.modelAbilitiesDesc')}</div>
-          </div>
-          <div className="space-y-3">
-            {models.map((model) => {
-              const capabilities = normalizeModelCapabilities(model)
-              return (
-                <div key={model.id} className="rounded-lg border border-border/60 p-3 space-y-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{model.name || model.id}</div>
-                    <div className="text-xs text-muted-foreground truncate">{model.id}</div>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">{t('settings.ai.inputCapabilities')}</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {INPUT_CAPABILITIES.map((capability) => <CapabilityPill key={capability} label={capLabel(capability)} active={!!capabilities.input?.[capability]} onClick={() => onToggleCapability(connection, model.id, 'input', capability, !capabilities.input?.[capability])} />)}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-medium text-muted-foreground">{t('settings.ai.outputCapabilities')}</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {OUTPUT_CAPABILITIES.map((capability) => <CapabilityPill key={capability} label={capLabel(capability)} active={!!capabilities.output?.[capability]} onClick={() => onToggleCapability(connection, model.id, 'output', capability, !capabilities.output?.[capability])} />)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-        </SettingsCard>
-      </div>
-    </SettingsSection>
-  )
-}
-
 // ============================================
 // Helpers
 // ============================================
@@ -1073,7 +927,7 @@ export default function AiSettingsPage() {
   const handleDefaultModelChange = useCallback(async (model: string) => {
     if (!window.electronAPI || !defaultConnection) return
     // Update defaultModel on the connection, then save the full connection
-    const updated = { ...defaultConnection, defaultModel: model, defaultModels: { ...(defaultConnection.defaultModels ?? {}), chat: model } }
+    const updated = { ...defaultConnection, defaultModel: model }
     // Remove status fields that aren't part of LlmConnection
     const { isAuthenticated: _a, authError: _b, isDefault: _c, ...connectionData } = updated
     await window.electronAPI.saveLlmConnection(connectionData as import('../../../shared/types').LlmConnection)
@@ -1090,19 +944,6 @@ export default function AiSettingsPage() {
     }
     await refreshLlmConnections?.()
   }, [refreshLlmConnections, t])
-
-  const handleToggleModelCapability = useCallback(async (connection: LlmConnectionWithStatus, modelId: string, direction: 'input' | 'output', capability: ModelInputCapability | ModelOutputCapability, enabled: boolean) => {
-    const current = modelEntriesForConnection(connection).find(model => model.id === modelId)
-    const nextCapabilities = normalizeModelCapabilities(current ?? {})
-    if (direction === 'input') nextCapabilities.input = { ...(nextCapabilities.input ?? {}), [capability]: enabled }
-    else nextCapabilities.output = { ...(nextCapabilities.output ?? {}), [capability]: enabled }
-    const nextConnection = { ...connection, models: promoteModelsWithCapabilities(connection, modelId, nextCapabilities) }
-    await saveConnection({ ...nextConnection, defaultModels: sanitizeDefaultModelsForConnection(nextConnection) })
-  }, [saveConnection])
-
-  const handleTaskDefaultChange = useCallback(async (connection: LlmConnectionWithStatus, task: ModelTask, modelId: string) => {
-    await saveConnection({ ...connection, defaultModels: { ...(connection.defaultModels ?? {}), [task]: modelId }, ...(task === 'chat' ? { defaultModel: modelId } : {}) })
-  }, [saveConnection])
 
   const handleDefaultThinkingChange = useCallback(async (level: ThinkingLevel) => {
     if (!window.electronAPI) return
@@ -1282,14 +1123,6 @@ export default function AiSettingsPage() {
                     ))}
                   </div>
                 </SettingsSection>
-              )}
-
-              {defaultConnection && (
-                <AdvancedModelSettings
-                  connection={defaultConnection}
-                  onToggleCapability={handleToggleModelCapability}
-                  onTaskDefaultChange={handleTaskDefaultChange}
-                />
               )}
 
               {/* Performance */}
