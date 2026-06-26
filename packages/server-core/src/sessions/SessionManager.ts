@@ -8,7 +8,7 @@ import { basename, dirname, isAbsolute, join, relative } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, type StudioFns, generateConversationSummary } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, type RightDockFns, type AgentsFns, type AutomationsFns, type ResourcesFns, type MemoryFns, type StudioFns, type MediaFns, generateConversationSummary } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -103,6 +103,7 @@ import { ensureLabelsExist } from '@craft-agent/shared/labels/crud'
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
+import { createEmbedding, generateImage, getMediaStatus, listMediaModels, listVoices, speechToText, textToSpeech } from '../media/nine-router-media'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -4402,6 +4403,50 @@ export class SessionManager implements ISessionManager {
               return output
             },
           } satisfies StudioFns,
+          mediaFns: {
+            status: async () => getMediaStatus(),
+            models: async (kind) => listMediaModels(kind),
+            voices: async () => listVoices(),
+            generateImage: async (input) => {
+              const sessionPath = getSessionStoragePath(managed.workspace.rootPath, managed.id)
+              const result = await generateImage({ sessionPath, workspaceRootPath: managed.workspace.rootPath }, input)
+              if (input.outputId) {
+                const sessions = listStoredSessions(managed.workspace.rootPath)
+                const existing = listStudioOutputsForSessions(sessions.map(session => getSessionStoragePath(managed.workspace.rootPath, session.id))).find(output => output.metadata.id === input.outputId)
+                const sessionId = existing?.metadata.sessionId ?? managed.id
+                const output = addStudioImageAsset(getSessionStoragePath(managed.workspace.rootPath, sessionId), input.outputId, {
+                  id: input.assetId ?? result.id,
+                  bytesBase64: result.bytesBase64,
+                  mimeType: result.mimeType,
+                  prompt: input.prompt,
+                  provider: '9router',
+                  model: result.model,
+                  size: input.size,
+                  format: input.format === 'jpg' ? 'jpeg' : input.format,
+                })
+                this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${sessionId}/data/studio/${output.metadata.id}/metadata.json`)
+                const asset = output.metadata.assets?.at(-1)
+                if (asset) {
+                  result.path = join(output.outputDir, asset.path)
+                  result.studioOutputId = output.metadata.id
+                  result.previewBlock = '```image-preview\n' + JSON.stringify({ src: result.path, title: asset.id }, null, 2) + '\n```'
+                }
+              }
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/media/${result.id}`)
+              return result
+            },
+            speech: async (input) => {
+              const result = await textToSpeech({ sessionPath: getSessionStoragePath(managed.workspace.rootPath, managed.id), workspaceRootPath: managed.workspace.rootPath }, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/media/${result.id}`)
+              return result
+            },
+            transcribe: async (input) => speechToText({ sessionPath: getSessionStoragePath(managed.workspace.rootPath, managed.id), workspaceRootPath: managed.workspace.rootPath }, input),
+            embed: async (input) => {
+              const result = await createEmbedding({ sessionPath: getSessionStoragePath(managed.workspace.rootPath, managed.id), workspaceRootPath: managed.workspace.rootPath }, input)
+              this.notifyConfigFileChange(managed.workspace.rootPath, `sessions/${managed.id}/data/media/${result.path}`)
+              return result
+            },
+          } satisfies MediaFns,
           resourcesFns: {
             status: async () => ({
               available: true,

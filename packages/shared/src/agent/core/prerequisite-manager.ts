@@ -72,6 +72,8 @@ const MEMORY_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'm
 const HOOKS_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'hooks-tools.md'));
 /** Global studio tools docs path required before Studio output management. */
 const STUDIO_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'studio-tools.md'));
+/** Global media tools docs path required before media generation. */
+const MEDIA_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'media-tools.md'));
 
 function isBrowserToolPrerequisiteEnabled(): boolean {
   try {
@@ -158,6 +160,18 @@ const RULES: PrerequisiteRule[] = [
     },
     blockMessage:
       'You must read the studio tools guide before managing Studio outputs. Please read the file at {filePath} first, then retry.',
+    strict: true,
+  },
+
+  // Built-in media tool: require media-tools.md first.
+  {
+    toolMatcher: (toolName: string) =>
+      toolName === 'media' || toolName === 'mcp__session__media',
+    resolveRequiredPath: () => {
+      return existsSync(MEDIA_TOOLS_DOC_PATH) ? MEDIA_TOOLS_DOC_PATH : null;
+    },
+    blockMessage:
+      'You must read the media tools guide before generating media. Please read the file at {filePath} first, then retry.',
     strict: true,
   },
 

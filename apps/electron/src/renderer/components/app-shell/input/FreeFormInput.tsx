@@ -386,6 +386,14 @@ export function FreeFormInput({
       return ANTHROPIC_MODELS // Safety net — shouldn't happen
     }
 
+    if (connection.providerType === '9router') {
+      return (connection.models ?? []).filter(model => {
+        if (typeof model === 'string') return true
+        const capabilities = model.capabilities ?? []
+        return capabilities.length === 0 || capabilities.includes('chat') || capabilities.includes('vision')
+      })
+    }
+
     return connection.models || ANTHROPIC_MODELS
   }, [llmConnections, currentConnection, workspaceDefaultConnection, connectionUnavailable])
 

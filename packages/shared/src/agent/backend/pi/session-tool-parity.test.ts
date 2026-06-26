@@ -14,15 +14,19 @@ describe('Pi backend session tool parity', () => {
     expect(missing).toEqual([]);
   });
 
-  it('exposes Studio through the Pi MCP proxy surface', () => {
+  it('exposes Studio and Media through the Pi MCP proxy surface', () => {
     expect(getSessionToolProxyDefs().some(def => def.name === 'mcp__session__studio')).toBe(true);
+    expect(getSessionToolProxyDefs().some(def => def.name === 'mcp__session__media')).toBe(true);
   });
 
-  it('routes Studio through a PiAgent backend adapter implementation', () => {
+  it('routes Studio and Media through PiAgent backend adapter implementations', () => {
     const source = readFileSync(join(__dirname, '..', '..', 'pi-agent.ts'), 'utf-8');
 
     expect(source).toContain("if (toolName === 'studio')");
     expect(source).toContain('callbacks?.studioFns');
     expect(source).toContain('executeStudioCommand');
+    expect(source).toContain("if (toolName === 'media')");
+    expect(source).toContain('callbacks?.mediaFns');
+    expect(source).toContain('executeMediaCommand');
   });
 });

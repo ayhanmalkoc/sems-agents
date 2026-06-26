@@ -83,6 +83,9 @@ export function normalizeDeprecatedModelId(modelId: string): string {
  */
 export type ModelProvider = 'anthropic' | 'pi';
 
+/** Runtime capability tags used to keep chat models separate from media models. */
+export type ModelCapability = 'chat' | 'vision' | 'image' | 'tts' | 'stt' | 'embedding';
+
 /**
  * Full model definition with capabilities and costs.
  * Used throughout the application for model selection and display.
@@ -107,6 +110,8 @@ export interface ModelDefinition {
   supportsThinking?: boolean;
   /** Legacy image input hint for vision/image input support. */
   supportsImages?: boolean;
+  /** Provider-reported or inferred runtime capabilities. */
+  capabilities?: ModelCapability[];
 }
 
 // ============================================

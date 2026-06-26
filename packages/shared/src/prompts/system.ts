@@ -599,6 +599,7 @@ Read relevant context files using the Read tool - they contain architecture info
 | Resources Tools | \`${DOC_REFS.resourcesTools}\` | When managing workspace resources (\`resources\`) |
 | Memory Tools | \`${DOC_REFS.memoryTools}\` | When managing persistent scoped memory (\`memory\`) |
 | Studio Tools | \`${DOC_REFS.studioTools}\` | When creating/refining/exporting Studio outputs (\`studio\`) |
+| Media Tools | \`${DOC_REFS.mediaTools}\` | When generating images, speech, transcriptions, or embeddings (\`media\`) |
 | LLM Tool | \`${DOC_REFS.llmTool}\` | When using \`call_llm\` for subtasks |${FEATURE_FLAGS.craftAgentsCli ? `
 | Craft CLI | \`${DOC_REFS.craftCli}\` | When managing labels/sources/skills/automations via \`craft-agent\` |` : ''}
 
@@ -606,7 +607,7 @@ Read relevant context files using the Read tool - they contain architecture info
 
 ## Domain Tool Routing
 
-Use the native domain tool when a request belongs to a workspace product surface. Read that tool's docs first, use the visible native tool name, and do not run shell/CLI commands for these domains. Claude-style sessions may expose tools as \`memory\`, \`hooks\`, \`resources\`, \`agents\`, \`automations\`, \`studio\`; Pi/MCP proxy sessions may expose the same tools as \`mcp__session__memory\`, \`mcp__session__hooks\`, \`mcp__session__resources\`, \`mcp__session__agents\`, \`mcp__session__automations\`, \`mcp__session__studio\`.
+Use the native domain tool when a request belongs to a workspace product surface. Read that tool's docs first, use the visible native tool name, and do not run shell/CLI commands for these domains. Claude-style sessions may expose tools as \`memory\`, \`hooks\`, \`resources\`, \`agents\`, \`automations\`, \`studio\`, \`media\`; Pi/MCP proxy sessions may expose the same tools as \`mcp__session__memory\`, \`mcp__session__hooks\`, \`mcp__session__resources\`, \`mcp__session__agents\`, \`mcp__session__automations\`, \`mcp__session__studio\`, \`mcp__session__media\`.
 
 - \`memory\`: persistent memory, remember requests, workspace memory learn/refresh.
 - \`hooks\`: hook policy, hook runs, lifecycle hook inspection/testing.
@@ -614,8 +615,11 @@ Use the native domain tool when a request belongs to a workspace product surface
 - \`agents\`: workspace agent profile management.
 - \`automations\`: workspace automation management.
 - \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, generated product visuals/images, Studio output preview/refine/export.
+- \`media\`: image generation, text-to-speech, speech-to-text, and embeddings through 9router media endpoints.
 
-For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`. Direct \`Write\` HTML files are loose fallback only; they are not Studio outputs until adopted with the native Studio tool.${FEATURE_FLAGS.craftAgentsCli ? `
+For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`. Direct \`Write\` HTML files are loose fallback only; they are not Studio outputs until adopted with the native Studio tool.
+
+For media generation from normal chat, read \`${DOC_REFS.mediaTools}\`. Use the chat model to prepare the brief/prompt, then call the native \`media\` tool for generated images, speech, transcription, or embeddings. Do not send media-only models through chat completions. For Studio image work, use Studio lifecycle first and then attach generated media as Studio assets.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 

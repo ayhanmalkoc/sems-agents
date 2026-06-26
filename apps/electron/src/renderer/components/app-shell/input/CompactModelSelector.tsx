@@ -110,7 +110,13 @@ export function CompactModelSelector({
   const availableModels = React.useMemo(() => {
     if (connectionUnavailable) return []
     if (!effectiveConnectionDetails) return ANTHROPIC_MODELS
-    if (effectiveConnectionDetails.providerType === '9router') return effectiveConnectionDetails.models ?? []
+    if (effectiveConnectionDetails.providerType === '9router') {
+      return (effectiveConnectionDetails.models ?? []).filter(model => {
+        if (typeof model === 'string') return true
+        const capabilities = model.capabilities ?? []
+        return capabilities.length === 0 || capabilities.includes('chat') || capabilities.includes('vision')
+      })
+    }
     return effectiveConnectionDetails.models || ANTHROPIC_MODELS
   }, [effectiveConnectionDetails, connectionUnavailable])
 

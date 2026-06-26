@@ -83,6 +83,7 @@ Supported output types: `prototype`, `landing-page`, `dashboard`, `deck`, `repor
 - For Studio create/refine/export, use native `studio` first; direct `Write` HTML is loose output only.
 - If an HTML file already exists under session `data/`, adopt it with `studio adopt <absoluteHtmlPath> <json>` before treating it as a Studio output.
 - Use the Studio tool only for output lifecycle.
+- For real image generation, create/update the Studio output first, then use the native `media` tool with `generate-image {"outputId":"..."}` so the generated image is stored as a canonical Studio asset.
 - Never write outside session data.
 - Do not store secrets in metadata, README, HTML, or assets.
 - Keep exports relative and local-first.

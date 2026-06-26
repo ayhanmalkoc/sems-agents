@@ -110,6 +110,7 @@ import { executeMemoryCommand } from './memory-tools.ts';
 import { executeHooksCommand } from './hooks-tools.ts';
 import { executeRightDockCommand } from './right-dock-tools.ts';
 import { executeStudioCommand } from './studio-tools.ts';
+import { executeMediaCommand } from './media-tools.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 
 // ============================================================
@@ -128,6 +129,7 @@ export const PI_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'memory',
   'hooks',
   'studio',
+  'media',
 ]);
 
 /**
@@ -1681,6 +1683,16 @@ export class PiAgent extends BaseAgent {
           return { content: 'Studio controls are not available. This tool requires the desktop app.', isError: true };
         }
         const result = await executeStudioCommand(String(args.command ?? 'status'), studioFns);
+        return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
+      }
+
+      if (toolName === 'media') {
+        const callbacks = getSessionScopedToolCallbacks(this._sessionId);
+        const mediaFns = callbacks?.mediaFns;
+        if (!mediaFns) {
+          return { content: 'Media controls are not available. This tool requires the desktop app.', isError: true };
+        }
+        const result = await executeMediaCommand(String(args.command ?? 'status'), mediaFns);
         return { content: result.content.map(c => c.text).join('\n'), isError: !!result.isError };
       }
       const def = SESSION_TOOL_REGISTRY.get(toolName);

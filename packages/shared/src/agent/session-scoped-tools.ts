@@ -41,6 +41,7 @@ import { createResourcesTool, type ResourcesFns } from './resources-tools.ts';
 import { createMemoryTool, type MemoryFns } from './memory-tools.ts';
 import { createHooksTool, type HooksFns } from './hooks-tools.ts';
 import { createStudioTool, type StudioFns } from './studio-tools.ts';
+import { createMediaTool, type MediaFns } from './media-tools.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 
@@ -69,6 +70,7 @@ export type { ResourcesFns } from './resources-tools.ts';
 export type { MemoryFns } from './memory-tools.ts';
 export type { HooksFns } from './hooks-tools.ts';
 export type { StudioFns } from './studio-tools.ts';
+export type { MediaFns } from './media-tools.ts';
 
 // ============================================================
 // Session-Scoped Tool Callbacks (re-exported from dedicated registry module)
@@ -99,6 +101,7 @@ export const CLAUDE_BACKEND_SESSION_TOOL_NAMES = new Set<string>([
   'memory',
   'hooks',
   'studio',
+  'media',
 ]);
 
 /**
@@ -383,6 +386,15 @@ export function getSessionScopedTools(
         getStudioFns: () => {
           const callbacks = getSessionScopedToolCallbacks(sessionId);
           return callbacks?.studioFns;
+        },
+      }),
+    );
+
+    tools.push(
+      createMediaTool({
+        getMediaFns: () => {
+          const callbacks = getSessionScopedToolCallbacks(sessionId);
+          return callbacks?.mediaFns;
         },
       }),
     );

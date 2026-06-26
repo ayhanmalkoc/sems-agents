@@ -20,6 +20,7 @@ import type { ResourcesFns } from './resources-tools.ts';
 import type { MemoryFns } from './memory-tools.ts';
 import type { HooksFns } from './hooks-tools.ts';
 import type { StudioFns } from './studio-tools.ts';
+import type { MediaFns } from './media-tools.ts';
 import type { AuthRequest } from '@craft-agent/session-tools-core';
 import { debug } from '../utils/debug.ts';
 
@@ -78,6 +79,9 @@ export interface SessionScopedToolCallbacks {
 
   /** Craft Studio output management functions. */
   studioFns?: StudioFns;
+
+  /** 9router-backed media generation functions. */
+  mediaFns?: MediaFns;
 
   /** Set labels on a session (defaults to current). */
   setSessionLabelsFn?: (sessionId: string | undefined, labels: string[]) => void | Promise<void>;

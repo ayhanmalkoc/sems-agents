@@ -1,5 +1,5 @@
 import type { ProviderDriver, DriverTestConnectionArgs } from '../driver-types.ts';
-import type { ModelDefinition } from '../../../../config/models.ts';
+import type { ModelCapability, ModelDefinition } from '../../../../config/models.ts';
 import { getAllPiModels, getPiModelsForAuthProvider, isDeprecatedClaudeOpus46Model } from '../../../../config/models-pi.ts';
 import { getPiProviderBaseUrl } from '../../../../config/models-pi.ts';
 
@@ -241,17 +241,31 @@ function map9routerModel(raw: unknown): ModelDefinition | null {
     : typeof model.contextWindow === 'number'
       ? model.contextWindow
       : undefined;
-  const capabilities = Array.isArray(model.capabilities)
-    ? model.capabilities.map(String)
+  const rawCapabilities = Array.isArray(model.capabilities)
+    ? model.capabilities.map(value => String(value).toLowerCase())
     : [];
   const kind = typeof model.kind === 'string'
-    ? model.kind
+    ? model.kind.toLowerCase()
     : typeof model.type === 'string'
-      ? model.type
+      ? model.type.toLowerCase()
       : undefined;
+  const lowerId = id.toLowerCase();
+  const capabilitySet = new Set<ModelCapability>();
+  if (rawCapabilities.includes('chat') || rawCapabilities.includes('text') || rawCapabilities.includes('completion') || kind === 'chat' || kind === 'llm') capabilitySet.add('chat');
+  if (rawCapabilities.includes('vision') || rawCapabilities.includes('image_input') || rawCapabilities.includes('image-input') || kind === 'vision') capabilitySet.add('vision');
+  if (rawCapabilities.includes('image') || rawCapabilities.includes('image_generation') || rawCapabilities.includes('image-generation') || kind === 'image') capabilitySet.add('image');
+  if (rawCapabilities.includes('tts') || rawCapabilities.includes('text_to_speech') || rawCapabilities.includes('text-to-speech') || kind === 'tts') capabilitySet.add('tts');
+  if (rawCapabilities.includes('stt') || rawCapabilities.includes('speech_to_text') || rawCapabilities.includes('speech-to-text') || rawCapabilities.includes('transcription') || kind === 'stt') capabilitySet.add('stt');
+  if (rawCapabilities.includes('embedding') || rawCapabilities.includes('embeddings') || kind === 'embedding' || kind === 'embeddings') capabilitySet.add('embedding');
+  if (capabilitySet.size === 0) {
+    if (/gpt-image|dall-e|dalle|image|flux|recraft|stable|sdxl|midjourney/.test(lowerId)) capabilitySet.add('image');
+    else if (/tts|speech|voice/.test(lowerId)) capabilitySet.add('tts');
+    else if (/whisper|transcribe|transcription|stt/.test(lowerId)) capabilitySet.add('stt');
+    else if (/embed|embedding|voyage|jina/.test(lowerId)) capabilitySet.add('embedding');
+    else capabilitySet.add('chat');
+  }
+  const capabilities = [...capabilitySet];
   const supportsImages = capabilities.includes('vision')
-    || capabilities.includes('image_input')
-    || capabilities.includes('image-input')
     || kind === 'vision';
 
   return {
@@ -261,6 +275,7 @@ function map9routerModel(raw: unknown): ModelDefinition | null {
     description: '9router Gateway model',
     provider: 'pi',
     contextWindow: contextWindow ?? 128_000,
+    capabilities,
     ...(supportsImages ? { supportsImages: true } : {}),
   };
 }
@@ -270,7 +285,8 @@ async function fetch9routerModels(
   baseUrl: string | undefined,
   timeoutMs: number,
 ): Promise<ModelDefinition[]> {
-  const url = `${normalize9routerBaseUrl(baseUrl)}/models`;
+  const root = normalize9routerBaseUrl(baseUrl);
+  const url = `${root}/models`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -287,12 +303,36 @@ async function fetch9routerModels(
     }
     const data = await res.json() as { data?: unknown[]; models?: unknown[] } | unknown[];
     const rows = Array.isArray(data) ? data : (data.data ?? data.models ?? []);
-    const models = rows.map(map9routerModel).filter(Boolean) as ModelDefinition[];
+    const infoRows = await fetch9routerModelInfo(root, apiKey, controller.signal).catch(() => []);
+    const infoById = new Map(infoRows.map(row => {
+      const record = row as Record<string, unknown>;
+      return [typeof record.id === 'string' ? record.id : '', record] as const;
+    }).filter(([id]) => id));
+    const models = rows
+      .map(row => {
+        const record = row as Record<string, unknown>;
+        const id = typeof record?.id === 'string' ? record.id : '';
+        return map9routerModel({ ...record, ...(infoById.get(id) ?? {}) });
+      })
+      .filter(Boolean) as ModelDefinition[];
     if (models.length === 0) throw new Error('No models returned by 9router');
     return models;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetch9routerModelInfo(root: string, apiKey: string | undefined, signal: AbortSignal): Promise<unknown[]> {
+  const res = await fetch(`${root}/models/info`, {
+    method: 'GET',
+    signal,
+    headers: {
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+    },
+  });
+  if (!res.ok) return [];
+  const data = await res.json() as { data?: unknown[]; models?: unknown[] } | unknown[];
+  return Array.isArray(data) ? data : (data.data ?? data.models ?? []);
 }
 
 async function test9routerChatCompletions(

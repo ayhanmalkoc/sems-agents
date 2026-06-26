@@ -194,6 +194,10 @@ export const StudioToolSchema = z.object({
   command: z.string().describe('Studio command: status, list, show <outputId>, templates, template <templateId>, design-systems, design-system <id>, create <json>, create-project <json>, update <outputId> <json>, add-page <outputId> <json>, add-component <outputId> <json>, quality <outputId>, assets <outputId>, asset <outputId> <assetId>, export <outputId> <html|zip|pdf>, adopt <absoluteHtmlPath> <json>.'),
 });
 
+export const MediaToolSchema = z.object({
+  command: z.string().describe('Media command: status, models image|tts|stt|embedding, voices, generate-image <json>, speech <json>, transcribe <json>, embed <json>.'),
+});
+
 export const SessionsToolSchema = z.object({
   command: z.string().describe('Sessions command: status, list, show <sessionId>, spawn <json>, rename <sessionId> <name>, labels <sessionId> <json-array>, status-set <sessionId> <status>, agent <sessionId> <agentId>, archive <sessionId> <true|false>, pin <sessionId> <true|false>, delete <sessionId> --confirm, message <sessionId> <message>.'),
 });
@@ -556,6 +560,10 @@ Commands:
 
 Use this for Studio templates, design systems, create/list/show/update, project pages/components, quality checks, adopt, and export. Read studio-tools.md before use. Do not run studio commands in shell.`,
 
+  media: `Generate and inspect media through configured 9router media endpoints.
+
+Use this for image generation, text-to-speech, speech-to-text, and embeddings. Read media-tools.md before use. Do not run media commands in shell.`,
+
   hooks: `Manage workspace lifecycle hooks, builtin policy hooks, trusted custom hooks, runs, and trust review.
 
 Use this when the user asks to inspect, test, enable, disable, audit, configure policy, or manage trusted custom hooks. Custom hooks require trust approval and never run untrusted.
@@ -765,6 +773,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'memory', description: TOOL_DESCRIPTIONS.memory, inputSchema: MemoryToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'hooks', description: TOOL_DESCRIPTIONS.hooks, inputSchema: HooksToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'studio', description: TOOL_DESCRIPTIONS.studio, inputSchema: StudioToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
+  { name: 'media', description: TOOL_DESCRIPTIONS.media, inputSchema: MediaToolSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   { name: 'sessions', description: TOOL_DESCRIPTIONS.sessions, inputSchema: SessionsToolSchema, executionMode: 'registry', safeMode: 'block', handler: handleSessionsTool },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
