@@ -71,7 +71,7 @@ export interface ApiKeyInputProps {
   /** Disable the input (e.g. during validation) */
   disabled?: boolean
   /** Provider type determines which presets and placeholders to show */
-  providerType?: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key'
+  providerType?: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key' | '9router_gateway'
   /** Pre-fill values when editing an existing connection */
   initialValues?: {
     apiKey?: string
@@ -100,7 +100,6 @@ const ANTHROPIC_PRESETS: Preset[] = [
   { key: 'openai-us', label: 'OpenAI US', url: 'https://us.api.openai.com/v1', placeholder: 'sk-...' },
   { key: 'google', label: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta', placeholder: 'AIza...' },
   { key: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', placeholder: 'sk-or-...' },
-  { key: '9router', label: '9router Gateway', url: 'http://localhost:20128/v1', placeholder: 'Paste your 9router key here...' },
   { key: 'azure-openai-responses', label: 'Azure OpenAI', url: '', placeholder: 'Paste your key here...' },
   { key: 'amazon-bedrock', label: 'Amazon Bedrock', url: 'https://bedrock-runtime.us-east-1.amazonaws.com', placeholder: 'AKIA...' },
   { key: 'groq', label: 'Groq', url: 'https://api.groq.com/openai/v1', placeholder: 'gsk_...' },
@@ -124,6 +123,13 @@ const ANTHROPIC_PRESETS: Preset[] = [
  * gets pinned to openai-completions) but stay branded in the dropdown.
  */
 const OPENAI_COMPAT_CUSTOM_URL_PRESETS: ReadonlySet<string> = new Set(['manifest'])
+
+const NINE_ROUTER_PRESET: Preset = {
+  key: '9router',
+  label: '9router Gateway',
+  url: 'http://localhost:20128/v1',
+  placeholder: 'Paste your 9router key here...',
+}
 
 // OpenAI provider presets - for Codex backend
 // Only direct OpenAI is supported; 3PP providers (OpenRouter, Vercel, Ollama) should be
@@ -152,7 +158,8 @@ const COMPAT_OPENAI_DEFAULTS = 'openai/gpt-5.2-codex, openai/gpt-5.1-codex-mini'
 const COMPAT_MINIMAX_DEFAULTS = 'MiniMax-M2.5, MiniMax-M2.5-highspeed'
 const COMPAT_KIMI_DEFAULTS = 'k2p5, kimi-k2-thinking'
 
-function getPresetsForProvider(providerType: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key'): Preset[] {
+function getPresetsForProvider(providerType: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key' | '9router_gateway'): Preset[] {
+  if (providerType === '9router_gateway') return [NINE_ROUTER_PRESET]
   if (providerType === 'pi_api_key') return ANTHROPIC_PRESETS
   if (providerType === 'google') return GOOGLE_PRESETS
   if (providerType === 'pi') return PI_PRESETS
@@ -197,7 +204,7 @@ export function ApiKeyInput({
   const { t } = useTranslation()
   const [apiKey, setApiKey] = useState(initialValues?.apiKey ?? '')
   const [showValue, setShowValue] = useState(false)
-  const [baseUrl, setBaseUrl] = useState(initialValues?.baseUrl ?? defaultPreset.url)
+  const [baseUrl, setBaseUrl] = useState(initialValues?.baseUrl ?? (initialPreset === '9router' ? NINE_ROUTER_PRESET.url : defaultPreset.url))
   const [activePreset, setActivePreset] = useState<PresetKey>(initialPreset)
   const [lastNonCustomPreset, setLastNonCustomPreset] = useState<PresetKey | null>(
     initialPreset !== 'custom' ? initialPreset : defaultPreset.key
@@ -228,13 +235,14 @@ export function ApiKeyInput({
   const isDisabled = disabled || status === 'validating'
 
   const isPiApiKeyFlow = providerType === 'pi_api_key'
+  const isNineRouterGateway = providerType === '9router_gateway'
   const isBedrock = activePreset === 'amazon-bedrock'
   // Hide endpoint/model fields for providers with well-known endpoints handled by the SDK
   const DEFAULT_ENDPOINT_PROVIDERS = new Set(['anthropic', 'openai', 'pi', 'google'])
   const isDefaultProviderPreset = DEFAULT_ENDPOINT_PROVIDERS.has(activePreset)
 
   // Provider-specific placeholders from the active preset
-  const activePresetObj = presets.find(p => p.key === activePreset)
+  const activePresetObj = isNineRouterGateway ? NINE_ROUTER_PRESET : presets.find(p => p.key === activePreset)
   const apiKeyPlaceholder = activePresetObj?.placeholder
     ?? (providerType === 'google' ? 'AIza...'
     : providerType === 'pi' ? 'pi-...'
@@ -273,7 +281,8 @@ export function ApiKeyInput({
   }, [activePreset, loadPiModels])
 
   // Whether to show 3 tier dropdowns instead of text input
-  const hasPiModels = isPiApiKeyFlow && piModels.length > 0 && !isDefaultProviderPreset && activePreset !== 'custom' && !isBedrock
+  const hasPiModels = isPiApiKeyFlow && piModels.length > 0 && !isDefaultProviderPreset && activePreset !== 'custom' && activePreset !== '9router' && !isBedrock
+
 
   const handlePresetSelect = (preset: Preset) => {
     setActivePreset(preset.key)
@@ -307,6 +316,12 @@ export function ApiKeyInput({
 
   const handleBaseUrlChange = (value: string) => {
     setBaseUrl(value)
+    if (isNineRouterGateway) {
+      setActivePreset('9router')
+      setLastNonCustomPreset('9router')
+      setModelError(null)
+      return
+    }
     const presetKey = getPresetForUrl(value, presets)
     const currentPresetObj = presets.find(p => p.key === activePreset)
     const nextPresetState = resolvePresetStateForBaseUrlChange({
@@ -392,7 +407,7 @@ export function ApiKeyInput({
 
     const parsedModels = parseModelList(connectionDefaultModel)
 
-    if (activePreset === '9router') {
+    if (isNineRouterGateway) {
       onSubmit({
         apiKey: apiKey.trim(),
         providerType: '9router',
@@ -480,7 +495,7 @@ export function ApiKeyInput({
       </div>)}
 
       {/* Endpoint/Provider Preset Selector - hidden when only one preset (e.g. Codex/OpenAI direct) */}
-      {presets.length > 1 && (
+      {presets.length > 1 && !isNineRouterGateway && (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="base-url">Endpoint</Label>
@@ -526,8 +541,28 @@ export function ApiKeyInput({
       </div>
       )}
 
+      {isNineRouterGateway && (
+        <div className="space-y-2">
+          <Label htmlFor="base-url">9router Endpoint</Label>
+          <div className={cn(
+            "rounded-md shadow-minimal transition-colors",
+            "bg-foreground-2 focus-within:bg-background"
+          )}>
+            <Input
+              id="base-url"
+              type="text"
+              value={baseUrl}
+              onChange={(e) => handleBaseUrlChange(e.target.value)}
+              placeholder="http://localhost:20128/v1"
+              className="border-0 bg-transparent shadow-none"
+              disabled={isDisabled}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Protocol Toggle — visible as soon as Custom preset is selected */}
-      {activePreset === 'custom' && !isDefaultProviderPreset && (
+      {activePreset === 'custom' && !isDefaultProviderPreset && !isNineRouterGateway && (
         <div className="space-y-2">
           <Label>Protocol</Label>
           <div className={cn(

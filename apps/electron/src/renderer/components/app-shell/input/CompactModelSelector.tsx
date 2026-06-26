@@ -110,6 +110,7 @@ export function CompactModelSelector({
   const availableModels = React.useMemo(() => {
     if (connectionUnavailable) return []
     if (!effectiveConnectionDetails) return ANTHROPIC_MODELS
+    if (effectiveConnectionDetails.providerType === '9router') return effectiveConnectionDetails.models ?? []
     return effectiveConnectionDetails.models || ANTHROPIC_MODELS
   }, [effectiveConnectionDetails, connectionUnavailable])
 

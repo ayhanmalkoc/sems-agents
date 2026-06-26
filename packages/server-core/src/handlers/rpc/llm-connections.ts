@@ -325,7 +325,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
       return { success: false, error: 'API key is required' }
     }
 
-    const setupValidation = validateSetupTestInput({ provider: agentProvider, baseUrl, piAuthProvider })
+    const setupValidation = validateSetupTestInput({ provider, baseUrl, piAuthProvider })
     if (!setupValidation.valid) {
       return { success: false, error: setupValidation.error }
     }

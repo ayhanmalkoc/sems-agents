@@ -97,6 +97,7 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
   pi_api_key: 'pi-api-key',
+  nine_router_api_key: 'nine-router',
 }
 
 /**
@@ -174,6 +175,16 @@ export function apiSetupMethodToConnectionSetup(
       return {
         slug,
         credential: options.credential,
+      }
+    case 'nine_router_api_key':
+      return {
+        slug,
+        providerType: '9router',
+        credential: options.credential,
+        baseUrl: options.baseUrl || 'http://localhost:20128/v1',
+        defaultModel: options.connectionDefaultModel,
+        models: options.models,
+        modelSelectionMode: 'automaticallySyncedFromProvider',
       }
     case 'pi_api_key':
       return {
@@ -652,6 +663,7 @@ export function useOnboarding({
       claude: 'claude_oauth',
       chatgpt: 'pi_chatgpt_oauth',
       copilot: 'pi_copilot_oauth',
+      '9router': 'nine_router_api_key',
       api_key: 'pi_api_key',
     }
 

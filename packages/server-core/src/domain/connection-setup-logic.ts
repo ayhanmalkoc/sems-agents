@@ -53,7 +53,7 @@ export function parseTestConnectionError(msg: string): string {
  * Guard against ambiguous Pi custom endpoint tests where no provider routing is selected.
  */
 export function validateSetupTestInput(params: {
-  provider: 'anthropic' | 'pi'
+  provider: 'anthropic' | 'pi' | '9router'
   baseUrl?: string
   piAuthProvider?: string
 }): { valid: true } | { valid: false; error: string } {
@@ -165,6 +165,11 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     authType: 'api_key',
     // piAuthProvider set dynamically from setup.piAuthProvider
   },
+  'nine-router': {
+    name: '9router Gateway',
+    providerType: '9router',
+    authType: 'api_key_with_endpoint',
+  },
 }
 
 // ============================================================
@@ -237,7 +242,7 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     authType,
     models: getDefaultModelsForConnection(providerType, template.piAuthProvider),
     defaultModel: getDefaultModelForConnection(providerType, template.piAuthProvider),
-    modelSelectionMode: providerType === 'pi' ? 'automaticallySyncedFromProvider' : undefined,
+    modelSelectionMode: (providerType === 'pi' || providerType === '9router') ? 'automaticallySyncedFromProvider' : undefined,
     piAuthProvider: template.piAuthProvider,
     midStreamBehavior: defaultMidStreamBehavior(providerType),
     createdAt: Date.now(),

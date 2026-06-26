@@ -64,7 +64,8 @@ export function CredentialsStep({
   const isCopilotOAuth = apiSetupMethod === 'pi_copilot_oauth'
   const isAnthropicApiKey = apiSetupMethod === 'anthropic_api_key'
   const isPiApiKey = apiSetupMethod === 'pi_api_key'
-  const isApiKey = isAnthropicApiKey || isPiApiKey
+  const isNineRouterApiKey = apiSetupMethod === 'nine_router_api_key'
+  const isApiKey = isAnthropicApiKey || isPiApiKey || isNineRouterApiKey
 
   // Copilot device code clipboard handling
   const [copiedCode, setCopiedCode] = useState(false)
@@ -260,10 +261,12 @@ export function CredentialsStep({
 
   // --- API Key flow ---
   // Determine provider type and description based on selected method
-  const providerType = isPiApiKey ? 'pi_api_key' : 'anthropic'
-  const apiKeyDescription = isPiApiKey
-    ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
-    : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
+  const providerType = isNineRouterApiKey ? '9router_gateway' : isPiApiKey ? 'pi_api_key' : 'anthropic'
+  const apiKeyDescription = isNineRouterApiKey
+    ? "Enter your 9router gateway API key and endpoint. Models are discovered from /v1/models."
+    : isPiApiKey
+      ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
+      : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
 
   const apiKeyInputKey = [
     apiSetupMethod,
@@ -297,7 +300,7 @@ export function CredentialsStep({
         errorMessage={errorMessage}
         onSubmit={onSubmit}
         providerType={providerType}
-        initialValues={editInitialValues}
+        initialValues={isNineRouterApiKey ? { activePreset: '9router', baseUrl: 'http://localhost:20128/v1', ...editInitialValues } : editInitialValues}
       />
     </StepFormLayout>
   )

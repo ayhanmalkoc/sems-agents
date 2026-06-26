@@ -12,7 +12,7 @@ import copilotIcon from "@/assets/provider-icons/copilot.svg"
  * The high-level provider choice the user makes on first launch.
  * This maps to one or more ApiSetupMethods downstream.
  */
-export type ProviderChoice = 'claude' | 'chatgpt' | 'copilot' | 'api_key' | 'local'
+export type ProviderChoice = 'claude' | 'chatgpt' | 'copilot' | '9router' | 'api_key' | 'local'
 
 interface ProviderOption {
   id: ProviderChoice
@@ -25,6 +25,7 @@ const PROVIDER_ICONS: Record<ProviderChoice, React.ReactNode> = {
   claude: <img src={claudeIcon} alt="" className="size-5 rounded-[3px]" />,
   chatgpt: <img src={openaiIcon} alt="" className="size-5 rounded-[3px]" />,
   copilot: <img src={copilotIcon} alt="" className="size-5 rounded-[3px]" />,
+  '9router': <Key className="size-5" />,
   api_key: <Key className="size-5" />,
   local: <Monitor className="size-5" />,
 }
@@ -63,6 +64,12 @@ export function ProviderSelectStep({ onSelect, onSkip }: ProviderSelectStepProps
       name: t("onboarding.providerSelect.githubCopilot"),
       description: t("onboarding.providerSelect.githubCopilotDesc"),
       icon: PROVIDER_ICONS.copilot,
+    },
+    {
+      id: '9router',
+      name: '9router Gateway',
+      description: 'Connect to your 9router gateway with OpenAI-compatible chat and model discovery.',
+      icon: PROVIDER_ICONS['9router'],
     },
     {
       id: 'api_key',

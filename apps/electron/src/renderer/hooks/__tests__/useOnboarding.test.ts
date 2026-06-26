@@ -34,7 +34,7 @@ describe('resolveSlugForMethod', () => {
   it('works for all setup methods', () => {
     const methods: ApiSetupMethod[] = [
       'anthropic_api_key', 'claude_oauth',
-      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_api_key',
+      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_api_key', 'nine_router_api_key',
     ]
     for (const method of methods) {
       const slug = resolveSlugForMethod(method, null, new Set())
@@ -82,6 +82,22 @@ describe('apiSetupMethodToConnectionSetup', () => {
   it('pi_copilot_oauth maps to github-copilot slug', () => {
     const setup = apiSetupMethodToConnectionSetup('pi_copilot_oauth', {}, null, new Set())
     expect(setup.slug).toBe('github-copilot')
+  })
+
+  it('nine_router_api_key creates native 9router setup', () => {
+    const setup = apiSetupMethodToConnectionSetup(
+      'nine_router_api_key',
+      { credential: 'sk-router', baseUrl: 'https://router.example.com/v1' },
+      null,
+      new Set(),
+    )
+    expect(setup.slug).toBe('nine-router')
+    expect(setup.providerType).toBe('9router')
+    expect(setup.credential).toBe('sk-router')
+    expect(setup.baseUrl).toBe('https://router.example.com/v1')
+    expect(setup.modelSelectionMode).toBe('automaticallySyncedFromProvider')
+    expect(setup.piAuthProvider).toBeUndefined()
+    expect(setup.customEndpoint).toBeUndefined()
   })
 
   it('pi_api_key includes piAuthProvider and modelSelectionMode', () => {

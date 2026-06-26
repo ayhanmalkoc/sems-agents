@@ -96,8 +96,7 @@ describe('resolvePresetStateForBaseUrlChange', () => {
       activePreset: 'custom',
       lastNonCustomPreset: 'openrouter',
     })
-  })
-})
+  })})
 
 describe('resolveCustomEndpointPayload', () => {
   const BRANDED = new Set(['manifest'])

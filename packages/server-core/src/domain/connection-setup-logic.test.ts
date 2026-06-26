@@ -27,6 +27,13 @@ describe('validateSetupTestInput', () => {
       piAuthProvider: 'openai',
     })).toEqual({ valid: true })
   })
+
+  it('allows 9router gateway endpoints without Pi provider preset', () => {
+    expect(validateSetupTestInput({
+      provider: '9router',
+      baseUrl: 'https://router.example.com/v1',
+    })).toEqual({ valid: true })
+  })
 })
 
 describe('setup test API key requirements', () => {
