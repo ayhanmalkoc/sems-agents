@@ -22,4 +22,5 @@ const piFetcher = new PiModelFetcher()
 export const MODEL_FETCHERS: ModelFetcherMap = {
   anthropic: anthropicFetcher,
   pi:        piFetcher,
+  '9router': piFetcher,
 }

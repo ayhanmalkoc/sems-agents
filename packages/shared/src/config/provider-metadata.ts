@@ -51,6 +51,9 @@ const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     name: 'OpenRouter',
     dashboardUrl: 'https://openrouter.ai/settings',
   },
+  '9router': {
+    name: '9router Gateway',
+  },
   groq: {
     name: 'Groq',
     statusPageUrl: 'https://status.groq.com',
@@ -82,6 +85,9 @@ export function getProviderMetadata(
 ): ProviderMetadata | undefined {
   if (providerType === 'anthropic') {
     return PROVIDER_METADATA.anthropic
+  }
+  if (providerType === '9router') {
+    return PROVIDER_METADATA['9router']
   }
   if (piAuthProvider) {
     return PROVIDER_METADATA[piAuthProvider]

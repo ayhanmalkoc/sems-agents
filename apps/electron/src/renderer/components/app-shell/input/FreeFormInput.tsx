@@ -356,7 +356,7 @@ export function FreeFormInput({
     const effectiveSlug = resolveEffectiveConnectionSlug(currentConnection, workspaceDefaultConnection, llmConnections)
     const conn = llmConnections.find(c => c.slug === effectiveSlug)
     if (!conn) return null
-    if (!isCompatProvider(conn.providerType)) return null
+    if (!(isCompatProvider(conn.providerType) || conn.providerType === '9router')) return null
     // Allow model switching when connection has multiple models
     if (conn.models && conn.models.length > 1) return null
     return conn.defaultModel ?? null
@@ -1563,7 +1563,7 @@ export function FreeFormInput({
   const showVisionWarning =
     hasStagedImages
     && !!effectiveConnectionDetails
-    && isCompatProvider(effectiveConnectionDetails.providerType)
+    && (isCompatProvider(effectiveConnectionDetails.providerType) || effectiveConnectionDetails.providerType === '9router')
     && !modelSupportsImages(effectiveConnectionDetails, currentModel)
 
   return (
@@ -2236,7 +2236,7 @@ export function FreeFormInput({
                   // remains interactive.
                   const lockedModel = currentModel || connectionDefaultModel
                   const showVisionToggle =
-                    !!effectiveConnectionDetails && isCompatProvider(effectiveConnectionDetails.providerType)
+                    !!effectiveConnectionDetails && (isCompatProvider(effectiveConnectionDetails.providerType) || effectiveConnectionDetails.providerType === '9router')
                   const visionOn = showVisionToggle && modelSupportsImages(effectiveConnectionDetails!, lockedModel)
                   const lockedModelDescription = currentModel && currentModel !== connectionDefaultModel ? 'Agent profile' : t('chat.connectionDefault')
                   return (
@@ -2330,7 +2330,7 @@ export function FreeFormInput({
                                   ? stripPiPrefixForDisplay(getModelShortName(model))
                                   : (model.name ?? stripPiPrefixForDisplay(model.id))
                                 const isSelectedModel = isCurrentConnection && currentModel === modelId
-                                const showVisionToggle = isCompatProvider(conn.providerType)
+                                const showVisionToggle = (isCompatProvider(conn.providerType) || conn.providerType === '9router')
                                 const visionOn = showVisionToggle && modelSupportsImages(conn, modelId)
                                 return (
                                   <StyledDropdownMenuItem
@@ -2422,7 +2422,7 @@ export function FreeFormInput({
                     const descriptionKey = typeof model !== 'string' && 'descriptionKey' in model ? (model.descriptionKey as string) : undefined
                     const description = descriptionKey ? t(descriptionKey) : (typeof model !== 'string' && 'description' in model ? (model.description as string) : '')
                     const showVisionToggle =
-                      !!effectiveConnectionDetails && isCompatProvider(effectiveConnectionDetails.providerType)
+                      !!effectiveConnectionDetails && (isCompatProvider(effectiveConnectionDetails.providerType) || effectiveConnectionDetails.providerType === '9router')
                     const visionOn = showVisionToggle && modelSupportsImages(effectiveConnectionDetails!, modelId)
                     return (
                       <StyledDropdownMenuItem

@@ -257,6 +257,7 @@ export function providerTypeToAgentProvider(providerType: LlmProviderType): Agen
     // Pi backends (includes former bedrock/vertex/anthropic_compat via migration)
     case 'pi':
     case 'pi_compat':
+    case '9router':
       return 'pi';
 
     default:
@@ -384,11 +385,15 @@ export function resolveBackendContext(args: {
  * Keeps provider-specific hint mapping out of Electron main IPC handlers.
  */
 export function resolveSetupTestConnectionHint(args: {
-  provider: AgentProvider;
+  provider: AgentProvider | '9router';
   baseUrl?: string;
   piAuthProvider?: string;
   customEndpoint?: CustomEndpointConfig;
 }): Pick<LlmConnection, 'providerType' | 'piAuthProvider' | 'customEndpoint'> {
+  if (args.provider === '9router') {
+    return { providerType: '9router' };
+  }
+
   if (args.provider === 'pi') {
     if (args.customEndpoint && args.baseUrl?.trim()) {
       return {
@@ -709,7 +714,7 @@ export async function testBackendConnection(args: {
     const providerType = args.connection?.providerType ?? getDefaultProviderType(args.provider);
     const now = Date.now();
     const authType: LlmAuthType = (
-      providerType === 'pi_compat'
+      providerType === 'pi_compat' || providerType === '9router'
     )
       ? 'api_key_with_endpoint'
       : 'api_key';

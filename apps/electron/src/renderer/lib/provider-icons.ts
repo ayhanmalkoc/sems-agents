@@ -57,6 +57,7 @@ const providerDisplayNames: Record<string, string> = {
   openrouter: 'OpenRouter',
   pi: 'Craft Agents Backend',
   pi_compat: 'Craft Agents Backend',
+  '9router': '9router Gateway',
   vercel: 'Vercel',
 }
 
@@ -71,6 +72,7 @@ export function getProviderDisplayName(providerType: string, baseUrl?: string | 
     if (url.includes('minimax.io') || url.includes('minimaxi.com')) return 'Minimax'
     if (url.includes('v0.dev') || url.includes('vercel')) return 'Vercel'
     if (url.includes('manifest.build')) return 'Manifest'
+    if (url.includes('9router')) return '9router Gateway'
   }
   return providerDisplayNames[providerType] || providerType
 }
@@ -183,6 +185,8 @@ export function getProviderIcon(
       return providerIcons.openai
     case 'copilot':
       return providerIcons.copilot
+    case '9router':
+      return 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://github.com/decolua/9router'
     case 'pi':
     case 'pi_compat': {
       // Resolve to actual upstream provider icon

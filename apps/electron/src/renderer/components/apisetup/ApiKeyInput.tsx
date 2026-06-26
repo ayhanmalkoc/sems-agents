@@ -39,6 +39,7 @@ export type { CustomEndpointApi }
 
 export interface ApiKeySubmitData {
   apiKey: string
+  providerType?: '9router'
   baseUrl?: string
   connectionDefaultModel?: string
   models?: string[]
@@ -99,6 +100,7 @@ const ANTHROPIC_PRESETS: Preset[] = [
   { key: 'openai-us', label: 'OpenAI US', url: 'https://us.api.openai.com/v1', placeholder: 'sk-...' },
   { key: 'google', label: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta', placeholder: 'AIza...' },
   { key: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/api/v1', placeholder: 'sk-or-...' },
+  { key: '9router', label: '9router Gateway', url: 'http://localhost:20128/v1', placeholder: 'Paste your 9router key here...' },
   { key: 'azure-openai-responses', label: 'Azure OpenAI', url: '', placeholder: 'Paste your key here...' },
   { key: 'amazon-bedrock', label: 'Amazon Bedrock', url: 'https://bedrock-runtime.us-east-1.amazonaws.com', placeholder: 'AKIA...' },
   { key: 'groq', label: 'Groq', url: 'https://api.groq.com/openai/v1', placeholder: 'gsk_...' },
@@ -242,7 +244,7 @@ export function ApiKeyInput({
   // Fetch Pi SDK models when a provider is selected in pi_api_key flow.
   // Returns all models sorted by cost (expensive-first) for the searchable tier dropdowns.
   const loadPiModels = useCallback(async (provider: string) => {
-    if (!isPiApiKeyFlow || !provider || provider === 'custom' || DEFAULT_ENDPOINT_PROVIDERS.has(provider) || OPENAI_COMPAT_CUSTOM_URL_PRESETS.has(provider)) {
+  if (!isPiApiKeyFlow || !provider || provider === 'custom' || provider === '9router' || DEFAULT_ENDPOINT_PROVIDERS.has(provider) || OPENAI_COMPAT_CUSTOM_URL_PRESETS.has(provider)) {
       setPiModels([])
       return
     }
@@ -389,6 +391,18 @@ export function ApiKeyInput({
     const effectiveBaseUrl = baseUrl.trim()
 
     const parsedModels = parseModelList(connectionDefaultModel)
+
+    if (activePreset === '9router') {
+      onSubmit({
+        apiKey: apiKey.trim(),
+        providerType: '9router',
+        baseUrl: effectiveBaseUrl || 'http://localhost:20128/v1',
+        connectionDefaultModel: parsedModels[0],
+        models: parsedModels.length > 0 ? parsedModels : undefined,
+        modelSelectionMode: 'automaticallySyncedFromProvider',
+      })
+      return
+    }
 
     const isUsingDefaultEndpoint = isDefaultProviderPreset || !effectiveBaseUrl
     const requiresModel = !isDefaultProviderPreset && !!effectiveBaseUrl

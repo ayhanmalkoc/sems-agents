@@ -3245,8 +3245,8 @@ export class SessionManager implements ISessionManager {
           authType: backendContext.authType,
           runtime: connection ? {
             baseUrl: connection.baseUrl,
-            piAuthProvider: connection.piAuthProvider,
-            customEndpoint: connection.customEndpoint,
+            piAuthProvider: connection.providerType === '9router' ? 'openai' : connection.piAuthProvider,
+            customEndpoint: connection.providerType === '9router' ? { api: 'openai-completions' } : connection.customEndpoint,
             customModels: connection.models?.map(model => {
               if (typeof model === 'string') return model
               const supportsImages = typeof model.supportsImages === 'boolean' ? model.supportsImages : undefined

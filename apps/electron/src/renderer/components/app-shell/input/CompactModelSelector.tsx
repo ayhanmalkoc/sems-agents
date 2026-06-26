@@ -95,7 +95,7 @@ export function CompactModelSelector({
   const connectionDefaultModel = React.useMemo(() => {
     const conn = effectiveConnectionDetails
     if (!conn) return null
-    if (!isCompatProvider(conn.providerType)) return null
+    if (!(isCompatProvider(conn.providerType) || conn.providerType === '9router')) return null
     if (conn.models && conn.models.length > 1) return null
     return conn.defaultModel ?? null
   }, [effectiveConnectionDetails])
@@ -288,7 +288,7 @@ export function CompactModelSelector({
                               : (model.name ?? stripPiPrefixForDisplay(model.id))
                             const isSelectedModel =
                               isCurrentConnection && currentModel === modelId
-                            const showVision = isCompatProvider(conn.providerType)
+                            const showVision = (isCompatProvider(conn.providerType) || conn.providerType === '9router')
                             const visionOn = showVision && modelSupportsImages(conn, modelId)
                             return (
                               <DrawerClose asChild key={modelId}>
@@ -348,7 +348,7 @@ export function CompactModelSelector({
                     : '')
               const showVision =
                 !!effectiveConnectionDetails &&
-                isCompatProvider(effectiveConnectionDetails.providerType)
+                (isCompatProvider(effectiveConnectionDetails.providerType) || effectiveConnectionDetails.providerType === '9router')
               const visionOn =
                 showVision && modelSupportsImages(effectiveConnectionDetails!, modelId)
               return (
@@ -464,7 +464,7 @@ function LockedSingleRow({
   onToggleVision: (connectionSlug: string, modelId: string, enabled: boolean) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const showVision = !!connection && isCompatProvider(connection.providerType)
+  const showVision = !!connection && (isCompatProvider(connection.providerType) || connection.providerType === '9router')
   const visionOn = !!(showVision && connection && modelSupportsImages(connection, modelId))
   return (
     <div className="flex items-center justify-between px-3 py-2 rounded-lg opacity-80 select-none">

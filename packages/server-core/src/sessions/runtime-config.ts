@@ -71,11 +71,13 @@ export function buildBackendRuntimeSignature(input: BackendRuntimeSignatureInput
         providerType: connection.providerType,
         authType: connection.authType,
         defaultModel: connection.defaultModel,
-        ...(isCompatProvider(connection.providerType)
+        ...((isCompatProvider(connection.providerType) || connection.providerType === '9router')
           ? {
               baseUrl: connection.baseUrl,
               piAuthProvider: connection.piAuthProvider,
-              customEndpoint: connection.customEndpoint
+              customEndpoint: connection.providerType === '9router'
+                ? { api: 'openai-completions' }
+                : connection.customEndpoint
                 ? definedObject({
                     api: connection.customEndpoint.api,
                     supportsImages: typeof connection.customEndpoint.supportsImages === 'boolean'
@@ -112,7 +114,7 @@ export function filterAttachmentsForModelInput(
   modelId: string,
 ): ModelAttachmentFilterResult {
   if (!attachments?.length) return { attachments, omittedImages: [] }
-  if (!connection || !isCompatProvider(connection.providerType)) return { attachments, omittedImages: [] }
+  if (!connection || !(isCompatProvider(connection.providerType) || connection.providerType === '9router')) return { attachments, omittedImages: [] }
   if (modelSupportsImages(connection, modelId)) return { attachments, omittedImages: [] }
 
   const modelAttachments: FileAttachment[] = []

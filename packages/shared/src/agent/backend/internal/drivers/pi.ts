@@ -225,6 +225,110 @@ async function testAnthropicCompatible(
   }
 }
 
+function normalize9routerBaseUrl(baseUrl?: string): string {
+  const trimmed = baseUrl?.trim() || 'http://localhost:20128/v1';
+  return trimmed.replace(/\/+$/, '').replace(/\/v1\/v1$/i, '/v1');
+}
+
+function map9routerModel(raw: unknown): ModelDefinition | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const model = raw as Record<string, unknown>;
+  const id = typeof model.id === 'string' ? model.id : undefined;
+  if (!id) return null;
+  const name = typeof model.name === 'string' ? model.name : id;
+  const contextWindow = typeof model.context_window === 'number'
+    ? model.context_window
+    : typeof model.contextWindow === 'number'
+      ? model.contextWindow
+      : undefined;
+  const capabilities = Array.isArray(model.capabilities)
+    ? model.capabilities.map(String)
+    : [];
+  const kind = typeof model.kind === 'string'
+    ? model.kind
+    : typeof model.type === 'string'
+      ? model.type
+      : undefined;
+  const supportsImages = capabilities.includes('vision')
+    || capabilities.includes('image_input')
+    || capabilities.includes('image-input')
+    || kind === 'vision';
+
+  return {
+    id,
+    name,
+    shortName: id.split('/').pop() || id,
+    description: '9router Gateway model',
+    provider: 'pi',
+    contextWindow: contextWindow ?? 128_000,
+    ...(supportsImages ? { supportsImages: true } : {}),
+  };
+}
+
+async function fetch9routerModels(
+  apiKey: string | undefined,
+  baseUrl: string | undefined,
+  timeoutMs: number,
+): Promise<ModelDefinition[]> {
+  const url = `${normalize9routerBaseUrl(baseUrl)}/models`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`${res.status} ${text}`.slice(0, 500));
+    }
+    const data = await res.json() as { data?: unknown[]; models?: unknown[] } | unknown[];
+    const rows = Array.isArray(data) ? data : (data.data ?? data.models ?? []);
+    const models = rows.map(map9routerModel).filter(Boolean) as ModelDefinition[];
+    if (models.length === 0) throw new Error('No models returned by 9router');
+    return models;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function test9routerChatCompletions(
+  apiKey: string,
+  baseUrl: string | undefined,
+  model: string,
+  timeoutMs: number,
+): Promise<{ success: boolean; error?: string }> {
+  const url = `${normalize9routerBaseUrl(baseUrl)}/chat/completions`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 8,
+        messages: [{ role: 'user', content: 'Say ok' }],
+      }),
+    });
+    if (res.ok) return { success: true };
+    const text = await res.text().catch(() => '');
+    return { success: false, error: `${res.status} ${text}`.slice(0, 500) };
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return { success: false, error: 'Connection test timed out' };
+    return { success: false, error: (err as Error).message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export const piDriver: ProviderDriver = {
   provider: 'pi',
   buildRuntime: ({ context, providerOptions, resolvedPaths }) => ({
@@ -233,9 +337,13 @@ export const piDriver: ProviderDriver = {
       interceptor: resolvedPaths.interceptorBundlePath,
       node: resolvedPaths.nodeRuntimePath,
     },
-    piAuthProvider: providerOptions?.piAuthProvider || context.connection?.piAuthProvider,
+    piAuthProvider: context.connection?.providerType === '9router'
+      ? 'openai'
+      : providerOptions?.piAuthProvider || context.connection?.piAuthProvider,
     baseUrl: context.connection?.baseUrl,
-    customEndpoint: context.connection?.customEndpoint,
+    customEndpoint: context.connection?.providerType === '9router'
+      ? { api: 'openai-completions' }
+      : context.connection?.customEndpoint,
     customModels: context.connection?.models?.map(m => {
       if (typeof m === 'string') return m;
       const supportsImages = typeof m.supportsImages === 'boolean'
@@ -252,6 +360,12 @@ export const piDriver: ProviderDriver = {
     }),
   }),
   fetchModels: async ({ connection, credentials, timeoutMs }) => {
+    if (connection.providerType === '9router') {
+      return {
+        models: await fetch9routerModels(credentials.apiKey, connection.baseUrl, timeoutMs),
+      };
+    }
+
     // Copilot OAuth: fetch models directly from the Copilot API via HTTP.
     // Uses the GitHub OAuth token (our refreshToken) to exchange for a
     // Copilot API token, then queries GET /models for the live model list.
@@ -275,6 +389,12 @@ export const piDriver: ProviderDriver = {
     return { models };
   },
   testConnection: async (args: DriverTestConnectionArgs): Promise<{ success: boolean; error?: string } | null> => {
+    if (args.connection?.providerType === '9router') {
+      const model = args.model || (await fetch9routerModels(args.apiKey, args.baseUrl, args.timeoutMs))[0]?.id;
+      if (!model) return { success: false, error: 'No models returned by 9router' };
+      return test9routerChatCompletions(args.apiKey, args.baseUrl, model, args.timeoutMs);
+    }
+
     const piAuthProvider = args.connection?.piAuthProvider;
     if (!piAuthProvider) {
       // No provider hint — fall back to generic subprocess path

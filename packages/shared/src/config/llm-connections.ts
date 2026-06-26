@@ -45,6 +45,7 @@ export function registerPiModelResolver(resolver: PiModelResolver): void {
  * - 'anthropic': Direct Anthropic API (api.anthropic.com) — uses Claude Agent SDK
  * - 'pi': Pi unified LLM API (20+ providers via @mariozechner/pi-ai)
  * - 'pi_compat': Pi with custom endpoint (Ollama, self-hosted models, Anthropic-compat endpoints)
+ * - '9router': Native 9router gateway provider (OpenAI-compatible chat + model discovery)
  *
  * Legacy values (bedrock, vertex, anthropic_compat) are migrated on startup
  * by migrateLegacyProviderTypes() in storage.ts.
@@ -52,7 +53,8 @@ export function registerPiModelResolver(resolver: PiModelResolver): void {
 export type LlmProviderType =
   | 'anthropic'
   | 'pi'
-  | 'pi_compat';
+  | 'pi_compat'
+  | '9router';
 
 /**
  * @deprecated Use LlmProviderType instead. Kept for migration compatibility.
@@ -540,7 +542,7 @@ export function modelSupportsImages(
   connection: Pick<LlmConnection, 'providerType' | 'models' | 'customEndpoint'>,
   modelId: string,
 ): boolean {
-  if (!isCompatProvider(connection.providerType)) return true;
+  if (!isCompatProvider(connection.providerType) && connection.providerType !== '9router') return true;
 
   const entry = connection.models?.find(m =>
     (typeof m === 'string' ? m : m.id) === modelId,
@@ -548,6 +550,7 @@ export function modelSupportsImages(
   if (entry && typeof entry !== 'string' && typeof entry.supportsImages === 'boolean') {
     return entry.supportsImages;
   }
+  if (connection.providerType === '9router') return false;
   return connection.customEndpoint?.supportsImages ?? false;
 }
 
@@ -566,6 +569,11 @@ function modelIdOf(model: ModelDefinition | string): string {
 export function getModelsForProviderType(providerType: LlmProviderType, piAuthProvider?: string): ModelDefinition[] {
   // Compat providers require explicit model lists from the connection
   if (isCompatProvider(providerType)) {
+    return [];
+  }
+
+  // 9router models are discovered from the configured gateway via /v1/models.
+  if (providerType === '9router') {
     return [];
   }
 
@@ -613,6 +621,8 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
 };
 
 export function getDefaultModelsForConnection(providerType: LlmProviderType, piAuthProvider?: string): Array<ModelDefinition | string> {
+  if (providerType === '9router') return [];
+
   if (providerType === 'pi') {
     const models = _piModelResolver(piAuthProvider);
     // Sort preferred defaults first so getDefaultModelForConnection picks a modern model.
@@ -729,6 +739,7 @@ export function isValidProviderAuthCombination(
     anthropic: ['api_key', 'oauth'],
     pi: ['api_key', 'oauth', 'iam_credentials', 'environment', 'none'],
     pi_compat: ['api_key_with_endpoint', 'none'],
+    '9router': ['api_key_with_endpoint'],
   };
 
   return validCombinations[providerType]?.includes(authType) ?? false;

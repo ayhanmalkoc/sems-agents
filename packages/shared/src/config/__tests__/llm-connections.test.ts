@@ -6,6 +6,7 @@ import {
   isCompatProvider,
   isAnthropicProvider,
   isPiProvider,
+  isValidProviderAuthCombination,
   toBedrockNativeId,
   fromBedrockNativeId,
   normalizeBedrockModelId,
@@ -85,6 +86,11 @@ describe('getDefaultModelForConnection', () => {
     const defaultModel = getDefaultModelForConnection('pi_compat')
     expect(defaultModel).toBe('')
   })
+
+  it('returns empty string for 9router before gateway discovery', () => {
+    expect(getDefaultModelsForConnection('9router')).toEqual([])
+    expect(getDefaultModelForConnection('9router')).toBe('')
+  })
 })
 
 // ============================================================
@@ -126,6 +132,18 @@ describe('isPiProvider', () => {
 
   it('returns false for anthropic', () => {
     expect(isPiProvider('anthropic')).toBe(false)
+  })
+
+  it('returns false for 9router', () => {
+    expect(isPiProvider('9router')).toBe(false)
+  })
+})
+
+describe('isValidProviderAuthCombination 9router', () => {
+  it('accepts only API key with endpoint', () => {
+    expect(isValidProviderAuthCombination('9router', 'api_key_with_endpoint')).toBe(true)
+    expect(isValidProviderAuthCombination('9router', 'api_key')).toBe(false)
+    expect(isValidProviderAuthCombination('9router', 'none')).toBe(false)
   })
 })
 

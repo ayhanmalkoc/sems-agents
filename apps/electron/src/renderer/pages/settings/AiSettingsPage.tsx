@@ -545,6 +545,7 @@ function WorkspaceOverrideCard({ workspace, llmConnections, onSettingsChange }: 
                     value: conn.slug,
                     label: conn.name,
                     description: conn.providerType === 'anthropic' ? 'Anthropic' :
+                                 conn.providerType === '9router' ? '9router Gateway' :
                                  conn.providerType === 'pi' ? 'Craft Agents Backend' :
                                  conn.providerType || 'Unknown',
                   })),
@@ -591,7 +592,7 @@ function WorkspaceOverrideCard({ workspace, llmConnections, onSettingsChange }: 
 /** Map a connection's provider type to the corresponding API key setup method. */
 function getApiKeyMethodForConnection(conn: LlmConnectionWithStatus): ApiSetupMethod {
   const provider = conn.providerType || conn.type
-  if (provider === 'pi' || provider === 'pi_compat') return 'pi_api_key'
+  if (provider === 'pi' || provider === 'pi_compat' || provider === '9router') return 'pi_api_key'
   return 'anthropic_api_key'
 }
 
@@ -816,7 +817,9 @@ export default function AiSettingsPage() {
       apiKey,
       baseUrl: connection.baseUrl,
       connectionDefaultModel: modelStr,
-      activePreset: isCustomEndpointConnection ? 'custom' : (connection.piAuthProvider || undefined),
+      activePreset: connection.providerType === '9router'
+        ? '9router'
+        : isCustomEndpointConnection ? 'custom' : (connection.piAuthProvider || undefined),
       models: modelIds,
       customApi: connection.customEndpoint?.api,
     })
@@ -1038,6 +1041,7 @@ export default function AiSettingsPage() {
                       value: conn.slug,
                       label: conn.name,
                       description: conn.providerType === 'anthropic' ? 'Anthropic API' :
+                                   conn.providerType === '9router' ? '9router Gateway' :
                                    conn.providerType === 'pi' ? 'Craft Agents Backend' :
                                    conn.providerType === 'pi_compat' ? (conn.baseUrl?.toLowerCase().includes('manifest.build') ? 'Manifest' : 'Craft Agents Backend Compatible') :
                                    conn.providerType || 'Unknown',

@@ -16,7 +16,7 @@ import type {
 } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
-import type { CustomEndpointConfig } from '../config/llm-connections'
+import type { CustomEndpointConfig, LlmProviderType } from '../config/llm-connections'
 import type {
   AuthRequest as SharedAuthRequest,
   CredentialInputMode as SharedCredentialInputMode,
@@ -374,6 +374,7 @@ export interface FileSearchResult {
 
 export interface LlmConnectionSetup {
   slug: string
+  providerType?: LlmProviderType
   credential?: string
   baseUrl?: string | null
   defaultModel?: string | null
@@ -397,7 +398,7 @@ export interface LlmConnectionSetup {
 }
 
 export interface TestLlmConnectionParams {
-  provider: 'anthropic' | 'pi'
+  provider: 'anthropic' | 'pi' | '9router'
   apiKey: string
   baseUrl?: string
   model?: string

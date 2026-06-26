@@ -138,6 +138,7 @@ export function apiSetupMethodToConnectionSetup(
   method: ApiSetupMethod,
   options: {
     credential?: string
+    providerType?: '9router'
     baseUrl?: string
     connectionDefaultModel?: string
     models?: string[]
@@ -177,6 +178,7 @@ export function apiSetupMethodToConnectionSetup(
     case 'pi_api_key':
       return {
         slug,
+        providerType: options.providerType,
         credential: options.credential,
         baseUrl: options.baseUrl,
         defaultModel: options.connectionDefaultModel,
@@ -244,6 +246,7 @@ export function useOnboarding({
     credential?: string,
     options?: {
       baseUrl?: string
+      providerType?: '9router'
       connectionDefaultModel?: string
       models?: string[]
       piAuthProvider?: string
@@ -268,6 +271,7 @@ export function useOnboarding({
       // Build connection setup from UI state
       const setup = apiSetupMethodToConnectionSetup(method, {
         credential,
+        providerType: options?.providerType,
         baseUrl: options?.baseUrl,
         connectionDefaultModel: options?.connectionDefaultModel,
         models: options?.models,
@@ -387,6 +391,7 @@ export function useOnboarding({
       if (data.bedrockAuthMethod) {
         const saved = await handleSaveConfig(undefined, {
           baseUrl: data.baseUrl,
+          providerType: data.providerType,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
           piAuthProvider: data.piAuthProvider,
@@ -407,6 +412,7 @@ export function useOnboarding({
       if (!data.apiKey.trim() && editingSlug) {
         const saved = await handleSaveConfig(undefined, {
           baseUrl: data.baseUrl,
+          providerType: data.providerType,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
           piAuthProvider: data.piAuthProvider,
@@ -425,6 +431,14 @@ export function useOnboarding({
       // - Local/loopback custom endpoints may be keyless (e.g. Ollama)
       // - Non-local endpoints require an API key
       const isLoopbackCustomEndpoint = isLoopbackEndpoint(data.baseUrl)
+      if (data.providerType === '9router' && !data.apiKey.trim()) {
+        setState(s => ({
+          ...s,
+          credentialStatus: 'error',
+          errorMessage: 'Please enter a valid API key',
+        }))
+        return
+      }
       if (isPiApiKeyFlow) {
         if (!data.apiKey.trim() && !isLoopbackCustomEndpoint) {
           setState(s => ({
@@ -447,7 +461,9 @@ export function useOnboarding({
 
       // Validate connection by spawning a lightweight subprocess test.
       // Custom endpoint protocol routes through PiAgent at runtime, so test with Pi too.
-      const setupTestProvider = data.customEndpoint ? 'pi' : (isPiApiKeyFlow ? 'pi' : 'anthropic')
+      const setupTestProvider = data.providerType === '9router'
+        ? '9router'
+        : data.customEndpoint ? 'pi' : (isPiApiKeyFlow ? 'pi' : 'anthropic')
       const testResult = await window.electronAPI.testLlmConnectionSetup({
         provider: setupTestProvider,
         apiKey: data.apiKey,
@@ -468,6 +484,7 @@ export function useOnboarding({
 
       const saved = await handleSaveConfig(data.apiKey, {
         baseUrl: data.baseUrl,
+        providerType: data.providerType,
         connectionDefaultModel: data.connectionDefaultModel,
         models: data.models,
         piAuthProvider: data.piAuthProvider,

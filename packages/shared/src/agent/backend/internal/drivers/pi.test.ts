@@ -39,4 +39,42 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
       'plain-model',
     ]);
   });
+
+  it('maps 9router to OpenAI-compatible runtime without persisting connection shims', () => {
+    const runtime = piDriver.buildRuntime({
+      context: {
+        provider: 'pi',
+        authType: 'api_key_with_endpoint',
+        resolvedModel: 'openai/gpt-4.1-mini',
+        capabilities: { needsHttpPoolServer: false },
+        connection: {
+          slug: 'nine-router',
+          name: '9router Gateway',
+          providerType: '9router',
+          authType: 'api_key_with_endpoint',
+          baseUrl: 'https://router.example.com/v1',
+          models: [
+            { id: 'openai/gpt-4.1-mini', contextWindow: 128_000, supportsImages: true },
+            { id: 'anthropic/claude-sonnet-4', contextWindow: 200_000, supportsImages: false },
+          ],
+          createdAt: Date.now(),
+        } as any,
+      },
+      coreConfig: {} as any,
+      hostRuntime: {} as any,
+      resolvedPaths: {
+        piServerPath: '/tmp/pi-agent-server.js',
+        interceptorBundlePath: '/tmp/interceptor.cjs',
+        nodeRuntimePath: '/usr/bin/node',
+      },
+    });
+
+    expect(runtime.baseUrl).toBe('https://router.example.com/v1');
+    expect(runtime.piAuthProvider).toBe('openai');
+    expect(runtime.customEndpoint).toEqual({ api: 'openai-completions' });
+    expect(runtime.customModels).toEqual([
+      { id: 'openai/gpt-4.1-mini', contextWindow: 128_000, supportsImages: true },
+      { id: 'anthropic/claude-sonnet-4', contextWindow: 200_000, supportsImages: false },
+    ]);
+  });
 });

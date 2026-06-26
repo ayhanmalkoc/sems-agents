@@ -189,6 +189,10 @@ describe('providerTypeToAgentProvider', () => {
     it('should map pi_compat to pi', () => {
       expect(providerTypeToAgentProvider('pi_compat')).toBe('pi');
     });
+
+    it('should map 9router to pi', () => {
+      expect(providerTypeToAgentProvider('9router')).toBe('pi');
+    });
   });
 });
 
@@ -289,6 +293,11 @@ describe('phase4 backend abstraction APIs', () => {
       baseUrl: 'https://my-anthropic-proxy.internal/v1',
       customEndpoint: { api: 'anthropic-messages' },
     })).toEqual({ providerType: 'pi_compat', piAuthProvider: 'anthropic', customEndpoint: { api: 'anthropic-messages' } });
+
+    expect(resolveSetupTestConnectionHint({
+      provider: '9router',
+      baseUrl: 'https://router.example/v1',
+    })).toEqual({ providerType: '9router' });
   });
 
   it('fetchBackendModels dispatches for pi provider', async () => {

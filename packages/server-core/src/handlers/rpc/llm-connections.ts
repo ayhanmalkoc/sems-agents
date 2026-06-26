@@ -15,6 +15,10 @@ import type { HandlerDeps } from '../handler-deps'
 import { randomUUID } from 'node:crypto'
 import { CLIENT_OPEN_EXTERNAL } from '@craft-agent/server-core/transport'
 
+function normalize9routerBaseUrl(baseUrl?: string | null): string {
+  return (baseUrl?.trim() || 'http://localhost:20128/v1').replace(/\/+$/, '').replace(/\/v1\/v1$/i, '/v1')
+}
+
 // Local OAuth state
 let copilotOAuthAbort: AbortController | null = null
 
@@ -71,11 +75,26 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
 
       const updates: Partial<LlmConnection> = {}
       const hasConfiguredBaseUrl = !!setup.baseUrl?.trim()
+
+      if (setup.providerType === '9router') {
+        updates.providerType = '9router'
+        updates.authType = 'api_key_with_endpoint'
+        updates.name = '9router Gateway'
+        updates.baseUrl = normalize9routerBaseUrl(setup.baseUrl)
+        updates.piAuthProvider = undefined
+        updates.customEndpoint = undefined
+        updates.models = setup.models ?? []
+        updates.defaultModel = setup.defaultModel ?? undefined
+        updates.modelSelectionMode = 'automaticallySyncedFromProvider'
+      }
+
       if (setup.baseUrl !== undefined) {
-        updates.baseUrl = setup.baseUrl?.trim() || undefined
+        updates.baseUrl = setup.providerType === '9router'
+          ? (normalize9routerBaseUrl(setup.baseUrl))
+          : (setup.baseUrl?.trim() || undefined)
 
         // Only mutate providerType for API key connections (not OAuth connections)
-        if (isAnthropicProvider(connection.providerType) && connection.authType !== 'oauth') {
+        if (setup.providerType !== '9router' && isAnthropicProvider(connection.providerType) && connection.authType !== 'oauth') {
           if (hasConfiguredBaseUrl) {
             updates.providerType = 'pi_compat'
             updates.authType = 'api_key_with_endpoint'
@@ -103,7 +122,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
         updates.modelSelectionMode = setup.modelSelectionMode
       }
 
-      const customEndpoint = hasConfiguredBaseUrl ? setup.customEndpoint : undefined
+      const customEndpoint = setup.providerType === '9router' ? undefined : (hasConfiguredBaseUrl ? setup.customEndpoint : undefined)
       const isCustomEndpointCompat = !!customEndpoint
       if (customEndpoint) {
         updates.customEndpoint = customEndpoint
@@ -135,7 +154,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
 
       // Pi API key flow: set piAuthProvider from setup data (e.g. 'anthropic', 'google', 'openai').
       // Skip when custom endpoint protocol is driving routing.
-      if (setup.piAuthProvider && !isCustomEndpointCompat) {
+      if (setup.providerType !== '9router' && setup.piAuthProvider && !isCustomEndpointCompat) {
         updates.piAuthProvider = setup.piAuthProvider
         // Update connection name to show the actual provider (e.g. "Craft Agents Backend (Google AI Studio)")
         const providerName = piAuthProviderDisplayName(setup.piAuthProvider)
@@ -298,14 +317,15 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
   // and validate credentials via runMiniCompletion(). Same code path as actual chat.
   server.handle(RPC_CHANNELS.settings.TEST_LLM_CONNECTION_SETUP, async (_ctx, params: import('@craft-agent/shared/protocol').TestLlmConnectionParams): Promise<import('@craft-agent/shared/protocol').TestLlmConnectionResult> => {
     const { provider, apiKey, baseUrl, model, piAuthProvider, customEndpoint } = params
+    const agentProvider = provider === '9router' ? 'pi' : provider
     const trimmedKey = apiKey?.trim() ?? ''
-    const allowEmptyApiKey = !setupTestRequiresApiKey(baseUrl)
+    const allowEmptyApiKey = provider !== '9router' && !setupTestRequiresApiKey(baseUrl)
 
     if (!trimmedKey && !allowEmptyApiKey) {
       return { success: false, error: 'API key is required' }
     }
 
-    const setupValidation = validateSetupTestInput({ provider, baseUrl, piAuthProvider })
+    const setupValidation = validateSetupTestInput({ provider: agentProvider, baseUrl, piAuthProvider })
     if (!setupValidation.valid) {
       return { success: false, error: setupValidation.error }
     }
@@ -315,10 +335,10 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
 
     const startedAt = Date.now()
     try {
-      const testModel = model || getDefaultModelForConnection(provider, piAuthProvider)
+      const testModel = model || (provider === '9router' ? '' : getDefaultModelForConnection(provider, piAuthProvider))
       deps.platform.logger?.info(`[testLlmConnectionSetup] Resolved model: ${testModel}`)
       const result = await testBackendConnection({
-        provider,
+        provider: agentProvider,
         apiKey: trimmedKey,
         allowEmptyApiKey,
         model: testModel,
