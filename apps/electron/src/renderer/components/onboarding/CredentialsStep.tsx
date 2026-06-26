@@ -41,6 +41,7 @@ interface CredentialsStepProps {
     connectionDefaultModel?: string
     activePreset?: string
     models?: string[]
+    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     customApi?: CustomEndpointApi
   }
 }

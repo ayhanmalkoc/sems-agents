@@ -3,6 +3,7 @@ import {
   resolveSlugForMethod,
   apiSetupMethodToConnectionSetup,
   BASE_SLUG_FOR_METHOD,
+  isMaskedCredential,
 } from '../useOnboarding'
 import type { ApiSetupMethod } from '@/components/onboarding'
 
@@ -40,6 +41,23 @@ describe('resolveSlugForMethod', () => {
       const slug = resolveSlugForMethod(method, null, new Set())
       expect(slug).toBe(BASE_SLUG_FOR_METHOD[method])
     }
+  })
+})
+
+// ============================================================
+// isMaskedCredential
+// ============================================================
+
+describe('isMaskedCredential', () => {
+  it('detects masked API key placeholders', () => {
+    expect(isMaskedCredential('sk-a5a7••••••••a036')).toBe(true)
+    expect(isMaskedCredential('••••••••')).toBe(true)
+  })
+
+  it('does not treat empty or real keys as masked', () => {
+    expect(isMaskedCredential('')).toBe(false)
+    expect(isMaskedCredential(undefined)).toBe(false)
+    expect(isMaskedCredential('sk-real-key')).toBe(false)
   })
 })
 
@@ -98,6 +116,24 @@ describe('apiSetupMethodToConnectionSetup', () => {
     expect(setup.modelSelectionMode).toBe('automaticallySyncedFromProvider')
     expect(setup.piAuthProvider).toBeUndefined()
     expect(setup.customEndpoint).toBeUndefined()
+  })
+
+  it('nine_router_api_key preserves manually edited model lists', () => {
+    const setup = apiSetupMethodToConnectionSetup(
+      'nine_router_api_key',
+      {
+        credential: 'sk-router',
+        baseUrl: 'https://router.example.com/v1',
+        connectionDefaultModel: 'openai/gpt-4.1',
+        models: ['openai/gpt-4.1', 'anthropic/claude-sonnet-4.5'],
+        modelSelectionMode: 'userDefined',
+      },
+      null,
+      new Set(),
+    )
+    expect(setup.modelSelectionMode).toBe('userDefined')
+    expect(setup.models).toEqual(['openai/gpt-4.1', 'anthropic/claude-sonnet-4.5'])
+    expect(setup.defaultModel).toBe('openai/gpt-4.1')
   })
 
   it('pi_api_key includes piAuthProvider and modelSelectionMode', () => {

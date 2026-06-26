@@ -94,9 +94,10 @@ export type LlmAuthType =
 /**
  * Ownership mode for a connection's model list.
  * - automaticallySyncedFromProvider: provider defaults are synced automatically.
- * - userDefined3Tier: user-picked Best/Balanced/Fast list is preserved.
+ * - userDefined: user-edited model list is preserved.
+ * - userDefined3Tier: legacy Pi Best/Balanced/Fast list is preserved.
  */
-export type ModelSelectionMode = 'automaticallySyncedFromProvider' | 'userDefined3Tier';
+export type ModelSelectionMode = 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier';
 
 /**
  * Protocol for custom API endpoints.
@@ -165,7 +166,8 @@ export interface LlmConnection {
   /**
    * Ownership mode for the model list.
    * - automaticallySyncedFromProvider: provider defaults are kept in sync.
-   * - userDefined3Tier: preserve user-selected Best/Balanced/Fast list.
+   * - userDefined: preserve user-edited model list.
+   * - userDefined3Tier: preserve legacy user-selected Best/Balanced/Fast list.
    */
   modelSelectionMode?: ModelSelectionMode;
 

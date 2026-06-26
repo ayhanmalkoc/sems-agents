@@ -121,17 +121,18 @@ class ModelRefreshService {
       return
     }
 
-    // For Pi connections with explicit user-owned 3-tier selection,
+    // For connections with explicit user-owned model selection,
     // never overwrite model lists from background refresh.
     // Exception: Copilot connections are always server-managed — GitHub's
     // model policy controls which models are enabled, so we must always
     // accept the live API result.
     const isCopilot = connection.providerType === 'pi' && connection.piAuthProvider === 'github-copilot'
-    if (connection.providerType === 'pi' && connection.modelSelectionMode === 'userDefined3Tier' && !isCopilot) {
+    const isUserDefinedModels = connection.modelSelectionMode === 'userDefined' || connection.modelSelectionMode === 'userDefined3Tier'
+    if (isUserDefinedModels && !isCopilot) {
       const modelCount = connection.models?.length ?? 0
-      handlerLog.info(`Model refresh [${slug}]: preserving user-defined Pi model list (${modelCount} models)`)
+      handlerLog.info(`Model refresh [${slug}]: preserving user-defined model list (${modelCount} models)`)
       if (modelCount > 10) {
-        handlerLog.warn(`Model refresh [${slug}]: userDefined3Tier has suspicious model count (${modelCount})`)
+        handlerLog.warn(`Model refresh [${slug}]: user-defined model list has suspicious model count (${modelCount})`)
       }
       return
     }

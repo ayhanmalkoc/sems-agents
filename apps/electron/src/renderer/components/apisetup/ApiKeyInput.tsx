@@ -44,7 +44,7 @@ export interface ApiKeySubmitData {
   connectionDefaultModel?: string
   models?: string[]
   piAuthProvider?: string
-  modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
+  modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
   /** Custom endpoint protocol — set when user configures an arbitrary API endpoint */
   customEndpoint?: CustomEndpointConfig
   /** IAM credentials for Pi+Bedrock (piAuthProvider='amazon-bedrock') setup */
@@ -79,6 +79,7 @@ export interface ApiKeyInputProps {
     connectionDefaultModel?: string
     activePreset?: string
     models?: string[]
+    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     /** Pre-fill the protocol toggle for custom endpoints */
     customApi?: CustomEndpointApi
   }
@@ -210,6 +211,7 @@ export function ApiKeyInput({
     initialPreset !== 'custom' ? initialPreset : defaultPreset.key
   )
   const [connectionDefaultModel, setConnectionDefaultModel] = useState(initialValues?.connectionDefaultModel ?? '')
+  const [modelListEdited, setModelListEdited] = useState(false)
   const [customApi, setCustomApi] = useState<CustomEndpointApi>(initialValues?.customApi ?? 'openai-completions')
   const [modelError, setModelError] = useState<string | null>(null)
 
@@ -408,13 +410,14 @@ export function ApiKeyInput({
     const parsedModels = parseModelList(connectionDefaultModel)
 
     if (isNineRouterGateway) {
+      const manualModels = parsedModels.length > 0 && (modelListEdited || initialValues?.modelSelectionMode === 'userDefined')
       onSubmit({
         apiKey: apiKey.trim(),
         providerType: '9router',
         baseUrl: effectiveBaseUrl || 'http://localhost:20128/v1',
         connectionDefaultModel: parsedModels[0],
         models: parsedModels.length > 0 ? parsedModels : undefined,
-        modelSelectionMode: 'automaticallySyncedFromProvider',
+        modelSelectionMode: manualModels ? 'userDefined' : 'automaticallySyncedFromProvider',
       })
       return
     }
@@ -850,6 +853,7 @@ export function ApiKeyInput({
               value={connectionDefaultModel}
               onChange={(e) => {
                 setConnectionDefaultModel(e.target.value)
+                setModelListEdited(true)
                 setModelError(null)
               }}
               placeholder="e.g. claude-opus-4-8, claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5"

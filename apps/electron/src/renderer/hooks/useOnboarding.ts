@@ -135,6 +135,10 @@ function isLoopbackEndpoint(baseUrl?: string): boolean {
   }
 }
 
+export function isMaskedCredential(value?: string): boolean {
+  return Boolean(value?.includes('••'))
+}
+
 export function apiSetupMethodToConnectionSetup(
   method: ApiSetupMethod,
   options: {
@@ -144,7 +148,7 @@ export function apiSetupMethodToConnectionSetup(
     connectionDefaultModel?: string
     models?: string[]
     piAuthProvider?: string
-    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
+    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     customEndpoint?: CustomEndpointConfig
     iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
     awsRegion?: string
@@ -184,7 +188,8 @@ export function apiSetupMethodToConnectionSetup(
         baseUrl: options.baseUrl || 'http://localhost:20128/v1',
         defaultModel: options.connectionDefaultModel,
         models: options.models,
-        modelSelectionMode: 'automaticallySyncedFromProvider',
+        modelSelectionMode: options.modelSelectionMode
+          ?? ((options.models?.length ?? 0) > 0 ? 'userDefined' : 'automaticallySyncedFromProvider'),
       }
     case 'pi_api_key':
       return {
@@ -261,7 +266,7 @@ export function useOnboarding({
       connectionDefaultModel?: string
       models?: string[]
       piAuthProvider?: string
-      modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
+      modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
       customEndpoint?: CustomEndpointConfig
       iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
       awsRegion?: string
@@ -419,8 +424,10 @@ export function useOnboarding({
         return
       }
 
-      // When editing an existing connection, API key is optional (empty = keep existing credential)
-      if (!data.apiKey.trim() && editingSlug) {
+      // When editing an existing connection, API key is optional:
+      // - empty = keep existing credential
+      // - masked placeholder from GET_API_KEY = keep existing credential
+      if ((!data.apiKey.trim() || isMaskedCredential(data.apiKey)) && editingSlug) {
         const saved = await handleSaveConfig(undefined, {
           baseUrl: data.baseUrl,
           providerType: data.providerType,

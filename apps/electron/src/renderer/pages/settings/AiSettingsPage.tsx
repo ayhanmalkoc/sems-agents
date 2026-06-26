@@ -615,6 +615,7 @@ export default function AiSettingsPage() {
     connectionDefaultModel?: string
     activePreset?: string
     models?: string[]
+    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     customApi?: CustomEndpointApi
   } | undefined>(undefined)
   const setFullscreenOverlayOpen = useSetAtom(fullscreenOverlayOpenAtom)
@@ -822,6 +823,7 @@ export default function AiSettingsPage() {
         ? '9router'
         : isCustomEndpointConnection ? 'custom' : (connection.piAuthProvider || undefined),
       models: modelIds,
+      modelSelectionMode: connection.modelSelectionMode,
       customApi: connection.customEndpoint?.api,
     })
 

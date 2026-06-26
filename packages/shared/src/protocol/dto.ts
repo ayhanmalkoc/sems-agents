@@ -380,7 +380,7 @@ export interface LlmConnectionSetup {
   defaultModel?: string | null
   models?: string[] | null
   piAuthProvider?: string
-  modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
+  modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
   /** When true, reject setup if the connection doesn't already exist (reauth guard). */
   updateOnly?: boolean
   /** Custom endpoint protocol for arbitrary OpenAI/Anthropic-compatible APIs */
