@@ -131,6 +131,27 @@ export interface CustomEndpointConfig {
  */
 export type MidStreamBehavior = 'steer' | 'queue';
 
+export interface NineRouterMediaEndpointConfig {
+  imagesGenerations?: string;
+  audioSpeech?: string;
+  audioTranscriptions?: string;
+  audioVoices?: string;
+  embeddings?: string;
+}
+
+export interface NineRouterMediaModelConfig {
+  image?: string[];
+  tts?: string[];
+  stt?: string[];
+  embedding?: string[];
+}
+
+export interface NineRouterMediaConfig {
+  endpoints?: NineRouterMediaEndpointConfig;
+  models?: NineRouterMediaModelConfig;
+  defaultVoice?: string;
+}
+
 /**
  * LLM Connection configuration.
  * Stored in config.llmConnections array.
@@ -162,6 +183,9 @@ export interface LlmConnection {
 
   /** Default model for this connection */
   defaultModel?: string;
+
+  /** 9router media endpoint/model overrides. Only used when providerType is '9router'. */
+  media?: NineRouterMediaConfig;
 
   /**
    * Ownership mode for the model list.

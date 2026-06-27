@@ -18,7 +18,7 @@ import type {
 import type { ProviderChoice } from '@/components/onboarding/ProviderSelectStep'
 import type { LocalModelSubmitData } from '@/components/onboarding/LocalModelStep'
 import type { ApiKeySubmitData } from '@/components/apisetup'
-import type { CustomEndpointConfig } from '@config/llm-connections'
+import type { CustomEndpointConfig, NineRouterMediaConfig } from '@config/llm-connections'
 import type { SetupNeeds, LlmConnectionSetup } from '../../shared/types'
 
 interface UseOnboardingOptions {
@@ -147,6 +147,7 @@ export function apiSetupMethodToConnectionSetup(
     baseUrl?: string
     connectionDefaultModel?: string
     models?: string[]
+    media?: NineRouterMediaConfig
     piAuthProvider?: string
     modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     customEndpoint?: CustomEndpointConfig
@@ -188,6 +189,7 @@ export function apiSetupMethodToConnectionSetup(
         baseUrl: options.baseUrl || 'http://localhost:20128/v1',
         defaultModel: options.connectionDefaultModel,
         models: options.models,
+        media: options.media,
         modelSelectionMode: options.modelSelectionMode
           ?? ((options.models?.length ?? 0) > 0 ? 'userDefined' : 'automaticallySyncedFromProvider'),
       }
@@ -265,6 +267,7 @@ export function useOnboarding({
       providerType?: '9router'
       connectionDefaultModel?: string
       models?: string[]
+      media?: NineRouterMediaConfig
       piAuthProvider?: string
       modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
       customEndpoint?: CustomEndpointConfig
@@ -291,6 +294,7 @@ export function useOnboarding({
         baseUrl: options?.baseUrl,
         connectionDefaultModel: options?.connectionDefaultModel,
         models: options?.models,
+        media: options?.media,
         piAuthProvider: options?.piAuthProvider,
         modelSelectionMode: options?.modelSelectionMode,
         customEndpoint: options?.customEndpoint,
@@ -410,6 +414,7 @@ export function useOnboarding({
           providerType: data.providerType,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
+          media: data.media,
           piAuthProvider: data.piAuthProvider,
           modelSelectionMode: data.modelSelectionMode,
           iamCredentials: data.iamCredentials,
@@ -433,6 +438,7 @@ export function useOnboarding({
           providerType: data.providerType,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
+          media: data.media,
           piAuthProvider: data.piAuthProvider,
           modelSelectionMode: data.modelSelectionMode,
           customEndpoint: data.customEndpoint,
@@ -505,6 +511,7 @@ export function useOnboarding({
         providerType: data.providerType,
         connectionDefaultModel: data.connectionDefaultModel,
         models: data.models,
+        media: data.media,
         piAuthProvider: data.piAuthProvider,
         modelSelectionMode: data.modelSelectionMode,
         customEndpoint: data.customEndpoint,

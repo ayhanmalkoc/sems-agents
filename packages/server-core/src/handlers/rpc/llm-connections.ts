@@ -85,6 +85,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
         updates.customEndpoint = undefined
         updates.models = setup.models ?? []
         updates.defaultModel = setup.defaultModel ?? undefined
+        updates.media = setup.media ?? undefined
         updates.modelSelectionMode = 'automaticallySyncedFromProvider'
       }
 
@@ -117,6 +118,9 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
       }
       if (setup.models !== undefined) {
         updates.models = setup.models ?? undefined
+      }
+      if (setup.media !== undefined) {
+        updates.media = setup.media ?? undefined
       }
       if (setup.modelSelectionMode !== undefined) {
         updates.modelSelectionMode = setup.modelSelectionMode

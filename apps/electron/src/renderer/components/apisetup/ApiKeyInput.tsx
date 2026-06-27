@@ -31,7 +31,7 @@ import {
   type PresetKey,
 } from "./submit-helpers"
 
-import type { CustomEndpointApi, CustomEndpointConfig } from '@config/llm-connections'
+import type { CustomEndpointApi, CustomEndpointConfig, NineRouterMediaConfig } from '@config/llm-connections'
 
 export type ApiKeyStatus = 'idle' | 'validating' | 'success' | 'error'
 
@@ -43,6 +43,7 @@ export interface ApiKeySubmitData {
   baseUrl?: string
   connectionDefaultModel?: string
   models?: string[]
+  media?: NineRouterMediaConfig
   piAuthProvider?: string
   modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
   /** Custom endpoint protocol — set when user configures an arbitrary API endpoint */
@@ -79,6 +80,7 @@ export interface ApiKeyInputProps {
     connectionDefaultModel?: string
     activePreset?: string
     models?: string[]
+    media?: NineRouterMediaConfig
     modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     /** Pre-fill the protocol toggle for custom endpoints */
     customApi?: CustomEndpointApi
@@ -181,6 +183,15 @@ function parseModelList(value: string): string[] {
     .filter(Boolean)
 }
 
+function joinModelList(models?: string[]): string {
+  return (models ?? []).join(', ')
+}
+
+function cleanEndpoint(value: string): string | undefined {
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
 // ============================================================
 // Pi model tier selection (for providers with many models)
 // ============================================================
@@ -214,6 +225,16 @@ export function ApiKeyInput({
   const [modelListEdited, setModelListEdited] = useState(false)
   const [customApi, setCustomApi] = useState<CustomEndpointApi>(initialValues?.customApi ?? 'openai-completions')
   const [modelError, setModelError] = useState<string | null>(null)
+  const [mediaImageModels, setMediaImageModels] = useState(joinModelList(initialValues?.media?.models?.image))
+  const [mediaTtsModels, setMediaTtsModels] = useState(joinModelList(initialValues?.media?.models?.tts))
+  const [mediaSttModels, setMediaSttModels] = useState(joinModelList(initialValues?.media?.models?.stt))
+  const [mediaEmbeddingModels, setMediaEmbeddingModels] = useState(joinModelList(initialValues?.media?.models?.embedding))
+  const [mediaDefaultVoice, setMediaDefaultVoice] = useState(initialValues?.media?.defaultVoice ?? '')
+  const [imagesEndpoint, setImagesEndpoint] = useState(initialValues?.media?.endpoints?.imagesGenerations ?? '/images/generations')
+  const [speechEndpoint, setSpeechEndpoint] = useState(initialValues?.media?.endpoints?.audioSpeech ?? '/audio/speech')
+  const [transcriptionsEndpoint, setTranscriptionsEndpoint] = useState(initialValues?.media?.endpoints?.audioTranscriptions ?? '/audio/transcriptions')
+  const [voicesEndpoint, setVoicesEndpoint] = useState(initialValues?.media?.endpoints?.audioVoices ?? '/audio/voices')
+  const [embeddingsEndpoint, setEmbeddingsEndpoint] = useState(initialValues?.media?.endpoints?.embeddings ?? '/embeddings')
 
   // Bedrock auth state
   const [bedrockAuthMethod, setBedrockAuthMethod] = useState<'iam_credentials' | 'environment'>('iam_credentials')
@@ -350,6 +371,23 @@ export function ApiKeyInput({
     }
   }
 
+  const buildNineRouterMediaConfig = (): NineRouterMediaConfig => ({
+    endpoints: {
+      imagesGenerations: cleanEndpoint(imagesEndpoint),
+      audioSpeech: cleanEndpoint(speechEndpoint),
+      audioTranscriptions: cleanEndpoint(transcriptionsEndpoint),
+      audioVoices: cleanEndpoint(voicesEndpoint),
+      embeddings: cleanEndpoint(embeddingsEndpoint),
+    },
+    models: {
+      image: parseModelList(mediaImageModels),
+      tts: parseModelList(mediaTtsModels),
+      stt: parseModelList(mediaSttModels),
+      embedding: parseModelList(mediaEmbeddingModels),
+    },
+    defaultVoice: cleanEndpoint(mediaDefaultVoice),
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -417,6 +455,7 @@ export function ApiKeyInput({
         baseUrl: effectiveBaseUrl || 'http://localhost:20128/v1',
         connectionDefaultModel: parsedModels[0],
         models: parsedModels.length > 0 ? parsedModels : undefined,
+        media: buildNineRouterMediaConfig(),
         modelSelectionMode: manualModels ? 'userDefined' : 'automaticallySyncedFromProvider',
       })
       return
@@ -872,6 +911,82 @@ export function ApiKeyInput({
               Required for custom endpoints. Use the provider-specific model ID.
             </p>
           )}
+        </div>
+      )}
+
+      {isNineRouterGateway && (
+        <div className="space-y-4 rounded-lg border border-border/60 bg-foreground-2/40 p-4">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Media endpoints</Label>
+            <p className="text-xs text-foreground/40">
+              Editable 9router media routes. Relative paths resolve under the connection base URL.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {[
+              ['Image generation', imagesEndpoint, setImagesEndpoint, '/images/generations'],
+              ['Text to speech', speechEndpoint, setSpeechEndpoint, '/audio/speech'],
+              ['Speech to text', transcriptionsEndpoint, setTranscriptionsEndpoint, '/audio/transcriptions'],
+              ['Voices', voicesEndpoint, setVoicesEndpoint, '/audio/voices'],
+              ['Embeddings', embeddingsEndpoint, setEmbeddingsEndpoint, '/embeddings'],
+            ].map(([label, value, setter, placeholder]) => (
+              <div key={label as string} className="space-y-1.5">
+                <Label className="text-muted-foreground font-normal text-xs">{label as string}</Label>
+                <div className={cn("rounded-md shadow-minimal transition-colors", "bg-background focus-within:bg-background")}>
+                  <Input
+                    type="text"
+                    value={value as string}
+                    onChange={(e) => (setter as (next: string) => void)(e.target.value)}
+                    placeholder={placeholder as string}
+                    className="border-0 bg-transparent shadow-none"
+                    disabled={isDisabled}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-1 pt-2">
+            <Label className="text-sm font-medium">Media models</Label>
+            <p className="text-xs text-foreground/40">
+              Comma-separated model IDs. Leave empty to use discovered 9router models automatically.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {[
+              ['Image models', mediaImageModels, setMediaImageModels, 'openai/gpt-image-1'],
+              ['TTS models', mediaTtsModels, setMediaTtsModels, 'openai/tts-1'],
+              ['STT models', mediaSttModels, setMediaSttModels, 'openai/whisper-1'],
+              ['Embedding models', mediaEmbeddingModels, setMediaEmbeddingModels, 'openai/text-embedding-3-small'],
+            ].map(([label, value, setter, placeholder]) => (
+              <div key={label as string} className="space-y-1.5">
+                <Label className="text-muted-foreground font-normal text-xs">{label as string}</Label>
+                <div className={cn("rounded-md shadow-minimal transition-colors", "bg-background focus-within:bg-background")}>
+                  <Input
+                    type="text"
+                    value={value as string}
+                    onChange={(e) => (setter as (next: string) => void)(e.target.value)}
+                    placeholder={placeholder as string}
+                    className="border-0 bg-transparent shadow-none"
+                    disabled={isDisabled}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground font-normal text-xs">Default TTS voice</Label>
+              <div className={cn("rounded-md shadow-minimal transition-colors", "bg-background focus-within:bg-background")}>
+                <Input
+                  type="text"
+                  value={mediaDefaultVoice}
+                  onChange={(e) => setMediaDefaultVoice(e.target.value)}
+                  placeholder="alloy"
+                  className="border-0 bg-transparent shadow-none"
+                  disabled={isDisabled}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

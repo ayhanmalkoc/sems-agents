@@ -615,6 +615,7 @@ export default function AiSettingsPage() {
     connectionDefaultModel?: string
     activePreset?: string
     models?: string[]
+    media?: import('@config/llm-connections').NineRouterMediaConfig
     modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
     customApi?: CustomEndpointApi
   } | undefined>(undefined)
@@ -823,6 +824,7 @@ export default function AiSettingsPage() {
         ? '9router'
         : isCustomEndpointConnection ? 'custom' : (connection.piAuthProvider || undefined),
       models: modelIds,
+      media: connection.media,
       modelSelectionMode: connection.modelSelectionMode,
       customApi: connection.customEndpoint?.api,
     })

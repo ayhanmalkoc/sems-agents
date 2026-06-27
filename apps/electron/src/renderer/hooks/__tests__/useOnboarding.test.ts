@@ -136,6 +136,32 @@ describe('apiSetupMethodToConnectionSetup', () => {
     expect(setup.defaultModel).toBe('openai/gpt-4.1')
   })
 
+  it('nine_router_api_key preserves media endpoint and model settings', () => {
+    const media = {
+      endpoints: {
+        imagesGenerations: '/images/generations',
+        audioSpeech: '/audio/speech',
+        audioTranscriptions: '/audio/transcriptions',
+        audioVoices: '/audio/voices',
+        embeddings: '/embeddings',
+      },
+      models: {
+        image: ['openai/gpt-image-1'],
+        tts: ['openai/tts-1'],
+        stt: ['openai/whisper-1'],
+        embedding: ['openai/text-embedding-3-small'],
+      },
+      defaultVoice: 'alloy',
+    }
+    const setup = apiSetupMethodToConnectionSetup(
+      'nine_router_api_key',
+      { credential: 'sk-router', media },
+      null,
+      new Set(),
+    )
+    expect(setup.media).toEqual(media)
+  })
+
   it('pi_api_key includes piAuthProvider and modelSelectionMode', () => {
     const setup = apiSetupMethodToConnectionSetup(
       'pi_api_key',

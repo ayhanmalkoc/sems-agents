@@ -7,6 +7,14 @@ import type { MediaEmbedInput, MediaEmbeddingResult, MediaFileResult, MediaGener
 const DEFAULT_9ROUTER_BASE_URL = 'http://localhost:20128/v1';
 const MAX_MEDIA_BYTES = 50_000_000;
 
+const DEFAULT_MEDIA_ENDPOINTS = {
+  imagesGenerations: '/images/generations',
+  audioSpeech: '/audio/speech',
+  audioTranscriptions: '/audio/transcriptions',
+  audioVoices: '/audio/voices',
+  embeddings: '/embeddings',
+} as const;
+
 export interface NineRouterMediaContext {
   sessionPath: string;
   workspaceRootPath: string;
@@ -14,6 +22,13 @@ export interface NineRouterMediaContext {
 
 function normalizeBaseUrl(baseUrl?: string): string {
   return (baseUrl?.trim() || DEFAULT_9ROUTER_BASE_URL).replace(/\/+$/, '').replace(/\/v1\/v1$/i, '/v1');
+}
+
+function endpointUrl(baseUrl: string, endpoint?: string): string {
+  const value = endpoint?.trim();
+  if (!value) return baseUrl;
+  if (/^https?:\/\//i.test(value)) return value.replace(/\/+$/, '');
+  return `${baseUrl}${value.startsWith('/') ? value : `/${value}`}`;
 }
 
 function safeId(prefix: string): string {
@@ -146,6 +161,10 @@ function toMediaModelInfo(model: ModelDefinition | string): MediaModelInfo {
 
 export function listMediaModels(kind: MediaKind): MediaModelInfo[] {
   const { connection } = get9routerConnection();
+  const configured = connection.media?.models?.[kind];
+  if (configured?.length) {
+    return configured.map(id => ({ id, capabilities: [kind] }));
+  }
   return (connection.models ?? [])
     .map(toMediaModelInfo)
     .filter(model => mediaKindMatches(kind, model.capabilities ?? []));
@@ -174,8 +193,8 @@ export async function getMediaStatus(): Promise<MediaStatus> {
 }
 
 export async function listVoices(): Promise<MediaVoiceInfo[]> {
-  const { apiKey, baseUrl } = await getAuth();
-  const data = await requestJson(`${baseUrl}/audio/voices`, { headers: { authorization: `Bearer ${apiKey}` } });
+  const { apiKey, baseUrl, connection } = await getAuth();
+  const data = await requestJson(endpointUrl(baseUrl, connection.media?.endpoints?.audioVoices ?? DEFAULT_MEDIA_ENDPOINTS.audioVoices), { headers: { authorization: `Bearer ${apiKey}` } });
   const rows = Array.isArray(data) ? data : ((data as { data?: unknown[]; voices?: unknown[] }).data ?? (data as { voices?: unknown[] }).voices ?? []);
   return rows.map(row => {
     const record = row as Record<string, unknown>;
@@ -186,9 +205,9 @@ export async function listVoices(): Promise<MediaVoiceInfo[]> {
 
 export async function generateImage(ctx: NineRouterMediaContext, input: MediaGenerateImageInput): Promise<MediaFileResult & { bytesBase64: string }> {
   if (!input.prompt?.trim()) throw new Error('generate-image requires prompt');
-  const { apiKey, baseUrl } = await getAuth();
+  const { apiKey, baseUrl, connection } = await getAuth();
   const model = pickModel('image', input.model);
-  const data = await requestJson(`${baseUrl}/images/generations`, {
+  const data = await requestJson(endpointUrl(baseUrl, connection.media?.endpoints?.imagesGenerations ?? DEFAULT_MEDIA_ENDPOINTS.imagesGenerations), {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model, prompt: input.prompt, size: input.size, quality: input.quality, n: 1 }),
@@ -209,12 +228,12 @@ export async function generateImage(ctx: NineRouterMediaContext, input: MediaGen
 
 export async function textToSpeech(ctx: NineRouterMediaContext, input: MediaSpeechInput): Promise<MediaFileResult> {
   if (!input.text?.trim()) throw new Error('speech requires text');
-  const { apiKey, baseUrl } = await getAuth();
+  const { apiKey, baseUrl, connection } = await getAuth();
   const model = pickModel('tts', input.model);
-  const { bytes, mimeType } = await requestBytes(`${baseUrl}/audio/speech`, {
+  const { bytes, mimeType } = await requestBytes(endpointUrl(baseUrl, connection.media?.endpoints?.audioSpeech ?? DEFAULT_MEDIA_ENDPOINTS.audioSpeech), {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, input: input.text, voice: input.voice, format: input.format }),
+    body: JSON.stringify({ model, input: input.text, voice: input.voice ?? connection.media?.defaultVoice, format: input.format }),
   });
   const id = input.assetId || safeId('speech');
   const path = writeMediaFile(ctx, id, bytes, extForMime(mimeType, input.format ?? 'mp3'));
@@ -225,14 +244,14 @@ export async function speechToText(ctx: NineRouterMediaContext, input: MediaTran
   if (!input.path?.trim()) throw new Error('transcribe requires path');
   const filePath = ensureInside(ctx.sessionPath, input.path);
   if (!existsSync(filePath)) throw new Error(`Audio file not found: ${filePath}`);
-  const { apiKey, baseUrl } = await getAuth();
+  const { apiKey, baseUrl, connection } = await getAuth();
   const model = pickModel('stt', input.model);
   const form = new FormData();
   form.set('model', model);
   if (input.language) form.set('language', input.language);
   const bytes = readFileSync(filePath);
   form.set('file', new Blob([bytes]), basename(filePath));
-  const data = await requestJson(`${baseUrl}/audio/transcriptions`, {
+  const data = await requestJson(endpointUrl(baseUrl, connection.media?.endpoints?.audioTranscriptions ?? DEFAULT_MEDIA_ENDPOINTS.audioTranscriptions), {
     method: 'POST',
     headers: { authorization: `Bearer ${apiKey}` },
     body: form,
@@ -242,9 +261,9 @@ export async function speechToText(ctx: NineRouterMediaContext, input: MediaTran
 }
 
 export async function createEmbedding(ctx: NineRouterMediaContext, input: MediaEmbedInput): Promise<MediaEmbeddingResult> {
-  const { apiKey, baseUrl } = await getAuth();
+  const { apiKey, baseUrl, connection } = await getAuth();
   const model = pickModel('embedding', input.model);
-  const data = await requestJson(`${baseUrl}/embeddings`, {
+  const data = await requestJson(endpointUrl(baseUrl, connection.media?.endpoints?.embeddings ?? DEFAULT_MEDIA_ENDPOINTS.embeddings), {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model, input: input.input }),

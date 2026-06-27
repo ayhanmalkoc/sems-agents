@@ -16,7 +16,7 @@ import type {
 } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
-import type { CustomEndpointConfig, LlmProviderType } from '../config/llm-connections'
+import type { CustomEndpointConfig, LlmProviderType, NineRouterMediaConfig } from '../config/llm-connections'
 import type {
   AuthRequest as SharedAuthRequest,
   CredentialInputMode as SharedCredentialInputMode,
@@ -379,6 +379,7 @@ export interface LlmConnectionSetup {
   baseUrl?: string | null
   defaultModel?: string | null
   models?: string[] | null
+  media?: NineRouterMediaConfig | null
   piAuthProvider?: string
   modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined' | 'userDefined3Tier'
   /** When true, reject setup if the connection doesn't already exist (reauth guard). */

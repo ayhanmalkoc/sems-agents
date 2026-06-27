@@ -90,6 +90,22 @@ const LlmConnectionSchema = z.object({
   baseUrl: z.string().optional(),
   models: z.array(z.union([z.string(), z.object({ id: z.string() }).passthrough()])).optional(),
   defaultModel: z.string().optional(),
+  media: z.object({
+    endpoints: z.object({
+      imagesGenerations: z.string().optional(),
+      audioSpeech: z.string().optional(),
+      audioTranscriptions: z.string().optional(),
+      audioVoices: z.string().optional(),
+      embeddings: z.string().optional(),
+    }).optional(),
+    models: z.object({
+      image: z.array(z.string()).optional(),
+      tts: z.array(z.string()).optional(),
+      stt: z.array(z.string()).optional(),
+      embedding: z.array(z.string()).optional(),
+    }).optional(),
+    defaultVoice: z.string().optional(),
+  }).optional(),
   modelSelectionMode: z.enum(['automaticallySyncedFromProvider', 'userDefined', 'userDefined3Tier']).optional(),
   customEndpoint: CustomEndpointSchema.optional(),
   createdAt: z.number(),
