@@ -60,6 +60,7 @@ import {
   ShikiThemeProvider,
   PlatformProvider,
   ImagePreviewOverlay,
+  AudioPreviewOverlay,
   PDFPreviewOverlay,
   CodePreviewOverlay,
   DocumentFormattedMarkdownOverlay,
@@ -2100,6 +2101,7 @@ function WindowCloseHandler() {
  *
  * Handles all preview types from the link interceptor:
  * - image → ImagePreviewOverlay (binary, loaded via data URL)
+ * - audio → AudioPreviewOverlay (binary, loaded via data URL)
  * - pdf → PDFPreviewOverlay (binary, embedded via Chromium viewer)
  * - code/text → CodePreviewOverlay (syntax highlighted)
  * - markdown → DocumentFormattedMarkdownOverlay
@@ -2127,6 +2129,17 @@ function FilePreviewRenderer({
     case 'image':
       return (
         <ImagePreviewOverlay
+          isOpen
+          onClose={onClose}
+          filePath={state.filePath}
+          loadDataUrl={loadDataUrl}
+          theme={theme}
+        />
+      )
+
+    case 'audio':
+      return (
+        <AudioPreviewOverlay
           isOpen
           onClose={onClose}
           filePath={state.filePath}

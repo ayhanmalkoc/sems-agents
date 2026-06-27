@@ -7,7 +7,7 @@
  */
 
 /** Preview types that map to specific overlay components */
-export type FilePreviewType = 'image' | 'code' | 'markdown' | 'json' | 'text' | 'pdf'
+export type FilePreviewType = 'image' | 'audio' | 'code' | 'markdown' | 'json' | 'text' | 'pdf'
 
 export interface FileClassification {
   /** The preview type, or null if no in-app preview is available */
@@ -25,6 +25,9 @@ export interface FileClassification {
 const IMAGE_EXTENSIONS = new Set([
   'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif',
 ])
+
+/** Audio formats — rendered in AudioPreviewOverlay via data URL. */
+const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'webm'])
 
 /**
  * Code file extensions — rendered in CodePreviewOverlay with syntax highlighting.
@@ -75,7 +78,6 @@ const EXTERNAL_EXTENSIONS = new Set([
   'pptx', 'ppt',             // Presentations
   'zip', 'tar', 'gz', 'rar', '7z',  // Archives
   'dmg', 'pkg', 'exe', 'msi',       // Installers
-  'mp3', 'wav', 'flac', 'aac',      // Audio
   'mp4', 'mov', 'avi', 'mkv',       // Video
   'heic', 'heif', 'tiff', 'tif',    // Images Chromium can't decode
 ])
@@ -102,6 +104,7 @@ export function classifyFile(filePath: string): FileClassification {
   if (!ext) return { type: null, canPreview: false }
 
   if (IMAGE_EXTENSIONS.has(ext))    return { type: 'image', canPreview: true }
+  if (AUDIO_EXTENSIONS.has(ext))    return { type: 'audio', canPreview: true }
   if (MARKDOWN_EXTENSIONS.has(ext)) return { type: 'markdown', canPreview: true }
   if (JSON_EXTENSIONS.has(ext))     return { type: 'json', canPreview: true }
   if (CODE_EXTENSIONS.has(ext))     return { type: 'code', canPreview: true }
@@ -118,6 +121,7 @@ export function classifyFile(filePath: string): FileClassification {
  */
 export const FILE_EXTENSIONS_PATTERN = [
   ...IMAGE_EXTENSIONS,
+  ...AUDIO_EXTENSIONS,
   ...CODE_EXTENSIONS,
   ...MARKDOWN_EXTENSIONS,
   ...JSON_EXTENSIONS,

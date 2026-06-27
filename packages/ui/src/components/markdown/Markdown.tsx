@@ -14,6 +14,7 @@ import { MarkdownDatatableBlock } from './MarkdownDatatableBlock'
 import { MarkdownSpreadsheetBlock } from './MarkdownSpreadsheetBlock'
 import { MarkdownHtmlBlock } from './MarkdownHtmlBlock'
 import { MarkdownImageBlock } from './MarkdownImageBlock'
+import { MarkdownAudioBlock } from './MarkdownAudioBlock'
 import { MarkdownLatexBlock } from './MarkdownLatexBlock'
 import { MarkdownPdfBlock } from './MarkdownPdfBlock'
 import { MarkdownDocBlock } from './MarkdownDocBlock'
@@ -37,6 +38,7 @@ export type DisablablePreviewBlock =
   | 'html-preview'
   | 'pdf-preview'
   | 'image-preview'
+  | 'audio-preview'
 
 /**
  * Render modes for markdown content:
@@ -301,6 +303,10 @@ function createComponents(
           // Image preview blocks → inline image with expand to full viewer
           if (match?.[1] === 'image-preview' && isPreviewEnabled('image-preview')) {
             return wrapBlock('image-preview', code, <MarkdownImageBlock code={code} className="my-2" />, props.node?.position)
+          }
+          // Audio preview blocks → inline player with expand to full viewer
+          if (match?.[1] === 'audio-preview' && isPreviewEnabled('audio-preview')) {
+            return wrapBlock('audio-preview', code, <MarkdownAudioBlock code={code} className="my-2" />, props.node?.position)
           }
           // Markdown preview blocks → inline rendered .md file
           if (match?.[1] === 'markdown-preview' && isPreviewEnabled('markdown-preview')) {

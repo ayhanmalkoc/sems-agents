@@ -118,6 +118,10 @@ function formatStatus(status: MediaStatus): string {
   return lines.join('\n');
 }
 
+function audioPreviewBlock(path: string, title: string): string {
+  return '```audio-preview\n' + JSON.stringify({ src: path, title }, null, 2) + '\n```';
+}
+
 export async function executeMediaCommand(command: string, fns: MediaFns): Promise<ToolResult> {
   const trimmed = command.trim() || 'status';
   const [rawVerb, ...rest] = trimmed.split(/\s+/);
@@ -142,7 +146,7 @@ export async function executeMediaCommand(command: string, fns: MediaFns): Promi
     if (verb === 'speech') {
       const payload = trimmed.slice(rawVerb.length).trim();
       const result = await fns.speech(parseJsonPayload<MediaSpeechInput>(payload, 'speech'));
-      return success([`Generated speech ${result.id}`, `model: ${result.model}`, `path: ${result.path}`].join('\n'));
+      return success([`Generated speech ${result.id}`, `model: ${result.model}`, `path: ${result.path}`, audioPreviewBlock(result.path, result.id)].join('\n'));
     }
     if (verb === 'transcribe') {
       const payload = trimmed.slice(rawVerb.length).trim();

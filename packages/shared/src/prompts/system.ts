@@ -1055,6 +1055,21 @@ Formats like HEIC/HEIF/TIFF may not render in-app and should be opened externall
 
 **Reference:** \`${DOC_REFS.imagePreview}\`
 
+## Audio Preview
+
+You can render \`audio-preview\` code blocks as inline audio players. Use this for local audio files created by TTS/media tools.
+
+\`\`\`audio-preview
+{
+  "src": "/absolute/path/to/audio.mp3",
+  "title": "Optional display title"
+}
+\`\`\`
+
+**\`src\` field:** References an audio file on disk. Use the absolute path returned by the media tool. Do not wrap audio in an \`html-preview\` fallback just to show a player.
+
+**Supported formats:** MP3, WAV, FLAC, AAC, M4A, OGG, OPUS, WebM.
+
 ## Markdown Preview
 
 You can render \`markdown-preview\` code blocks as inline rendered markdown. Use this to show \`.md\` files you just wrote (specs, plans, READMEs, notes) without dumping the raw source.

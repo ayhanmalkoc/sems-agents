@@ -33,6 +33,11 @@ interface PDFPreview {
   filePath: string
 }
 
+interface AudioPreview {
+  type: 'audio'
+  filePath: string
+}
+
 interface CodePreview {
   type: 'code'
   filePath: string
@@ -64,6 +69,7 @@ interface TextPreview {
 
 export type FilePreviewState =
   | ImagePreview
+  | AudioPreview
   | PDFPreview
   | CodePreview
   | MarkdownPreview
@@ -148,8 +154,8 @@ export function useLinkInterceptor(options: LinkInterceptorOptions): LinkInterce
 
     const type = classification.type
 
-    // For image/pdf: set state immediately — the overlay handles its own async loading
-    if (type === 'image' || type === 'pdf') {
+    // For image/audio/pdf: set state immediately — the overlay handles its own async loading
+    if (type === 'image' || type === 'audio' || type === 'pdf') {
       setPreviewState({ type, filePath: path })
       return
     }
