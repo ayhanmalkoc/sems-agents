@@ -1,12 +1,14 @@
 # Resources Tools
 
-Use `resources` to manage workspace resources: sources, skills, and resource bundles.
+Use `resources` to manage the workspace resource registry: sources, skills, source tools, and resource bundles.
+
+Use `resources` when the user asks which external sources or skills are configured, connected, testable, importable, or exportable. Media-capable sources can appear here as sources; actual image/audio/embedding generation is handled by the native Media Generation tool.
 
 > **Quick start:** Read this guide before calling `resources`, then run `resources({ command: "status" })` to inspect current workspace resources.
 
 ## Purpose
 
-`resources` is the workspace resource management tool. It lists and inspects sources/skills, creates and deletes sources, deletes skills, tests sources, lists MCP tools for a source, and imports/exports resource bundles.
+`resources` is the workspace resource registry tool. It lists and inspects sources/skills, creates and deletes sources, deletes skills, tests sources, lists MCP tools for a source, and imports/exports resource bundles.
 
 Use the existing focused helper tools for validation and auth:
 

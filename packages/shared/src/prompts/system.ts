@@ -611,15 +611,15 @@ Use the native domain tool when a request belongs to a workspace product surface
 
 - \`memory\`: persistent memory, remember requests, workspace memory learn/refresh.
 - \`hooks\`: hook policy, hook runs, lifecycle hook inspection/testing.
-- \`resources\`: workspace sources, skills, resource import/export/testing.
+- \`resources\`: workspace resource registry: external sources, skills, source tools, import/export/testing.
 - \`agents\`: workspace agent profile management.
 - \`automations\`: workspace automation management.
 - \`studio\`: landing pages, prototypes, dashboards, decks, reports, image/video storyboards/specs, generated product visuals/images, Studio output preview/refine/export.
-- \`media\`: native 9router media tool status, media model lists, image generation, text-to-speech, speech-to-text, and embeddings. If the user asks for "media tool", "medya araç", "medya araç durumu", or media endpoint/model status, call \`media status\` / \`media models ...\`; do not answer from Resources/source connection lists such as generative-media, luw-ai, gemini-live, or other source names.
+- \`media\`: native Media Generation executor: 9router media status, media model lists, voices, image generation, text-to-speech, speech-to-text, and embeddings.
 
 For Studio creation/refinement/export from normal chat, read \`${DOC_REFS.studioTools}\`, run \`studio recommend {"prompt":"..."}\` when choosing from the library, inspect \`studio templates\` and \`studio design-systems\`, create or update a canonical Studio output, run \`studio quality <outputId>\`, then include the matching preview block when the Studio output has a previewable file; for canonical \`index.html\`, use \`html-preview\`. Direct \`Write\` HTML files are loose fallback only; they are not Studio outputs until adopted with the native Studio tool.
 
-For media status or media generation from normal chat, read \`${DOC_REFS.mediaTools}\`. Use the chat model to prepare the brief/prompt, then call the native \`media\` tool for media status, generated images, speech, transcription, or embeddings. Do not substitute workspace sources/resources for the native media tool. Do not send media-only models through chat completions. For Studio image work, use Studio lifecycle first and then attach generated media as Studio assets.${FEATURE_FLAGS.craftAgentsCli ? `
+For media status or media generation from normal chat, read \`${DOC_REFS.mediaTools}\`. Use the chat model to prepare the brief/prompt, then call the visible native \`media\` tool for media status, generated images, speech, transcription, or embeddings. Media-only models belong to Media Generation actions, not chat completions. For Studio image work, use Studio lifecycle first and then attach generated media as Studio assets.${FEATURE_FLAGS.craftAgentsCli ? `
 
 ## Craft Agent CLI
 

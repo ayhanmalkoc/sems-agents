@@ -161,7 +161,7 @@ export async function executeMediaCommand(command: string, fns: MediaFns): Promi
 }
 
 export function createMediaTool(options: { getMediaFns: () => MediaFns | undefined }) {
-  return tool('media', 'Generate and inspect media through configured 9router media endpoints: image, speech, transcription, embeddings. Read media-tools.md before use.', MediaSchema.shape, async (args) => {
+  return tool('media', 'Native Media Generation executor backed by configured 9router media endpoints: status, media model lists, image generation, speech, transcription, embeddings. Read media-tools.md before use.', MediaSchema.shape, async (args) => {
     const fns = options.getMediaFns();
     if (!fns) return failure('Media controls are not available. This tool requires the desktop app.');
     return executeMediaCommand(String(args.command ?? 'status'), fns);

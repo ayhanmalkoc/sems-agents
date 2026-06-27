@@ -210,7 +210,7 @@ export async function executeResourcesCommand(command: string, fns: ResourcesFns
 }
 
 export function createResourcesTool(options: { getResourcesFns: () => ResourcesFns | undefined }) {
-  return tool('resources', 'Manage workspace resources: list, inspect, create/delete sources, delete skills, test sources, list source tools, and import/export resource bundles.', ResourcesSchema.shape, async (args) => {
+  return tool('resources', 'Manage the workspace resource registry: list, inspect, create/delete sources, delete skills, test sources, list source tools, and import/export resource bundles.', ResourcesSchema.shape, async (args) => {
     const fns = options.getResourcesFns()
     if (!fns) return failure('Resource controls are not available. This tool requires the desktop app.')
     return executeResourcesCommand(String(args.command ?? 'status'), fns)

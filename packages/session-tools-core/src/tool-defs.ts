@@ -537,9 +537,9 @@ Commands:
 - \`history <automationId>\` � show recent runs
 - \`replay <automationId> <runId>\` � replay webhook actions`,
 
-  resources: `Manage workspace resources.
+  resources: `Manage the workspace resource registry.
 
-Use this when the user asks to list, inspect, create, delete, test, import, or export workspace sources and skills.
+Use this when the user asks to list, inspect, create, delete, test, import, or export workspace sources, skills, source tools, and resource bundles.
 
 Commands:
 - \`status\` - summarize resource availability and counts
@@ -560,9 +560,9 @@ Commands:
 
 Use this for Studio templates, design systems, create/list/show/update, project pages/components, quality checks, adopt, and export. Read studio-tools.md before use. Do not run studio commands in shell.`,
 
-  media: `Generate and inspect media through configured 9router media endpoints.
+  media: `Native Media Generation executor backed by configured 9router media endpoints.
 
-Use this for image generation, text-to-speech, speech-to-text, and embeddings. Read media-tools.md before use. Do not run media commands in shell.`,
+Use this for 9router media status, media model lists, image generation, text-to-speech, speech-to-text, and embeddings. Read media-tools.md before use. Do not run media commands in shell.`,
 
   hooks: `Manage workspace lifecycle hooks, builtin policy hooks, trusted custom hooks, runs, and trust review.
 

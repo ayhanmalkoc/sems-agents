@@ -1,8 +1,17 @@
 # Media Tools
 
-Use the native `media` tool for generated media through the configured 9router gateway. Do not run shell or CLI commands for media generation.
+Use the native `media` tool as the Media Generation executor through the configured 9router gateway. Do not run shell or CLI commands for media generation.
 
-If the user asks for "media tool status", "medya araç durumu", media endpoint status, or media model availability, call `media({ command: "status" })` first. Do not answer from workspace Resources/source connection lists such as `generative-media`, `luw-ai`, `gemini-live`, or other source names; those are external sources, not the native media tool.
+Use `media` when the user asks for media endpoint status, media model availability, image generation, text-to-speech, speech-to-text, or embeddings. Use `resources` when the user asks which external sources or skills are configured.
+
+## Tool Boundaries
+
+| Intent | Tool |
+| --- | --- |
+| Workspace source/skill registry | `resources` |
+| 9router media status/models/voices | `media` |
+| Generate image/audio/transcription/embedding | `media` |
+| Attach generated image to Studio output | `studio` first, then `media generate-image` with `outputId` |
 
 ## Commands
 
