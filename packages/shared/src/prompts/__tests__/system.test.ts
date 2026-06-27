@@ -46,6 +46,16 @@ describe('system prompt guidance', () => {
     expect(prompt).toContain('`agents`: workspace agent profile management')
     expect(prompt).toContain('`automations`: workspace automation management')
     expect(prompt).toContain('`studio`: landing pages, prototypes, dashboards, decks, reports')
+    expect(prompt).toContain('`media`: native 9router media tool status')
+    expect(prompt).toContain('do not answer from Resources/source connection lists')
+  })
+
+  it('routes media status requests to the native media tool instead of resources', () => {
+    const prompt = getSystemPrompt(undefined, undefined, '/tmp/workspace', '/tmp/workspace')
+
+    expect(prompt).toContain('"medya araç durumu"')
+    expect(prompt).toContain('call `media status`')
+    expect(prompt).toContain('Do not substitute workspace sources/resources for the native media tool')
   })
 
   it('documents Studio routing and backend-agnostic tool names', () => {

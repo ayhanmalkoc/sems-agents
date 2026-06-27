@@ -2,6 +2,8 @@
 
 Use the native `media` tool for generated media through the configured 9router gateway. Do not run shell or CLI commands for media generation.
 
+If the user asks for "media tool status", "medya araç durumu", media endpoint status, or media model availability, call `media({ command: "status" })` first. Do not answer from workspace Resources/source connection lists such as `generative-media`, `luw-ai`, `gemini-live`, or other source names; those are external sources, not the native media tool.
+
 ## Commands
 
 - `media({ command: "status" })` — show active 9router media availability.
