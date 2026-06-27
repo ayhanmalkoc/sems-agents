@@ -30,6 +30,30 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.fs.LIST_ENTRIES,
 ] as const
 
+export function getPreviewDataUrlMime(ext: string): string {
+  const normalized = ext.toLowerCase().replace(/^\./, '')
+  const mimeMap: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    bmp: 'image/bmp',
+    ico: 'image/x-icon',
+    avif: 'image/avif',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    m4a: 'audio/mp4',
+    ogg: 'audio/ogg',
+    opus: 'audio/ogg',
+    webm: 'audio/webm',
+  }
+  return mimeMap[normalized] || 'application/octet-stream'
+}
+
 export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): void {
   // Read a file (with path validation to prevent traversal attacks)
   server.handle(RPC_CHANNELS.file.READ, async (ctx, path: string) => {
@@ -50,8 +74,8 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
     }
   })
 
-  // Read an image file as a data URL for in-app image preview overlays.
-  // Returns data:{mime};base64,{content} — used by ImagePreviewOverlay and markdown image blocks.
+  // Read a binary preview file as a data URL for in-app preview overlays.
+  // Returns data:{mime};base64,{content} — used by image/audio previews and markdown media blocks.
   server.handle(RPC_CHANNELS.file.READ_DATA_URL, async (ctx, path: string) => {
     try {
       const workspaceId = ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
@@ -59,20 +83,9 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
       const buffer = await readFile(safePath)
       const ext = safePath.split('.').pop()?.toLowerCase() ?? ''
 
-      // Map previewable image extensions to MIME types.
+      // Map previewable media extensions to MIME types.
       // HEIC/HEIF/TIFF are intentionally excluded — no Chromium codec, opened externally instead.
-      const mimeMap: Record<string, string> = {
-        png: 'image/png',
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        gif: 'image/gif',
-        webp: 'image/webp',
-        svg: 'image/svg+xml',
-        bmp: 'image/bmp',
-        ico: 'image/x-icon',
-        avif: 'image/avif',
-      }
-      const mime = mimeMap[ext] || 'application/octet-stream'
+      const mime = getPreviewDataUrlMime(ext)
       const base64 = buffer.toString('base64')
       return `data:${mime};base64,${base64}`
     } catch (error) {
